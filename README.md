@@ -1,14 +1,158 @@
-# WDP301_G4_University Room Booking System
+# University Room Booking System
 
+## Overview
+The University Room Booking System is an internal web-based application that allows students to view available rooms and request room usage, while administrators manage rooms, users, and system booking configurations.
 
+This project is developed following an iterative approach. Iteration 1 focuses on core authentication, data setup, and system configuration as a proof of concept (POC).
+
+**WDP301 - Nhóm G4**
+
+## User Roles
+
+### Student
+- Login to the system
+- View room list and room details
+- Manage personal profile
+
+### Admin
+- Manage users
+- Manage rooms
+- Configure system settings (booking time range)
+- Access admin dashboard
+
+## Iteration 1 Scope (POC)
+- User authentication (login, reset password)
+- User profile management
+- Room management (CRUD)
+- System settings management
+- Admin user management
+
+## Out of Scope (Iteration 1)
+- Room booking and cancellation
+- Availability conflict handling
+- Search and filtering
+- Booking history and reports
+
+## Technology Stack
+- **Frontend:** React
+- **Backend:** Node.js + Express
+- **Database:** MongoDB Compass
+
+## Cấu trúc dự án
+
+```
+wdp301_g4_university-room-booking-system/
+├── backend/          # Node.js Backend (MVC)
+│   ├── config/       # Cấu hình database, môi trường
+│   ├── controllers/  # Controllers xử lý logic
+│   ├── models/       # Models MongoDB
+│   ├── routes/       # API routes
+│   ├── middleware/   # Middleware (auth, validation, etc.)
+│   ├── utils/        # Utility functions
+│   ├── server.js     # Entry point
+│   └── .env.example  # Environment variables template
+│
+└── frontend/         # React Frontend
+    ├── public/       # Static files
+    ├── src/
+    │   ├── assets/   # Images, fonts, etc.
+    │   ├── components/ # React components
+    │   ├── pages/    # Page components
+    │   ├── services/ # API services
+    │   ├── utils/    # Utility functions
+    │   ├── App.jsx   # Main App component
+    │   └── index.jsx # Entry point
+    └── .env.example  # Environment variables template
+```
+
+## Project Management
+- GitLab is used for source control and project tracking
+- Issues are used to manage tasks
+- Milestone `Iteration_1_POC` represents Iteration 1 scope
+- Each team member is assigned specific issues
+
+## Team Members & Responsibilities
+- **SV1:** Authentication (Login)
+- **SV2:** Reset Password & User Profile
+- **SV3:** Room Management
+- **SV4:** System Settings
+- **SV5:** Admin User Management
+
+## Tech Stack
+
+- **Backend:** Node.js + Express
+- **Frontend:** React
+- **Database:** MongoDB Compass
 
 ## Getting started
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+### Prerequisites
+- Node.js (v16 or higher)
+- MongoDB Compass
+- Git
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### Clone repository
 
-## Add your files
+```bash
+git clone https://gitlab.com/wdp3011/wdp301_g4_university-room-booking-system.git
+cd wdp301_g4_university-room-booking-system
+```
+
+### Backend Setup
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+# Edit .env file and configure your MongoDB connection string
+# MONGODB_URI=mongodb://localhost:27017/university-room-booking
+npm start
+```
+
+The backend server will run on `http://localhost:5000`
+
+### Frontend Setup
+
+```bash
+cd frontend
+npm install
+cp .env.example .env
+# Edit .env file if needed
+# REACT_APP_API_URL=http://localhost:5000
+npm start
+```
+
+The frontend application will run on `http://localhost:3000`
+
+## Development Workflow
+
+1. Create a new branch for your feature
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. Make your changes and commit
+   ```bash
+   git add .
+   git commit -m "Description of changes"
+   ```
+
+3. Push to GitLab
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+4. Create a Merge Request on GitLab
+
+## GitLab Repository
+
+https://gitlab.com/wdp3011/wdp301_g4_university-room-booking-system
+
+---
+
+## Additional GitLab Resources
+
+### Add your files
 
 * [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
 * [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
