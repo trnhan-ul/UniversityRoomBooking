@@ -49,7 +49,6 @@ const roomSchema = new mongoose.Schema({
 });
 
 // Indexes
-roomSchema.index({ room_code: 1 });
 roomSchema.index({ status: 1 });
 roomSchema.index({ location: 1 });
 

@@ -25,8 +25,6 @@ const passwordResetSchema = new mongoose.Schema({
 });
 
 // Indexes
-passwordResetSchema.index({ token: 1 });
 passwordResetSchema.index({ user_id: 1 });
-passwordResetSchema.index({ expires_at: 1 });
 
 module.exports = mongoose.model('PasswordReset', passwordResetSchema);

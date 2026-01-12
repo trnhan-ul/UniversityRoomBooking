@@ -31,6 +31,5 @@ const settingSchema = new mongoose.Schema({
 });
 
 // Indexes
-settingSchema.index({ key: 1 });
 
 module.exports = mongoose.model('Setting', settingSchema);
