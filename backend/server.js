@@ -3,6 +3,12 @@ const express = require('express');
 const cors = require("cors");
 require('dotenv').config();
 
+// Fail fast if JWT secret is not provided
+if (!process.env.JWT_SECRET) {
+    console.error('Environment variable JWT_SECRET is required');
+    process.exit(1);
+}
+
 const connectDB = require("./config/db");
 const initDatabase = require("./config/init");
 
@@ -24,8 +30,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
 
 app.use('/api/auth', authRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
