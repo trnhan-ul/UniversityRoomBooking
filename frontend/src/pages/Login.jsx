@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import fptLogo from '../../assets/images/fptlogo.png';
 import backgroundImage from '../../assets/images/image.png';
-import { Button } from '../../components/common';
-import { useAuthContext } from '../../context/AuthContext';
-import { validateEmail } from '../../utils/helpers';
+import { Button } from '../components/common';
+import { useAuthContext } from '../context/AuthContext';
+import { validateEmail } from '../utils/helpers';
 
 const Login = () => {
   const navigate = useNavigate();
