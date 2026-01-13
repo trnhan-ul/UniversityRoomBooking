@@ -21,6 +21,11 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Full name is required'],
     trim: true
   },
+  avatar_url: {
+    type: String,
+    trim: true,
+    default: null
+  },
   phone_number: {
     type: String,
     trim: true,
@@ -37,6 +42,10 @@ const userSchema = new mongoose.Schema({
     enum: ['ACTIVE', 'INACTIVE'],
     default: 'ACTIVE',
     required: true
+  },
+  is_email_verified: {
+    type: Boolean,
+    default: false
   },
   created_by: {
     type: mongoose.Schema.Types.ObjectId,
