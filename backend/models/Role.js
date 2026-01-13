@@ -32,7 +32,4 @@ const roleSchema = new mongoose.Schema({
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
-// Indexes
-roleSchema.index({ name: 1 });
-
 module.exports = mongoose.model('Role', roleSchema);
