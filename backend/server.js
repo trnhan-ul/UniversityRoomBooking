@@ -4,11 +4,18 @@ const cors = require("cors");
 require('dotenv').config();
 
 const connectDB = require("./config/db");
+const initDatabase = require("./config/init");
 
 const app = express();
 
-// Connect to database
-connectDB();
+// Connect to database and initialize
+connectDB().then(async () => {
+    await initDatabase();
+    console.log('Database initialized');
+}).catch(err => {
+    console.error('Database connection failed:', err);
+    process.exit(1);
+});
 
 // Middleware
 app.use(cors());
@@ -16,13 +23,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-// TODO: Import and use routes here
-// Example: app.use('/api/auth', require('./routes/auth'));
+const authRoutes = require('./routes/authRoutes');
+
+app.use('/api/auth', authRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
+    res.json({
+        status: 'OK',
         message: 'University Room Booking System API',
         timestamp: new Date().toISOString()
     });
@@ -31,7 +39,7 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).json({ 
+    res.status(500).json({
         success: false,
         message: 'Something went wrong!',
         error: process.env.NODE_ENV === 'development' ? err.message : undefined

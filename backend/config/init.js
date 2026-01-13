@@ -8,19 +8,16 @@ const initDatabase = async () => {
     const adminExists = await User.findOne({ role: "ADMIN" });
 
     if (!adminExists) {
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash("Admin@123", salt);
-
-      // Create admin user
+      // Create admin user (password sẽ tự động hash nhờ pre('save') hook)
       const admin = await User.create({
-        email: "admin@university.edu.vn",
-        password: hashedPassword,
+        email: "admin@fpt.edu.vn",
+        password: "Admin@123",
         full_name: "System Administrator",
         phone_number: "0123456789",
         role: "ADMIN",
         status: "ACTIVE",
       });
+      console.log('Admin user created successfully');
     }
 
     // Check if settings already exist

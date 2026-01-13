@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -49,6 +50,18 @@ const userSchema = new mongoose.Schema({
   }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+});
+
+// Hash password trước khi lưu vào database
+userSchema.pre('save', async function () {
+  // Chỉ hash password nếu password được thay đổi hoặc là mới
+  if (!this.isModified('password')) {
+    return;
+  }
+
+  // Tạo salt và hash password
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Indexes

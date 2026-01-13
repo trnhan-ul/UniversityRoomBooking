@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
+// import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import fptLogo from '../../assets/images/fptlogo.png';
 import backgroundImage from '../../assets/images/image.png';
+import { login } from '../../services/authService';
 
 const Login = () => {
+  // const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,9 +21,10 @@ const Login = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validation cơ bản
     if (!formData.email || !formData.password) {
       alert('Please fill in all fields');
       return;
@@ -30,8 +35,30 @@ const Login = () => {
       return;
     }
     
-    console.log('Login submitted:', formData);
-    // TODO: Add login API call
+    if (!formData.email.endsWith('@fpt.edu.vn')) {
+      alert('Please use FPT University email (@fpt.edu.vn)');
+      return;
+    }
+    
+    // Gọi API đăng nhập
+    setLoading(true);
+    try {
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        alert('Login successful!');
+        // Chuyển hướng đến trang chủ (hoặc dashboard)
+        // navigate('/dashboard');
+        console.log('User logged in:', result.data.user);
+      } else {
+        alert(result.message || 'Login failed');
+      }
+    } catch (error) {
+      alert(error.message || 'Login failed. Please try again');
+      console.error('Login error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,7 +76,7 @@ const Login = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="@example.com"
+              placeholder="@fpt.edu.vn"
             />
           </div>
 
@@ -68,8 +95,8 @@ const Login = () => {
             Forgot Password?
           </a>
 
-          <button type="submit" className="login-btn">
-            Login
+          <button type="submit" className="login-btn" disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
       </div>
