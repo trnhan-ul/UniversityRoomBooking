@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { User, Setting } = require('../models');
+const { User, Setting, Role } = require("../models");
 
 const initDatabase = async () => {
   try {
@@ -17,11 +17,25 @@ const initDatabase = async () => {
         role: "ADMIN",
         status: "ACTIVE",
       });
-      console.log('Admin user created successfully');
+      console.log("Admin user created successfully");
     }
 
     // Check if settings already exist
     const settingsCount = await Setting.countDocuments();
+
+    // Seed roles if not exist
+    const rolesCount = await Role.countDocuments();
+    if (rolesCount === 0) {
+      const defaultRoles = [
+        { name: "STUDENT", description: "Student role" },
+        { name: "TEACHER", description: "Teacher role" },
+        { name: "STAFF", description: "Staff role" },
+        { name: "ADMIN", description: "System administrator" },
+      ];
+
+      await Role.insertMany(defaultRoles);
+      console.log("Default roles seeded");
+    }
 
     if (settingsCount === 0) {
       const defaultSettings = [
