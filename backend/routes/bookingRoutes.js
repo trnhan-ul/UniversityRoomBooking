@@ -12,4 +12,7 @@ router.get('/:id', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingCont
 // PATCH /api/bookings/:id/approve -> only Manager/Admin
 router.patch('/:id/approve', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingController.approveBooking);
 
+// PATCH /api/bookings/:id/cancel -> user cancel own booking
+router.patch('/:id/cancel', authenticate, bookingController.cancelBooking);
+
 module.exports = router;
