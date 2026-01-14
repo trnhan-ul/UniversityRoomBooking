@@ -38,18 +38,27 @@ const MyBookings = () => {
         statusFilter = "CANCELLED";
       }
 
+      console.log('Fetching bookings with params:', { page, statusFilter, timeFilter });
       const response = await getMyBookings(page, 20, statusFilter, timeFilter);
+      console.log('API Response:', response);
 
-      if (response.success) {
-        setBookings(response.data.bookings);
-        setTotal(response.data.pagination.total);
-        const limit = response.data.pagination.limit;
-        setTotalPages(Math.ceil(response.data.pagination.total / limit));
+      if (response.success && response.data) {
+        setBookings(response.data.bookings || []);
+        setTotal(response.data.pagination?.total || 0);
+        const limit = response.data.pagination?.limit || 20;
+        setTotalPages(Math.ceil((response.data.pagination?.total || 0) / limit));
       } else {
         setError(response.message || "Failed to load bookings");
+        setBookings([]);
+        setTotal(0);
+        setTotalPages(1);
       }
     } catch (err) {
+      console.error('Fetch bookings error:', err);
       setError(err.message || "An error occurred");
+      setBookings([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -76,16 +85,16 @@ const MyBookings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50">
       <Header user={user} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Heading */}
         <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-black text-gray-900 dark:text-white">
+            <h1 className="text-4xl font-black text-gray-900">
               My Bookings History
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            <p className="text-gray-600 text-sm mt-1">
               Manage and view your academic space reservations.
             </p>
           </div>
@@ -100,7 +109,7 @@ const MyBookings = () => {
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="flex border-b border-gray-200 dark:border-gray-800 gap-8">
+          <div className="flex border-b border-gray-300 gap-8">
             <button
               onClick={() => {
                 setActiveTab("upcoming");
@@ -144,7 +153,7 @@ const MyBookings = () => {
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-3 mb-6">
           <div className="flex-1">
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -155,15 +164,21 @@ const MyBookings = () => {
                 placeholder="Search by room name or ID"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
               />
             </div>
           </div>
+          <button className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
+            📅 Filter by Date
+          </button>
+          <button className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
+            ⚡ Status
+          </button>
         </div>
 
         {/* Loading/Error States */}
         {loading && (
-          <div className="text-center py-8 text-gray-600">Loading...</div>
+          <div className="text-center py-8 text-gray-700">Loading...</div>
         )}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -173,18 +188,18 @@ const MyBookings = () => {
 
         {/* Bookings Table */}
         {!loading && !error && (
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-gray-300 rounded-xl overflow-hidden shadow-sm">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-xs font-bold uppercase">
+                <tr className="bg-gray-50 text-gray-600 text-xs font-semibold uppercase tracking-wider">
                   <th className="px-6 py-4 text-left">Room / Space</th>
                   <th className="px-6 py-4 text-left">Date</th>
                   <th className="px-6 py-4 text-left">Time Slot</th>
-                  <th className="px-6 py-4 text-center">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4 text-left">Status</th>
+                  <th className="px-6 py-4 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody className="divide-y divide-gray-200">
                 {bookings.length === 0 ? (
                   <tr>
                     <td
@@ -198,46 +213,45 @@ const MyBookings = () => {
                   bookings.map((booking) => (
                     <tr
                       key={booking._id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
+                      className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-blue-600">
-                            <span>{getRoomIcon(booking.room_id?.name)}</span>
-                          </div>
                           <div>
-                            <p className="font-bold text-gray-900 dark:text-white">
-                              {booking.room_id?.name || "N/A"}
+                            <p className="font-bold text-gray-900">
+                              {booking.room_id?.room_name || "N/A"}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-gray-600">
                               {booking.room_id?.location || ""}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                      <td className="px-6 py-4 text-sm text-gray-800">
                         {formatDate(booking.date)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 font-medium">
+                      <td className="px-6 py-4 text-sm text-gray-800 font-medium">
                         {booking.start_time} - {booking.end_time}
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-6 py-4">
                         <Badge variant={getStatusBadge(booking.status)}>
                           {getStatusLabel(booking.status)}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="text-blue-600 text-sm font-bold hover:underline">
-                          View Details
-                        </button>
-                        {["PENDING", "APPROVED"].includes(booking.status) && (
-                          <button
-                            onClick={() => handleCancelBooking(booking._id)}
-                            className="text-red-500 text-sm font-bold hover:underline ml-4"
-                          >
-                            Cancel
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <button className="text-blue-600 text-sm font-semibold hover:underline">
+                            View Details
                           </button>
-                        )}
+                          {["PENDING", "APPROVED"].includes(booking.status) && (
+                            <button
+                              onClick={() => handleCancelBooking(booking._id)}
+                              className="text-red-600 text-sm font-semibold hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -246,22 +260,22 @@ const MyBookings = () => {
             </table>
 
             {/* Pagination */}
-            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 bg-white">
+              <p className="text-sm text-gray-600">
                 Showing {bookings.length} of {total} {activeTab} bookings
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
-                  className="p-2 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-900 disabled:opacity-50 hover:text-blue-600"
+                  className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-600 bg-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
                 >
                   ‹
                 </button>
                 <button
                   onClick={() => setPage(page + 1)}
                   disabled={page >= totalPages}
-                  className="p-2 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-900 disabled:opacity-50 hover:text-blue-600"
+                  className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-600 bg-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
                 >
                   ›
                 </button>
