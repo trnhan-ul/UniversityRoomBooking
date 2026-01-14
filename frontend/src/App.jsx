@@ -15,6 +15,7 @@ import MyBookings from "./pages/MyBookings";
 import HomePage from "./pages/HomePage";
 import MyProfile from "./pages/MyProfile";
 import CreateBooking from "./pages/CreateBooking";
+import BookingDetail from "./pages/BookingDetail";
 import SearchClassrooms from "./pages/SearchClassrooms";
 import ClassroomDetails from "./pages/ClassroomDetails";
 import ClassroomScheduleGrid from "./pages/ClassroomScheduleGrid";
@@ -113,6 +114,7 @@ function App() {
               }
             />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/booking-detail/:id" element={<BookingDetail />} />
             <Route path="/my-profile" element={<MyProfile />} />
             <Route path="/create-booking" element={<CreateBooking />} />
             <Route path="/search-classrooms" element={<SearchClassrooms />} />
