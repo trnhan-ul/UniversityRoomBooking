@@ -4,16 +4,35 @@ const bookingController = require('../controllers/bookingController');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
 
 // GET /api/bookings/pending  -> only Manager/Admin
-router.get('/pending', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingController.getPendingBookings);
+router.get(
+  "/pending",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.getPendingBookings
+);
 // GET /api/bookings/statistics -> get booking statistics
-router.get('/statistics', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingController.getBookingStatistics);
-
+router.get(
+  "/statistics",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.getBookingStatistics
+);
 
 // GET /api/bookings/:id -> view booking detail (Manager/Admin)
-router.get('/:id', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingController.getBookingById);
+router.get(
+  "/:id",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.getBookingById
+);
 
 // PATCH /api/bookings/:id/approve -> only Manager/Admin
-router.patch('/:id/approve', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingController.approveBooking);
+router.patch(
+  "/:id/approve",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.approveBooking
+);
 
 // PATCH /api/bookings/:id/cancel -> user cancel own booking
 router.patch('/:id/cancel', authenticate, bookingController.cancelBooking);

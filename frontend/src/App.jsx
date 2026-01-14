@@ -1,15 +1,20 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from './components/common';
-import {
-  Login,
-  StudentDashboard,
-  LecturerDashboard,
-  FacilityManagerDashboard,
-  AdministratorDashboard
-} from './pages';
+import { useAuthContext } from "./context/AuthContext";
+import Login from "./pages/Login";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserManagement from "./pages/UserManagement";
+import PendingRequests from "./pages/PendingRequests";
+import MyBookings from "./pages/MyBookings";
+import HomePage from "./pages/HomePage";
 
 function App() {
+  const isAdminRole = (role) =>
+    role === "ADMINISTRATOR" || role === "FACILITY_MANAGER";
+
+  const getDefaultPath = (role) =>
+    isAdminRole(role) ? "/admin/dashboard" : "/homepage";
+
   const { user, loading } = useAuthContext();
 
   if (loading) {
@@ -29,30 +34,43 @@ function App() {
         {/* Public Routes */}
         <Route
           path="/login"
-          element={!user ? <Login /> : <Navigate to="/dashboard" replace />}
+          element={
+            !user ? (
+              <Login />
+            ) : (
+              <Navigate to={getDefaultPath(user.role)} replace />
+            )
+          }
         />
 
         {/* Protected Routes */}
-        {user && user.role === "ADMIN" && (
-          <>
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/user-management" element={<UserManagement />} />
-          </>
+        {user && isAdminRole(user.role) && (
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
         )}
 
-        {user && (user.role === "STAFF" || user.role === "ADMIN") && (
-          <Route path="/pending-requests" element={<PendingRequests />} />
+        {user && user.role === "ADMINISTRATOR" && (
+          <Route path="/user-management" element={<UserManagement />} />
         )}
+
+        {user &&
+          (user.role === "FACILITY_MANAGER" ||
+            user.role === "ADMINISTRATOR") && (
+            <Route path="/pending-requests" element={<PendingRequests />} />
+          )}
 
         {user && (
           <>
             <Route
               path="/homepage"
               element={
-                user.role === "ADMIN" ? <AdminDashboard /> : <MyBookings />
+                isAdminRole(user.role) ? <AdminDashboard /> : <HomePage />
               }
             />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route
+              path="/dashboard"
+              element={<Navigate to={getDefaultPath(user.role)} replace />}
+            />
           </>
         )}
 
@@ -61,7 +79,7 @@ function App() {
           path="/"
           element={
             user ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to={getDefaultPath(user.role)} replace />
             ) : (
               <Navigate to="/login" replace />
             )

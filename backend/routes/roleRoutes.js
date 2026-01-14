@@ -5,7 +5,7 @@ const { authenticate, authorizeRoles } = require('../middleware/auth');
 
 // Apply authentication and authorization middleware
 router.use(authenticate);
-router.use(authorizeRoles(['ADMIN']));
+router.use(authorizeRoles(["ADMINISTRATOR"]));
 
 // UC40: Get all roles
 router.get('/', roleController.getAllRoles);
