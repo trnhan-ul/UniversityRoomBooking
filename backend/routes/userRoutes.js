@@ -11,7 +11,7 @@ const {
 
 // All routes require authentication and ADMIN role
 router.use(authenticate);
-router.use(authorizeRoles('ADMIN'));
+router.use(authorizeRoles("ADMINISTRATOR"));
 
 // Get all users with filters
 router.get('/', getAllUsers);

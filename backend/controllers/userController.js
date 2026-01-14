@@ -48,7 +48,8 @@ exports.createUser = async (req, res) => {
     if (!email || !password || !full_name || !role) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: email, password, full_name, role'
+        message:
+          "Please provide all required fields: email, password, full_name, role",
       });
     }
 
@@ -56,24 +57,29 @@ exports.createUser = async (req, res) => {
     if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid email format'
+        message: "Invalid email format",
       });
     }
 
     // Validate role
-    const validRoles = ['STUDENT', 'ADMIN', 'TEACHER', 'STAFF'];
+    const validRoles = [
+      "STUDENT",
+      "LECTURER",
+      "FACILITY_MANAGER",
+      "ADMINISTRATOR",
+    ];
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: `Invalid role. Must be one of: ${validRoles.join(', ')}`
+        message: `Invalid role. Must be one of: ${validRoles.join(", ")}`,
       });
     }
 
     // Validate status if provided
-    if (status && !['ACTIVE', 'INACTIVE'].includes(status)) {
+    if (status && !["ACTIVE", "INACTIVE"].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid status. Must be ACTIVE or INACTIVE'
+        message: "Invalid status. Must be ACTIVE or INACTIVE",
       });
     }
 
@@ -81,7 +87,7 @@ exports.createUser = async (req, res) => {
     if (phone_number && !/^[0-9]{10,11}$/.test(phone_number)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid phone number. Must be 10-11 digits'
+        message: "Invalid phone number. Must be 10-11 digits",
       });
     }
 
@@ -90,7 +96,7 @@ exports.createUser = async (req, res) => {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'User with this email already exists'
+        message: "User with this email already exists",
       });
     }
 
@@ -101,9 +107,9 @@ exports.createUser = async (req, res) => {
       full_name,
       phone_number,
       role,
-      status: status || 'ACTIVE',
+      status: status || "ACTIVE",
       created_by: req.user._id,
-      is_email_verified: false
+      is_email_verified: false,
     });
 
     // Remove password from response
@@ -112,23 +118,23 @@ exports.createUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
-      data: userResponse
+      message: "User created successfully",
+      data: userResponse,
     });
   } catch (error) {
-    console.error('Create user error:', error);
-    
+    console.error("Create user error:", error);
+
     // Handle duplicate key error
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: 'User with this email already exists'
+        message: "User with this email already exists",
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Failed to create user'
+      message: "Failed to create user",
     });
   }
 };
@@ -140,19 +146,19 @@ exports.getAllUsers = async (req, res) => {
 
     // Build query
     const query = {};
-    
+
     if (role) {
       query.role = role;
     }
-    
+
     if (status) {
       query.status = status;
     }
-    
+
     if (search) {
       query.$or = [
-        { full_name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { full_name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -160,7 +166,7 @@ exports.getAllUsers = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const users = await User.find(query)
-      .select('-password')
+      .select("-password")
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -174,14 +180,14 @@ exports.getAllUsers = async (req, res) => {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(total / parseInt(limit))
-      }
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
     });
   } catch (error) {
-    console.error('Get all users error:', error);
+    console.error("Get all users error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve users'
+      message: "Failed to retrieve users",
     });
   }
 };
@@ -196,13 +202,13 @@ exports.updateUser = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid user ID'
+        message: "Invalid user ID",
       });
     }
 
     // Build update object
     const updateData = {
-      updated_by: req.user._id
+      updated_by: req.user._id,
     };
 
     if (full_name) updateData.full_name = full_name;
@@ -210,55 +216,59 @@ exports.updateUser = async (req, res) => {
       if (!/^[0-9]{10,11}$/.test(phone_number)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid phone number. Must be 10-11 digits'
+          message: "Invalid phone number. Must be 10-11 digits",
         });
       }
       updateData.phone_number = phone_number;
     }
     if (role) {
-      const validRoles = ['STUDENT', 'ADMIN', 'TEACHER', 'STAFF'];
+      const validRoles = [
+        "STUDENT",
+        "LECTURER",
+        "FACILITY_MANAGER",
+        "ADMINISTRATOR",
+      ];
       if (!validRoles.includes(role)) {
         return res.status(400).json({
           success: false,
-          message: `Invalid role. Must be one of: ${validRoles.join(', ')}`
+          message: `Invalid role. Must be one of: ${validRoles.join(", ")}`,
         });
       }
       updateData.role = role;
     }
     if (status) {
-      if (!['ACTIVE', 'INACTIVE'].includes(status)) {
+      if (!["ACTIVE", "INACTIVE"].includes(status)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid status. Must be ACTIVE or INACTIVE'
+          message: "Invalid status. Must be ACTIVE or INACTIVE",
         });
       }
       updateData.status = status;
     }
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
 
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).select('-password');
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
 
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'User updated successfully',
-      data: updatedUser
+      message: "User updated successfully",
+      data: updatedUser,
     });
   } catch (error) {
-    console.error('Update user error:', error);
+    console.error("Update user error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update user'
+      message: "Failed to update user",
     });
   }
 };

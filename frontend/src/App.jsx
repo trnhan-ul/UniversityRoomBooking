@@ -1,15 +1,20 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from './components/common';
-import {
-  Login,
-  StudentDashboard,
-  LecturerDashboard,
-  FacilityManagerDashboard,
-  AdministratorDashboard
-} from './pages';
+import { useAuthContext } from "./context/AuthContext";
+import Login from "./pages/Login";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserManagement from "./pages/UserManagement";
+import PendingRequests from "./pages/PendingRequests";
+import MyBookings from "./pages/MyBookings";
+import HomePage from "./pages/HomePage";
 
 function App() {
+  const isAdminRole = (role) =>
+    role === "ADMINISTRATOR" || role === "FACILITY_MANAGER";
+
+  const getDefaultPath = (role) =>
+    isAdminRole(role) ? "/admin/dashboard" : "/homepage";
+
   const { user, loading } = useAuthContext();
 
   if (loading) {
@@ -24,56 +29,65 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<Login />} />
-      
-      {/* Protected Routes - Student */}
-      <Route 
-        path="/student/dashboard" 
-        element={
-          <ProtectedRoute allowedRoles={['STUDENT']}>
-            <StudentDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Protected Routes - Lecturer */}
-      <Route 
-        path="/lecturer/dashboard" 
-        element={
-          <ProtectedRoute allowedRoles={['LECTURER']}>
-            <LecturerDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Protected Routes - Facility Manager */}
-      <Route 
-        path="/facility-manager/dashboard" 
-        element={
-          <ProtectedRoute allowedRoles={['FACILITY_MANAGER']}>
-            <FacilityManagerDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Protected Routes - Administrator */}
-      <Route 
-        path="/administrator/dashboard" 
-        element={
-          <ProtectedRoute allowedRoles={['ADMINISTRATOR']}>
-            <AdministratorDashboard />
-          </ProtectedRoute>
-        } 
-      />
+    <div className="App">
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/login"
+          element={
+            !user ? (
+              <Login />
+            ) : (
+              <Navigate to={getDefaultPath(user.role)} replace />
+            )
+          }
+        />
 
-      {/* Redirect root to login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      
-      {/* Catch all - redirect to login */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        {/* Protected Routes */}
+        {user && isAdminRole(user.role) && (
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        )}
+
+        {user && user.role === "ADMINISTRATOR" && (
+          <Route path="/user-management" element={<UserManagement />} />
+        )}
+
+        {user &&
+          (user.role === "FACILITY_MANAGER" ||
+            user.role === "ADMINISTRATOR") && (
+            <Route path="/pending-requests" element={<PendingRequests />} />
+          )}
+
+        {user && (
+          <>
+            <Route
+              path="/homepage"
+              element={
+                isAdminRole(user.role) ? <AdminDashboard /> : <HomePage />
+              }
+            />
+            <Route path="/my-bookings" element={<MyBookings />} />
+            <Route
+              path="/dashboard"
+              element={<Navigate to={getDefaultPath(user.role)} replace />}
+            />
+          </>
+        )}
+
+        {/* Fallback */}
+        <Route
+          path="/"
+          element={
+            user ? (
+              <Navigate to={getDefaultPath(user.role)} replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   );
 }
 
