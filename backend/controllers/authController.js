@@ -1,6 +1,12 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const User = require('../models/User');
+const EmailVerification = require('../models/EmailVerification');
+const PasswordReset = require('../models/PasswordReset');
+const { PASSWORD_RESET_EXPIRY } = require('../config/constants');
+const { passwordResetTemplate, emailVerificationTemplate } = require('../templates/emailTemplates');
 
 // Tạo JWT token
 const generateToken = (userId) => {
@@ -101,13 +107,266 @@ const login = async (req, res) => {
 };
 
 // ============================================
-// PASSWORD RESET FUNCTIONS
+// EMAIL VERIFICATION FUNCTIONS (REGISTER)
 // ============================================
 
-const nodemailer = require('nodemailer');
-const PasswordReset = require('../models/PasswordReset');
-const { PASSWORD_RESET_EXPIRY } = require('../config/constants');
-const { passwordResetTemplate } = require('../templates/emailTemplates');
+// Helper: Tạo email transporter
+const createEmailTransporter = () => {
+    return nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: process.env.EMAIL_PORT || 587,
+        secure: false,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD
+        }
+    });
+};
+
+// Helper: Gửi email verification link
+const sendVerificationEmail = async (email, token) => {
+    try {
+        const transporter = createEmailTransporter();
+        const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || `"UniBooking System" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Verify Your Email - University Room Booking System',
+            html: emailVerificationTemplate(verificationLink)
+        };
+
+        await transporter.sendMail(mailOptions);
+        return { success: true };
+    } catch (error) {
+        console.error('Email send error:', error);
+        return { success: false, error };
+    }
+};
+
+// Register new user
+const register = async (req, res) => {
+    try {
+        const { email, password, full_name, phone_number } = req.body;
+
+        // 1. Validate required fields
+        if (!email || !password || !full_name) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email, password and full name are required'
+            });
+        }
+
+        // 2. Validate FPT email
+        if (!email.endsWith('@fpt.edu.vn')) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please use FPT University email (@fpt.edu.vn)'
+            });
+        }
+
+        // 3. Validate password strength
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // 4. Check if email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email already registered. Please login or use a different email.'
+            });
+        }
+
+        // 5. Create new user (password will be auto-hashed by pre-save hook)
+        const user = await User.create({
+            email,
+            password,
+            full_name,
+            phone_number: phone_number || null,
+            role: 'STUDENT', // Default role
+            is_email_verified: false,
+            status: 'ACTIVE'
+        });
+
+        // 6. Generate verification token (valid for 24 hours)
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        // 7. Save verification token
+        await EmailVerification.create({
+            user_id: user._id,
+            token: verificationToken,
+            expires_at: expiresAt
+        });
+
+        // 8. Send verification email
+        const emailResult = await sendVerificationEmail(email, verificationToken);
+
+        if (!emailResult.success) {
+            console.error('Failed to send verification email:', emailResult.error);
+            // Don't fail registration, user can resend later
+        }
+
+        // 9. Return success response
+        res.status(201).json({
+            success: true,
+            message: 'Registration successful! Please check your email to verify your account.',
+            data: {
+                email: user.email,
+                full_name: user.full_name
+            }
+        });
+
+    } catch (error) {
+        console.error('Register error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error. Please try again later.'
+        });
+    }
+};
+
+// Verify email with token
+const verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.query;
+
+        // 1. Validate token
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: 'Verification token is required'
+            });
+        }
+
+        // 2. Find verification record
+        const verification = await EmailVerification.findOne({
+            token,
+            verified_at: null,
+            expires_at: { $gt: new Date() }
+        });
+
+        if (!verification) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired verification link'
+            });
+        }
+
+        // 3. Find and update user
+        const user = await User.findById(verification.user_id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // 4. Update user verification status
+        user.is_email_verified = true;
+        await user.save();
+
+        // 5. Mark verification as completed
+        verification.verified_at = new Date();
+        await verification.save();
+
+        // 6. Return success
+        res.status(200).json({
+            success: true,
+            message: 'Email verified successfully! You can now login to your account.'
+        });
+
+    } catch (error) {
+        console.error('Verify email error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error. Please try again later.'
+        });
+    }
+};
+
+// Resend verification email
+const resendVerificationEmail = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // 1. Validate email
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+
+        // 2. Find user
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // 3. Check if already verified
+        if (user.is_email_verified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is already verified. Please login.'
+            });
+        }
+
+        // 4. Delete old verification tokens
+        await EmailVerification.deleteMany({ user_id: user._id });
+
+        // 5. Generate new token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        // 6. Save new token
+        await EmailVerification.create({
+            user_id: user._id,
+            token: verificationToken,
+            expires_at: expiresAt
+        });
+
+        // 7. Send email
+        const emailResult = await sendVerificationEmail(email, verificationToken);
+
+        if (!emailResult.success) {
+            console.error('Failed to send verification email:', emailResult.error);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to send verification email. Please try again later.'
+            });
+        }
+
+        // 8. Return success
+        res.status(200).json({
+            success: true,
+            message: 'Verification email has been sent! Please check your inbox.'
+        });
+
+    } catch (error) {
+        console.error('Resend verification error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error. Please try again later.'
+        });
+    }
+};
+
+// ============================================
+// PASSWORD RESET FUNCTIONS
+// ============================================
 
 // Helper function: Gửi email với mã OTP
 const sendResetCodeEmail = async (email, code) => {
@@ -332,6 +591,9 @@ const resetPassword = async (req, res) => {
 
 module.exports = {
     login,
+    register,
+    verifyEmail,
+    resendVerificationEmail,
     forgotPassword,
     resetPassword
 };

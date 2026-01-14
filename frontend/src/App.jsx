@@ -3,6 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthContext } from "./context/AuthContext";
 import { AdminLayout } from "./components/layout";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import EmailVerification from "./pages/EmailVerification";
+import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -47,6 +50,18 @@ function App() {
             )
           }
         />
+        <Route
+          path="/register"
+          element={
+            !user ? (
+              <Register />
+            ) : (
+              <Navigate to={getDefaultPath(user.role)} replace />
+            )
+          }
+        />
+        <Route path="/email-verification" element={<EmailVerification />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
