@@ -1,6 +1,19 @@
 const User = require('../models/User');
 const mongoose = require('mongoose');
 
+// Danh sách role hợp lệ lấy từ enum của User
+const AVAILABLE_ROLES = [
+  "STUDENT",
+  "LECTURER",
+  "FACILITY_MANAGER",
+  "ADMINISTRATOR",
+];
+
+// Trả về danh sách role để FE hiển thị
+exports.getAvailableRoles = (req, res) => {
+  return res.status(200).json({ success: true, data: AVAILABLE_ROLES });
+};
+
 // UC41: View User Detail - Admin views user details
 exports.getUserById = async (req, res) => {
   try {

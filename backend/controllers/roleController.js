@@ -79,51 +79,12 @@ const getRoleById = async (req, res) => {
   }
 };
 
-// UC40: Create new role
-const createRole = async (req, res) => {
-  try {
-    const { name, description, permissions = [] } = req.body;
-
-    // Validation
-    if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Role name is required'
-      });
-    }
-
-    // Check if role already exists
-    const existingRole = await Role.findOne({ name: name.toUpperCase() });
-    if (existingRole) {
-      return res.status(409).json({
-        success: false,
-        message: 'Role already exists'
-      });
-    }
-
-    // Create new role
-    const role = new Role({
-      name: name.toUpperCase(),
-      description,
-      permissions,
-      created_by: req.user._id
-    });
-
-    await role.save();
-    await role.populate('created_by', 'full_name email');
-
-    res.status(201).json({
-      success: true,
-      message: 'Role created successfully',
-      data: role
-    });
-  } catch (error) {
-    console.error('Create role error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create role'
-    });
-  }
+// UC40: Create new role (disabled)
+const createRole = async (_req, res) => {
+  return res.status(403).json({
+    success: false,
+    message: 'Role creation is disabled. Use existing system roles only.'
+  });
 };
 
 // UC40: Update role
@@ -141,25 +102,21 @@ const updateRole = async (req, res) => {
       });
     }
 
-    // Check for predefined roles (cannot modify)
-    const predefinedRoles = ['STUDENT', 'ADMIN', 'TEACHER', 'STAFF'];
-    if (predefinedRoles.includes(role.name)) {
+    // Chỉ cho phép chỉnh sửa role hệ thống hiện có, không đổi tên
+    const predefinedRoles = ['STUDENT', 'LECTURER', 'FACILITY_MANAGER', 'ADMINISTRATOR'];
+    if (!predefinedRoles.includes(role.name)) {
       return res.status(403).json({
         success: false,
-        message: 'Cannot modify predefined system roles'
+        message: 'Chỉ được chỉnh sửa role hệ thống hiện có'
       });
     }
 
-    // Check if new name already exists (if changing)
+    // Không cho đổi tên role
     if (name && name.toUpperCase() !== role.name) {
-      const existingRole = await Role.findOne({ name: name.toUpperCase() });
-      if (existingRole) {
-        return res.status(409).json({
-          success: false,
-          message: 'Role name already exists'
-        });
-      }
-      role.name = name.toUpperCase();
+      return res.status(400).json({
+        success: false,
+        message: 'Không được đổi tên role hệ thống'
+      });
     }
 
     // Update fields
@@ -185,50 +142,12 @@ const updateRole = async (req, res) => {
   }
 };
 
-// UC40: Delete role
-const deleteRole = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const role = await Role.findById(id);
-    if (!role) {
-      return res.status(404).json({
-        success: false,
-        message: 'Role not found'
-      });
-    }
-
-    // Check for predefined roles
-    const predefinedRoles = ['STUDENT', 'ADMIN', 'TEACHER', 'STAFF'];
-    if (predefinedRoles.includes(role.name)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Cannot delete predefined system roles'
-      });
-    }
-
-    // Check if role is in use
-    const usersWithRole = await User.countDocuments({ role: role.name });
-    if (usersWithRole > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete role. ${usersWithRole} user(s) still have this role`
-      });
-    }
-
-    await Role.findByIdAndDelete(id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Role deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete role error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete role'
-    });
-  }
+// UC40: Delete role (disabled)
+const deleteRole = async (_req, res) => {
+  return res.status(403).json({
+    success: false,
+    message: 'Không được phép xóa role hệ thống'
+  });
 };
 
 // UC41: Assign permissions to role
@@ -251,6 +170,15 @@ const assignPermissions = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Role not found'
+      });
+    }
+
+    // Chỉ cho phép gán quyền cho role hệ thống
+    const predefinedRoles = ['STUDENT', 'LECTURER', 'FACILITY_MANAGER', 'ADMINISTRATOR'];
+    if (!predefinedRoles.includes(role.name)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ được gán quyền cho role hệ thống'
       });
     }
 
