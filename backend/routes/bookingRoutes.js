@@ -5,6 +5,9 @@ const { authenticate, authorizeRoles } = require('../middleware/auth');
 
 // GET /api/bookings/pending  -> only Manager/Admin
 router.get('/pending', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingController.getPendingBookings);
+// GET /api/bookings/statistics -> get booking statistics
+router.get('/statistics', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingController.getBookingStatistics);
+
 
 // GET /api/bookings/:id -> view booking detail (Manager/Admin)
 router.get('/:id', authenticate, authorizeRoles(['STAFF', 'ADMIN']), bookingController.getBookingById);

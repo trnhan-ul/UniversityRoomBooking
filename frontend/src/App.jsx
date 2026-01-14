@@ -24,56 +24,52 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<Login />} />
-      
-      {/* Protected Routes - Student */}
-      <Route 
-        path="/student/dashboard" 
-        element={
-          <ProtectedRoute allowedRoles={['STUDENT']}>
-            <StudentDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Protected Routes - Lecturer */}
-      <Route 
-        path="/lecturer/dashboard" 
-        element={
-          <ProtectedRoute allowedRoles={['LECTURER']}>
-            <LecturerDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Protected Routes - Facility Manager */}
-      <Route 
-        path="/facility-manager/dashboard" 
-        element={
-          <ProtectedRoute allowedRoles={['FACILITY_MANAGER']}>
-            <FacilityManagerDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Protected Routes - Administrator */}
-      <Route 
-        path="/administrator/dashboard" 
-        element={
-          <ProtectedRoute allowedRoles={['ADMINISTRATOR']}>
-            <AdministratorDashboard />
-          </ProtectedRoute>
-        } 
-      />
+    <div className="App">
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/login"
+          element={!user ? <Login /> : <Navigate to="/dashboard" replace />}
+        />
 
-      {/* Redirect root to login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      
-      {/* Catch all - redirect to login */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        {/* Protected Routes */}
+        {user && user.role === "ADMIN" && (
+          <>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/user-management" element={<UserManagement />} />
+          </>
+        )}
+
+        {user && (user.role === "STAFF" || user.role === "ADMIN") && (
+          <Route path="/pending-requests" element={<PendingRequests />} />
+        )}
+
+        {user && (
+          <>
+            <Route
+              path="/homepage"
+              element={
+                user.role === "ADMIN" ? <AdminDashboard /> : <MyBookings />
+              }
+            />
+            <Route path="/my-bookings" element={<MyBookings />} />
+          </>
+        )}
+
+        {/* Fallback */}
+        <Route
+          path="/"
+          element={
+            user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   );
 }
 

@@ -1,35 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { getPendingBookings, approveBooking } from '../../services/bookingService';
-import { Button, Badge } from '../../components/common';
-import { useAuthContext } from '../../context/AuthContext';
-import { formatDate } from '../../utils/helpers';
+import {
+  getPendingBookings,
+  approveBooking,
+  getBookingStatistics,
+} from "../services/bookingService";
+import { Button, Badge } from "../components/common";
+import { formatDate } from "../utils/helpers";
 
 const PendingRequests = () => {
-  const { user: currentUser } = useAuthContext();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [statistics, setStatistics] = useState({
+    approvedToday: 0,
+    pendingTotal: 0,
+    approvedTotal: 0,
+  });
 
   // Filters
-  const [filterType, setFilterType] = useState('all'); // all, priority, conflict
+  const [filterType, setFilterType] = useState("all"); // all, priority, conflict
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    limit: 10
+    limit: 10,
   });
 
   // Modal states
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
+  const [rejectReason, setRejectReason] = useState("");
 
   // Fetch pending bookings
   const fetchPendingBookings = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const response = await getPendingBookings(page, 10);
       if (response.success) {
@@ -37,67 +44,96 @@ const PendingRequests = () => {
         setPagination(response.data.pagination);
       }
     } catch (err) {
-      setError(err.message || 'Failed to fetch pending bookings');
+      setError(err.message || "Failed to fetch pending bookings");
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch statistics
+  const fetchStatistics = async () => {
+    try {
+      const response = await getBookingStatistics();
+      if (response.success) {
+        setStatistics(response.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch statistics:", err);
+    }
+  };
+
   useEffect(() => {
     fetchPendingBookings();
-  }, [page]);
+    fetchStatistics();
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter bookings based on type
   const getFilteredBookings = () => {
-    if (filterType === 'priority') {
-      return bookings.filter(b => b.priority === 'HIGH');
+    if (filterType === "priority") {
+      return bookings.filter((b) => b.priority === "HIGH");
     }
-    if (filterType === 'conflict') {
-      return bookings.filter(b => b.has_conflict === true);
+    if (filterType === "conflict") {
+      return bookings.filter((b) => b.has_conflict === true);
     }
     return bookings;
   };
 
   const filteredBookings = getFilteredBookings();
-  const conflictCount = bookings.filter(b => b.has_conflict === true).length;
+  const conflictCount = bookings.filter((b) => b.has_conflict === true).length;
+  const today = new Date();
+  const todaysBookings = bookings
+    .filter((b) => {
+      const d = new Date(b.date);
+      return d.toDateString() === today.toDateString();
+    })
+    .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
+  const timelineItems = todaysBookings.slice(0, 4);
+  const pendingTotal = pagination.total || bookings.length;
+
+  const getPendingTotalForHeading = () => {
+    if (filterType === "priority")
+      return bookings.filter((b) => b.priority === "HIGH").length;
+    if (filterType === "conflict") return conflictCount;
+    return pagination.total || bookings.length;
+  };
 
   // Handle approve
   const handleApprove = async (bookingId) => {
     try {
-      const response = await approveBooking(bookingId, { action: 'APPROVE' });
+      const response = await approveBooking(bookingId, { action: "APPROVE" });
       if (response.success) {
-        setSuccess('Booking approved successfully');
+        setSuccess("Booking approved successfully");
         setIsApproveModalOpen(false);
         setSelectedBooking(null);
         fetchPendingBookings();
-        setTimeout(() => setSuccess(''), 3000);
+        setTimeout(() => setSuccess(""), 3000);
       }
     } catch (err) {
-      setError(err.message || 'Failed to approve booking');
+      setError(err.message || "Failed to approve booking");
     }
   };
 
   // Handle reject
   const handleReject = async (bookingId) => {
     if (!rejectReason.trim() || rejectReason.length < 10) {
-      setError('Rejection reason must be at least 10 characters');
+      setError("Rejection reason must be at least 10 characters");
       return;
     }
     try {
       const response = await approveBooking(bookingId, {
-        action: 'REJECT',
-        reject_reason: rejectReason
+        action: "REJECT",
+        reject_reason: rejectReason,
       });
       if (response.success) {
-        setSuccess('Booking rejected successfully');
+        setSuccess("Booking rejected successfully");
         setIsApproveModalOpen(false);
-        setRejectReason('');
+        setRejectReason("");
         setSelectedBooking(null);
         fetchPendingBookings();
-        setTimeout(() => setSuccess(''), 3000);
+        setTimeout(() => setSuccess(""), 3000);
       }
     } catch (err) {
-      setError(err.message || 'Failed to reject booking');
+      setError(err.message || "Failed to reject booking");
     }
   };
 
@@ -112,13 +148,9 @@ const PendingRequests = () => {
   };
 
   const getStatusColor = (hasConflict) => {
-    return hasConflict ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' : 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400';
-  };
-
-  const getPendingCount = () => {
-    if (filterType === 'priority') return bookings.filter(b => b.priority === 'HIGH').length;
-    if (filterType === 'conflict') return conflictCount;
-    return pagination.total;
+    return hasConflict
+      ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+      : "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400";
   };
 
   return (
@@ -128,7 +160,7 @@ const PendingRequests = () => {
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold">Pending Requests</h1>
           <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
-            {getPendingCount()} Total
+            {getPendingTotalForHeading()} Total
           </span>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50">
@@ -140,27 +172,90 @@ const PendingRequests = () => {
         {/* Sidebar */}
         <aside className="w-72 border-r border-slate-200 bg-white p-6 hidden lg:flex flex-col gap-8 overflow-y-auto">
           <div>
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Request Summary</h3>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+              Request Summary
+            </h3>
             <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
               <div className="flex justify-between items-start mb-2">
-                <p className="text-2xl font-bold text-blue-600">{pagination.total}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {pendingTotal}
+                </p>
                 <span className="text-2xl">⏳</span>
               </div>
-              <p className="text-sm font-medium text-slate-600">Pending reviews remaining</p>
+              <p className="text-sm font-medium text-slate-600">
+                Pending reviews remaining
+              </p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Quick Stats</h3>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+              Quick Stats
+            </h3>
             <div className="space-y-3">
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-500 mb-1">Conflicts Detected</p>
-                <p className="text-xl font-bold text-amber-600">{conflictCount}</p>
+                <p className="text-xs text-slate-500 mb-1">
+                  Conflicts Detected
+                </p>
+                <p className="text-xl font-bold text-amber-600">
+                  {conflictCount}
+                </p>
               </div>
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                 <p className="text-xs text-slate-500 mb-1">Approved Today</p>
-                <p className="text-xl font-bold text-green-600">8</p>
+                <p className="text-xl font-bold text-green-600">
+                  {statistics.approvedToday}
+                </p>
               </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+              Daily View
+            </h3>
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-semibold text-sm">
+                  {formatDate(today.toISOString())}
+                </span>
+                <div className="flex gap-1">
+                  <span className="px-2 py-1 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700">
+                    Today
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {timelineItems.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    No pending requests scheduled for today.
+                  </p>
+                ) : (
+                  timelineItems.map((item, idx) => (
+                    <div
+                      className="flex items-center gap-3"
+                      key={`${item._id}-${idx}`}
+                    >
+                      <span className="text-[10px] w-12 font-medium text-slate-500">
+                        {item.start_time || "--:--"}
+                      </span>
+                      <div
+                        className={`h-2 flex-1 rounded-full ${
+                          item.has_conflict
+                            ? "bg-amber-400/50"
+                            : "bg-blue-500/40"
+                        }`}
+                        title={`${item.room?.name || "Room"} • ${
+                          item.user?.full_name || "Requester"
+                        }`}
+                      ></div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <button className="mt-4 w-full text-xs font-bold text-blue-600 hover:underline">
+                View Full Calendar
+              </button>
             </div>
           </div>
 
@@ -182,38 +277,52 @@ const PendingRequests = () => {
           {success && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 flex justify-between items-center">
               <span>{success}</span>
-              <button onClick={() => setSuccess('')} className="text-green-600 hover:text-green-800">✕</button>
+              <button
+                onClick={() => setSuccess("")}
+                className="text-green-600 hover:text-green-800"
+              >
+                ✕
+              </button>
             </div>
           )}
 
           {/* Filter Tabs */}
           <div className="flex bg-slate-200 p-1 rounded-xl w-fit mb-6">
             <button
-              onClick={() => { setFilterType('all'); setPage(1); }}
+              onClick={() => {
+                setFilterType("all");
+                setPage(1);
+              }}
               className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
-                filterType === 'all'
-                  ? 'bg-white shadow-sm text-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
+                filterType === "all"
+                  ? "bg-white shadow-sm text-blue-600"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               All Requests
             </button>
             <button
-              onClick={() => { setFilterType('priority'); setPage(1); }}
+              onClick={() => {
+                setFilterType("priority");
+                setPage(1);
+              }}
               className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
-                filterType === 'priority'
-                  ? 'bg-white shadow-sm text-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
+                filterType === "priority"
+                  ? "bg-white shadow-sm text-blue-600"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               Priority
             </button>
             <button
-              onClick={() => { setFilterType('conflict'); setPage(1); }}
+              onClick={() => {
+                setFilterType("conflict");
+                setPage(1);
+              }}
               className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-                filterType === 'conflict'
-                  ? 'bg-white shadow-sm text-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
+                filterType === "conflict"
+                  ? "bg-white shadow-sm text-blue-600"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               Conflicts
@@ -231,23 +340,39 @@ const PendingRequests = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">Requester</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">Room Information</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">Date & Time</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase text-center">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase text-right">Actions</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">
+                      Requester
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">
+                      Room Information
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">
+                      Date & Time
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase text-center">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase text-right">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {loading ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                      <td
+                        colSpan="5"
+                        className="px-6 py-12 text-center text-slate-500"
+                      >
                         Loading pending requests...
                       </td>
                     </tr>
                   ) : filteredBookings.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                      <td
+                        colSpan="5"
+                        className="px-6 py-12 text-center text-slate-500"
+                      >
                         No pending requests found
                       </td>
                     </tr>
@@ -256,32 +381,44 @@ const PendingRequests = () => {
                       <tr
                         key={booking._id}
                         className={`hover:bg-slate-50 transition-colors group ${
-                          booking.has_conflict ? 'border-l-4 border-l-amber-400' : ''
+                          booking.has_conflict
+                            ? "border-l-4 border-l-amber-400"
+                            : ""
                         }`}
                       >
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
                               {booking.user?.full_name
-                                ?.split(' ')
-                                .map(n => n[0])
-                                .join('')
-                                .toUpperCase() || 'U'}
+                                ?.split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase() || "U"}
                             </div>
                             <div>
-                              <p className="text-sm font-bold">{booking.user?.full_name}</p>
+                              <p className="text-sm font-bold">
+                                {booking.user?.full_name}
+                              </p>
                               <span className="text-xs font-bold uppercase bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                                {booking.user?.role === 'TEACHER' ? 'Lecturer' : booking.user?.role}
+                                {booking.user?.role === "TEACHER"
+                                  ? "Lecturer"
+                                  : booking.user?.role}
                               </span>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          <p className="text-sm font-bold">{booking.room?.name}</p>
-                          <p className="text-xs text-slate-500">{booking.room?.location}</p>
+                          <p className="text-sm font-bold">
+                            {booking.room?.name}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {booking.room?.location}
+                          </p>
                         </td>
                         <td className="px-6 py-5">
-                          <p className="text-sm font-medium">{formatDate(booking.date)}</p>
+                          <p className="text-sm font-medium">
+                            {formatDate(booking.date)}
+                          </p>
                           <p className="text-xs text-slate-500">
                             {booking.start_time} - {booking.end_time}
                           </p>
@@ -298,7 +435,8 @@ const PendingRequests = () => {
                               </>
                             ) : (
                               <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Clear
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>{" "}
+                                Clear
                               </>
                             )}
                           </span>
@@ -341,8 +479,9 @@ const PendingRequests = () => {
             {!loading && filteredBookings.length > 0 && (
               <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
                 <p className="text-xs text-slate-600">
-                  Showing {(page - 1) * 10 + 1} to {Math.min(page * 10, pagination.total)} of{' '}
-                  {pagination.total} requests
+                  Showing {(page - 1) * 10 + 1} to{" "}
+                  {Math.min(page * 10, pagination.total)} of {pagination.total}{" "}
+                  requests
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -352,7 +491,9 @@ const PendingRequests = () => {
                   >
                     Prev
                   </button>
-                  {[...Array(Math.min(3, Math.ceil(pagination.total / 10)))].map((_, i) => {
+                  {[
+                    ...Array(Math.min(3, Math.ceil(pagination.total / 10))),
+                  ].map((_, i) => {
                     const p = i + 1;
                     return (
                       <button
@@ -360,8 +501,8 @@ const PendingRequests = () => {
                         onClick={() => setPage(p)}
                         className={`px-3 py-1 text-xs font-bold rounded ${
                           page === p
-                            ? 'bg-blue-600 text-white'
-                            : 'border border-slate-300 bg-white hover:bg-slate-100'
+                            ? "bg-blue-600 text-white"
+                            : "border border-slate-300 bg-white hover:bg-slate-100"
                         }`}
                       >
                         {p}
@@ -391,32 +532,57 @@ const PendingRequests = () => {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <p className="text-xs text-slate-500 font-bold uppercase">Requester</p>
-                <p className="text-sm font-bold">{selectedBooking.user?.full_name}</p>
-                <p className="text-xs text-slate-600">{selectedBooking.user?.email}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 font-bold uppercase">Room</p>
-                <p className="text-sm font-bold">{selectedBooking.room?.name}</p>
+                <p className="text-xs text-slate-500 font-bold uppercase">
+                  Requester
+                </p>
+                <p className="text-sm font-bold">
+                  {selectedBooking.user?.full_name}
+                </p>
                 <p className="text-xs text-slate-600">
-                  {selectedBooking.room?.location} • Capacity: {selectedBooking.room?.capacity}
+                  {selectedBooking.user?.email}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-bold uppercase">Date & Time</p>
-                <p className="text-sm font-bold">{formatDate(selectedBooking.date)}</p>
+                <p className="text-xs text-slate-500 font-bold uppercase">
+                  Room
+                </p>
+                <p className="text-sm font-bold">
+                  {selectedBooking.room?.name}
+                </p>
+                <p className="text-xs text-slate-600">
+                  {selectedBooking.room?.location} • Capacity:{" "}
+                  {selectedBooking.room?.capacity}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-bold uppercase">
+                  Date & Time
+                </p>
+                <p className="text-sm font-bold">
+                  {formatDate(selectedBooking.date)}
+                </p>
                 <p className="text-xs text-slate-600">
                   {selectedBooking.start_time} - {selectedBooking.end_time}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-bold uppercase">Purpose</p>
-                <p className="text-sm">{selectedBooking.purpose || 'Not specified'}</p>
+                <p className="text-xs text-slate-500 font-bold uppercase">
+                  Purpose
+                </p>
+                <p className="text-sm">
+                  {selectedBooking.purpose || "Not specified"}
+                </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-bold uppercase">Status</p>
-                <Badge variant={selectedBooking.has_conflict ? 'cancelled' : 'confirmed'}>
-                  {selectedBooking.has_conflict ? 'Conflict Detected' : 'Clear'}
+                <p className="text-xs text-slate-500 font-bold uppercase">
+                  Status
+                </p>
+                <Badge
+                  variant={
+                    selectedBooking.has_conflict ? "cancelled" : "confirmed"
+                  }
+                >
+                  {selectedBooking.has_conflict ? "Conflict Detected" : "Clear"}
                 </Badge>
               </div>
               <div className="flex gap-3 pt-4">
@@ -449,14 +615,14 @@ const PendingRequests = () => {
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
             <div className="p-6 border-b border-slate-200">
               <h2 className="text-xl font-bold">
-                {rejectReason ? 'Reject Booking' : 'Approve or Reject?'}
+                {rejectReason ? "Reject Booking" : "Approve or Reject?"}
               </h2>
             </div>
             {!rejectReason ? (
               <div className="p-6 space-y-4">
                 <p className="text-sm text-slate-600">
-                  <strong>{selectedBooking.user?.full_name}</strong> is requesting{' '}
-                  <strong>{selectedBooking.room?.name}</strong> on{' '}
+                  <strong>{selectedBooking.user?.full_name}</strong> is
+                  requesting <strong>{selectedBooking.room?.name}</strong> on{" "}
                   <strong>{formatDate(selectedBooking.date)}</strong>
                 </p>
                 <div className="flex gap-3">
@@ -467,7 +633,7 @@ const PendingRequests = () => {
                     ✓ Approve
                   </Button>
                   <Button
-                    onClick={() => setRejectReason('')}
+                    onClick={() => setRejectReason("")}
                     variant="danger"
                     className="flex-1"
                   >
@@ -477,7 +643,7 @@ const PendingRequests = () => {
                 <button
                   onClick={() => {
                     setIsApproveModalOpen(false);
-                    setRejectReason('');
+                    setRejectReason("");
                   }}
                   className="w-full px-4 py-2 text-sm text-slate-600 hover:text-slate-900"
                 >
@@ -506,7 +672,7 @@ const PendingRequests = () => {
                     Submit Rejection
                   </Button>
                   <Button
-                    onClick={() => setRejectReason('Approve')}
+                    onClick={() => setRejectReason("Approve")}
                     variant="secondary"
                     className="flex-1"
                   >

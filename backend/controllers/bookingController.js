@@ -188,10 +188,50 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+// Get booking statistics
+const getBookingStatistics = async (req, res) => {
+  try {
+    // Get today's date at the start of the day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Count approved bookings today
+    const approvedToday = await Booking.countDocuments({
+      status: 'APPROVED',
+      updated_at: { $gte: today, $lt: tomorrow }
+    });
+
+    // Count pending bookings
+    const pendingTotal = await Booking.countDocuments({
+      status: 'PENDING'
+    });
+
+    // Count approved bookings
+    const approvedTotal = await Booking.countDocuments({
+      status: 'APPROVED'
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        approvedToday,
+        pendingTotal,
+        approvedTotal
+      }
+    });
+  } catch (error) {
+    console.error('getBookingStatistics error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   getPendingBookings,
   getBookingById,
   approveBooking,
   getMyBookings,
-  cancelBooking
+  cancelBooking,
+  getBookingStatistics
 };
