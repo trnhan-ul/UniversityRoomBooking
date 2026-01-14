@@ -50,6 +50,30 @@ export const logout = () => {
     localStorage.removeItem('user');
 };
 
+// Forgot Password - Request reset code
+export const forgotPassword = async (email) => {
+    try {
+        const response = await api.post('/auth/forgot-password', { email });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || { success: false, message: 'Network error' };
+    }
+};
+
+// Reset Password - Verify code and reset password
+export const resetPassword = async (email, code, newPassword) => {
+    try {
+        const response = await api.post('/auth/reset-password', {
+            email,
+            code,
+            newPassword
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || { success: false, message: 'Network error' };
+    }
+};
+
 // Lấy thông tin user hiện tại
 export const getCurrentUser = () => {
     const userStr = localStorage.getItem('user');
