@@ -22,6 +22,16 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// UC14 - Create booking
+export const createBooking = async (bookingData) => {
+  try {
+    const response = await api.post("/bookings", bookingData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
 // User bookings (UC19)
 export const getMyBookings = async (
   page = 1,
