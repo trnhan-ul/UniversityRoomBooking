@@ -10,6 +10,7 @@ import UserManagement from "./pages/UserManagement";
 import PendingRequests from "./pages/PendingRequests";
 import MyBookings from "./pages/MyBookings";
 import HomePage from "./pages/HomePage";
+import MyProfile from "./pages/MyProfile";
 import CreateBooking from "./pages/CreateBooking";
 
 function App() {
@@ -94,6 +95,7 @@ function App() {
               }
             />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/my-profile" element={<MyProfile />} />
             <Route path="/create-booking" element={<CreateBooking />} />
             <Route
               path="/dashboard"
