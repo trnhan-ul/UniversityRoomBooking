@@ -1,13 +1,13 @@
 import React from 'react';
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuthContext } from "./context/AuthContext";
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ProtectedRoute } from './components/common';
 import {
   Login,
-  AdminDashboard,
-  PendingRequests,
-  UserManagement,
-  MyBookings,
-} from "./pages";
+  StudentDashboard,
+  LecturerDashboard,
+  FacilityManagerDashboard,
+  AdministratorDashboard
+} from './pages';
 
 function App() {
   const { user, loading } = useAuthContext();
@@ -24,53 +24,56 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/login"
-          element={!user ? <Login /> : <Navigate to="/dashboard" replace />}
-        />
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
+      
+      {/* Protected Routes - Student */}
+      <Route 
+        path="/student/dashboard" 
+        element={
+          <ProtectedRoute allowedRoles={['STUDENT']}>
+            <StudentDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Protected Routes - Lecturer */}
+      <Route 
+        path="/lecturer/dashboard" 
+        element={
+          <ProtectedRoute allowedRoles={['LECTURER']}>
+            <LecturerDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Protected Routes - Facility Manager */}
+      <Route 
+        path="/facility-manager/dashboard" 
+        element={
+          <ProtectedRoute allowedRoles={['FACILITY_MANAGER']}>
+            <FacilityManagerDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Protected Routes - Administrator */}
+      <Route 
+        path="/administrator/dashboard" 
+        element={
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR']}>
+            <AdministratorDashboard />
+          </ProtectedRoute>
+        } 
+      />
 
-        {/* Protected Routes */}
-        {user && user.role === "ADMIN" && (
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        )}
-
-        {user && (user.role === "STAFF" || user.role === "ADMIN") && (
-          <Route path="/pending-requests" element={<PendingRequests />} />
-        )}
-
-        {user && user.role === "ADMIN" && (
-          <Route path="/user-management" element={<UserManagement />} />
-        )}
-
-        {user && (
-          <>
-            <Route
-              path="/homepage"
-              element={
-                user.role === "ADMIN" ? <AdminDashboard /> : <MyBookings />
-              }
-            />
-            <Route path="/my-bookings" element={<MyBookings />} />
-          </>
-        )}
-
-        {/* Fallback */}
-        <Route
-          path="/"
-          element={
-            user ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </div>
+      {/* Redirect root to login */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      
+      {/* Catch all - redirect to login */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 }
 

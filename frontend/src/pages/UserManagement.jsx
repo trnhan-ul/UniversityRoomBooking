@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getAllUsers, createUser, updateUser, deleteUser } from '../../services/userService';
-import { Button, Badge } from '../../components/common';
-import { useAuthContext } from '../../context/AuthContext';
-import { formatDate } from '../../utils/helpers';
+import { getAllUsers, createUser, updateUser } from '../services/userService';
+import { Button, Badge } from '../components/common';
+import { useAuthContext } from '../context/AuthContext';
+import { formatDate } from '../utils/helpers';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuthContext();

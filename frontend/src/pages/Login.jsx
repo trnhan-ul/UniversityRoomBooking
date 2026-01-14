@@ -50,7 +50,22 @@ const Login = () => {
       const success = await login(formData.email, formData.password);
       
       if (success) {
-        navigate('/dashboard');
+        // Get user from localStorage to check role
+        const userStr = localStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        
+        // Redirect based on role
+        if (user?.role === 'STUDENT') {
+          navigate('/student/dashboard');
+        } else if (user?.role === 'LECTURER') {
+          navigate('/lecturer/dashboard');
+        } else if (user?.role === 'FACILITY_MANAGER') {
+          navigate('/facility-manager/dashboard');
+        } else if (user?.role === 'ADMINISTRATOR') {
+          navigate('/administrator/dashboard');
+        } else {
+          navigate('/login');
+        }
       } else {
         setError('Invalid email or password');
       }

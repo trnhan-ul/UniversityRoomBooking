@@ -57,14 +57,22 @@ const login = async (req, res) => {
         if (user.status !== 'ACTIVE') {
             return res.status(403).json({
                 success: false,
-                message: 'Your account has been deactivated'
+                message: 'Your account has been deactivated. Please contact administrator.'
             });
         }
 
-        // 7. Tạo token
+        // 7. Kiểm tra email đã được xác thực chưa
+        if (!user.is_email_verified) {
+            return res.status(403).json({
+                success: false,
+                message: 'Please verify your email before logging in. Check your inbox for verification link.'
+            });
+        }
+
+        // 8. Tạo token
         const token = generateToken(user._id);
 
-        // 8. Trả về thông tin user và token (không trả password)
+        // 9. Trả về thông tin user và token (không trả password)
         res.status(200).json({
             success: true,
             message: 'Login successful',
@@ -75,7 +83,10 @@ const login = async (req, res) => {
                     email: user.email,
                     full_name: user.full_name,
                     role: user.role,
-                    phone_number: user.phone_number
+                    phone_number: user.phone_number,
+                    avatar_url: user.avatar_url,
+                    is_email_verified: user.is_email_verified,
+                    status: user.status
                 }
             }
         });
