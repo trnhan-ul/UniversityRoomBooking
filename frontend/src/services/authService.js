@@ -50,6 +50,41 @@ export const logout = () => {
     localStorage.removeItem('user');
 };
 
+// Đăng ký tài khoản mới
+export const register = async (email, password, full_name, phone_number) => {
+    try {
+        const response = await api.post('/auth/register', {
+            email,
+            password,
+            full_name,
+            phone_number
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || { success: false, message: 'Network error' };
+    }
+};
+
+// Xác thực email
+export const verifyEmail = async (token) => {
+    try {
+        const response = await api.get(`/auth/verify-email?token=${token}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || { success: false, message: 'Network error' };
+    }
+};
+
+// Gửi lại email xác thực
+export const resendVerificationEmail = async (email) => {
+    try {
+        const response = await api.post('/auth/resend-verification', { email });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || { success: false, message: 'Network error' };
+    }
+};
+
 // Forgot Password - Request reset code
 export const forgotPassword = async (email) => {
     try {

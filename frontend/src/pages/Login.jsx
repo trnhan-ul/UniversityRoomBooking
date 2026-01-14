@@ -89,7 +89,7 @@ const Login = () => {
       
       {/* Header Branding */}
       <div className="absolute top-8 left-8 flex items-center gap-2 z-10">
-        <div className="bg-[#136dec] p-2 rounded-lg text-white">
+        <div className="bg-[#FF6C00] p-2 rounded-lg text-white">
           <span className="material-symbols-outlined text-2xl">school</span>
         </div>
         <span className="text-xl font-bold tracking-tight text-[#0d131b]">FPT University</span>
