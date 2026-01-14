@@ -6,12 +6,16 @@ const {
   createUser,
   getAllUsers,
   updateUser,
-  deleteUser
-} = require('../controllers/userController');
+  deleteUser,
+  getAvailableRoles,
+} = require("../controllers/userController");
 
-// All routes require authentication and ADMIN role
+// Danh sách role hợp lệ (để FE sử dụng form chọn role)
+router.get("/roles", getAvailableRoles);
+
+// All routes below require authentication and ADMIN role
 router.use(authenticate);
-router.use(authorizeRoles("ADMINISTRATOR"));
+router.use(authorizeRoles(["ADMINISTRATOR"]));
 
 // Get all users with filters
 router.get('/', getAllUsers);
