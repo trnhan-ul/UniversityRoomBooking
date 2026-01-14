@@ -73,7 +73,7 @@ const StudentDashboard = () => {
             title="Search Rooms"
             description="Find available classrooms for your schedule"
             color="blue"
-            onClick={() => navigate('/rooms')}
+            onClick={() => navigate('/search-classrooms')}
           />
           <FeatureCard
             icon="book_online"

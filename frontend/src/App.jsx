@@ -15,6 +15,9 @@ import MyBookings from "./pages/MyBookings";
 import HomePage from "./pages/HomePage";
 import MyProfile from "./pages/MyProfile";
 import CreateBooking from "./pages/CreateBooking";
+import SearchClassrooms from "./pages/SearchClassrooms";
+import ClassroomDetails from "./pages/ClassroomDetails";
+import ClassroomScheduleGrid from "./pages/ClassroomScheduleGrid";
 
 function App() {
   const isAdminRole = (role) =>
@@ -112,6 +115,9 @@ function App() {
             <Route path="/my-bookings" element={<MyBookings />} />
             <Route path="/my-profile" element={<MyProfile />} />
             <Route path="/create-booking" element={<CreateBooking />} />
+            <Route path="/search-classrooms" element={<SearchClassrooms />} />
+            <Route path="/classroom-details" element={<ClassroomDetails />} />
+            <Route path="/schedule-grid" element={<ClassroomScheduleGrid />} />
             <Route
               path="/dashboard"
               element={<Navigate to={getDefaultPath(user.role)} replace />}
