@@ -73,18 +73,21 @@ const StudentDashboard = () => {
             title="Search Rooms"
             description="Find available classrooms for your schedule"
             color="blue"
+            onClick={() => navigate('/rooms')}
           />
           <FeatureCard
             icon="book_online"
             title="Book Room"
             description="Create a new room booking request"
             color="green"
+            onClick={() => navigate('/create-booking')}
           />
           <FeatureCard
             icon="calendar_month"
             title="My Bookings"
             description="View and manage your booking requests"
             color="purple"
+            onClick={() => navigate('/my-bookings')}
           />
           <FeatureCard
             icon="schedule"
@@ -110,7 +113,7 @@ const StudentDashboard = () => {
   );
 };
 
-const FeatureCard = ({ icon, title, description, color }) => {
+const FeatureCard = ({ icon, title, description, color, onClick }) => {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
     green: 'bg-green-50 text-green-600 hover:bg-green-100',
@@ -121,7 +124,10 @@ const FeatureCard = ({ icon, title, description, color }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
+    <div
+      onClick={onClick}
+      className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer"
+    >
       <div className={`w-12 h-12 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-4`}>
         <span className="material-symbols-outlined text-2xl">{icon}</span>
       </div>

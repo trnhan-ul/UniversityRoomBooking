@@ -1,5 +1,113 @@
-const Booking = require('../models/Booking');
-const mongoose = require('mongoose');
+const Booking = require("../models/Booking");
+const Room = require("../models/Room");
+const mongoose = require("mongoose");
+
+// UC14 - Create Booking
+const createBooking = async (req, res) => {
+  try {
+    const { room_id, date, start_time, end_time, purpose } = req.body;
+
+    // Validate required fields
+    if (!room_id || !date || !start_time || !end_time || !purpose) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
+
+    // Validate room exists and available
+    const room = await Room.findById(room_id);
+    if (!room) {
+      return res.status(404).json({
+        success: false,
+        message: "Room not found",
+      });
+    }
+
+    if (room.status !== "AVAILABLE") {
+      return res.status(400).json({
+        success: false,
+        message: "Room is not available",
+      });
+    }
+
+    // Validate date is not in the past
+    const bookingDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (bookingDate < today) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot book room in the past",
+      });
+    }
+
+    // Validate time format and logic
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (!timeRegex.test(start_time) || !timeRegex.test(end_time)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid time format. Use HH:mm",
+      });
+    }
+
+    const [startHour, startMin] = start_time.split(":").map(Number);
+    const [endHour, endMin] = end_time.split(":").map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    if (endMinutes <= startMinutes) {
+      return res.status(400).json({
+        success: false,
+        message: "End time must be after start time",
+      });
+    }
+
+    // Check for booking conflicts
+    const conflicts = await Booking.find({
+      room_id,
+      date: bookingDate,
+      status: { $in: ["PENDING", "APPROVED"] },
+      $or: [
+        {
+          start_time: { $lt: end_time },
+          end_time: { $gt: start_time },
+        },
+      ],
+    });
+
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "This time slot is already booked",
+      });
+    }
+
+    // Create booking
+    const booking = await Booking.create({
+      user_id: req.user._id,
+      room_id,
+      date: bookingDate,
+      start_time,
+      end_time,
+      purpose,
+      status: "PENDING",
+    });
+
+    // Populate room info
+    await booking.populate("room_id", "room_name room_code location capacity");
+
+    res.status(201).json({
+      success: true,
+      data: booking,
+      message: "Booking created successfully. Waiting for approval.",
+    });
+  } catch (error) {
+    console.error("createBooking error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 // Lấy danh sách booking đang ở trạng thái PENDING (cho Manager xem)
 // Sắp xếp theo date asc, sau đó theo room.name asc
@@ -10,45 +118,64 @@ const getPendingBookings = async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Sử dụng aggregation để lookup room và user, rồi sort theo date và room.name
-    const matchStage = { $match: { status: 'PENDING' } };
+    const matchStage = { $match: { status: "PENDING" } };
     const lookupRoom = {
       $lookup: {
-        from: 'rooms',
-        localField: 'room_id',
-        foreignField: '_id',
-        as: 'room'
-      }
+        from: "rooms",
+        localField: "room_id",
+        foreignField: "_id",
+        as: "room",
+      },
     };
     const lookupUser = {
       $lookup: {
-        from: 'users',
-        localField: 'user_id',
-        foreignField: '_id',
-        as: 'user'
-      }
+        from: "users",
+        localField: "user_id",
+        foreignField: "_id",
+        as: "user",
+      },
     };
-    const unwindRoom = { $unwind: { path: '$room', preserveNullAndEmptyArrays: true } };
-    const unwindUser = { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } };
+    const unwindRoom = {
+      $unwind: { path: "$room", preserveNullAndEmptyArrays: true },
+    };
+    const unwindUser = {
+      $unwind: { path: "$user", preserveNullAndEmptyArrays: true },
+    };
 
-    const sortStage = { $sort: { date: 1, 'room.name': 1, start_time: 1 } };
+    const sortStage = { $sort: { date: 1, "room.name": 1, start_time: 1 } };
 
     const facetStage = {
       $facet: {
-        data: [ { $skip: skip }, { $limit: limit } ],
-        totalCount: [ { $count: 'count' } ]
-      }
+        data: [{ $skip: skip }, { $limit: limit }],
+        totalCount: [{ $count: "count" }],
+      },
     };
 
-    const pipeline = [matchStage, lookupRoom, unwindRoom, lookupUser, unwindUser, sortStage, facetStage];
+    const pipeline = [
+      matchStage,
+      lookupRoom,
+      unwindRoom,
+      lookupUser,
+      unwindUser,
+      sortStage,
+      facetStage,
+    ];
 
     const results = await Booking.aggregate(pipeline);
     const bookings = (results[0] && results[0].data) || [];
-    const total = (results[0] && results[0].totalCount[0] && results[0].totalCount[0].count) || 0;
+    const total =
+      (results[0] &&
+        results[0].totalCount[0] &&
+        results[0].totalCount[0].count) ||
+      0;
 
-    res.status(200).json({ success: true, data: { bookings, pagination: { total, page, limit } } });
+    res.status(200).json({
+      success: true,
+      data: { bookings, pagination: { total, page, limit } },
+    });
   } catch (error) {
-    console.error('getPendingBookings error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("getPendingBookings error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -57,20 +184,24 @@ const getBookingById = async (req, res) => {
   try {
     const bookingId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(bookingId)) {
-      return res.status(400).json({ success: false, message: 'Invalid booking id' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid booking id" });
     }
     const booking = await Booking.findById(bookingId)
-      .populate('user_id', 'full_name email phone_number')
-      .populate('room_id', 'name location capacity');
+      .populate("user_id", "full_name email phone_number")
+      .populate("room_id", "name location capacity");
 
     if (!booking) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     }
 
     res.status(200).json({ success: true, data: booking });
   } catch (error) {
-    console.error('getBookingById error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("getBookingById error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -79,29 +210,37 @@ const approveBooking = async (req, res) => {
   try {
     const bookingId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(bookingId)) {
-      return res.status(400).json({ success: false, message: 'Invalid booking id' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid booking id" });
     }
     const { action, reject_reason } = req.body; // action: 'APPROVE' or 'REJECT'
 
-    if (!['APPROVE', 'REJECT'].includes(action)) {
-      return res.status(400).json({ success: false, message: 'Invalid action' });
+    if (!["APPROVE", "REJECT"].includes(action)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid action" });
     }
 
     const booking = await Booking.findById(bookingId);
     if (!booking) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     }
 
-    if (booking.status !== 'PENDING') {
-      return res.status(400).json({ success: false, message: 'Booking is not pending' });
+    if (booking.status !== "PENDING") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not pending" });
     }
 
-    if (action === 'APPROVE') {
-      booking.status = 'APPROVED';
+    if (action === "APPROVE") {
+      booking.status = "APPROVED";
       booking.approved_at = new Date();
       booking.approved_by = req.user ? req.user._id : null;
     } else {
-      booking.status = 'REJECTED';
+      booking.status = "REJECTED";
       booking.reject_reason = reject_reason || null;
       booking.approved_at = new Date();
       booking.approved_by = req.user ? req.user._id : null;
@@ -111,8 +250,8 @@ const approveBooking = async (req, res) => {
 
     res.status(200).json({ success: true, data: booking });
   } catch (error) {
-    console.error('approveBooking error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("approveBooking error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -126,34 +265,37 @@ const getMyBookings = async (req, res) => {
     const timeFilter = req.query.time;
 
     const query = { user_id: req.user._id };
-    
+
     if (statusFilter) {
-      const statuses = statusFilter.split(',').map(s => s.toUpperCase());
+      const statuses = statusFilter.split(",").map((s) => s.toUpperCase());
       query.status = { $in: statuses };
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    if (timeFilter === 'upcoming') {
+
+    if (timeFilter === "upcoming") {
       query.date = { $gte: today };
-    } else if (timeFilter === 'past') {
+    } else if (timeFilter === "past") {
       query.date = { $lt: today };
     }
 
     const [bookings, total] = await Promise.all([
       Booking.find(query)
-        .populate('room_id', 'name location capacity')
+        .populate("room_id", "name location capacity")
         .sort({ date: -1, start_time: -1 })
         .skip(skip)
         .limit(limit),
-      Booking.countDocuments(query)
+      Booking.countDocuments(query),
     ]);
 
-    res.status(200).json({ success: true, data: { bookings, pagination: { total, page, limit } } });
+    res.status(200).json({
+      success: true,
+      data: { bookings, pagination: { total, page, limit } },
+    });
   } catch (error) {
-    console.error('getMyBookings error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("getMyBookings error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -162,29 +304,41 @@ const cancelBooking = async (req, res) => {
   try {
     const bookingId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(bookingId)) {
-      return res.status(400).json({ success: false, message: 'Invalid booking id' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid booking id" });
     }
 
     const booking = await Booking.findById(bookingId);
     if (!booking) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     }
 
     if (booking.user_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Forbidden: not your booking' });
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden: not your booking" });
     }
 
-    if (!['PENDING', 'APPROVED'].includes(booking.status)) {
-      return res.status(400).json({ success: false, message: 'Cannot cancel this booking' });
+    if (!["PENDING", "APPROVED"].includes(booking.status)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Cannot cancel this booking" });
     }
 
-    booking.status = 'CANCELLED';
+    booking.status = "CANCELLED";
     await booking.save();
 
-    res.status(200).json({ success: true, data: booking, message: 'Booking cancelled successfully' });
+    res.status(200).json({
+      success: true,
+      data: booking,
+      message: "Booking cancelled successfully",
+    });
   } catch (error) {
-    console.error('cancelBooking error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("cancelBooking error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -199,18 +353,18 @@ const getBookingStatistics = async (req, res) => {
 
     // Count approved bookings today
     const approvedToday = await Booking.countDocuments({
-      status: 'APPROVED',
-      updated_at: { $gte: today, $lt: tomorrow }
+      status: "APPROVED",
+      updated_at: { $gte: today, $lt: tomorrow },
     });
 
     // Count pending bookings
     const pendingTotal = await Booking.countDocuments({
-      status: 'PENDING'
+      status: "PENDING",
     });
 
     // Count approved bookings
     const approvedTotal = await Booking.countDocuments({
-      status: 'APPROVED'
+      status: "APPROVED",
     });
 
     res.status(200).json({
@@ -218,20 +372,21 @@ const getBookingStatistics = async (req, res) => {
       data: {
         approvedToday,
         pendingTotal,
-        approvedTotal
-      }
+        approvedTotal,
+      },
     });
   } catch (error) {
-    console.error('getBookingStatistics error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("getBookingStatistics error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 module.exports = {
+  createBooking,
   getPendingBookings,
   getBookingById,
   approveBooking,
   getMyBookings,
   cancelBooking,
-  getBookingStatistics
+  getBookingStatistics,
 };
