@@ -1,40 +1,50 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const bookingController = require('../controllers/bookingController');
-const { authenticate, authorizeRoles } = require('../middleware/auth');
+const Booking = require("../models/Booking");
+const { authenticate, authorizeRoles } = require("../middleware/auth");
 
-// GET /api/bookings/pending  -> only Manager/Admin
-router.get(
-  "/pending",
-  authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
-  bookingController.getPendingBookings
-);
-// GET /api/bookings/statistics -> get booking statistics
-router.get(
-  "/statistics",
-  authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
-  bookingController.getBookingStatistics
-);
+// POST /api/bookings -> create new booking
+router.post("/", authenticate, async (req, res) => {
+  try {
+    
+    const { room_id, date, start_time, end_time, purpose } = req.body;
+    
+    const booking = await Booking.create({
+      user_id: req.user._id,
+      room_id,
+      date: new Date(date),
+      start_time,
+      end_time,
+      purpose: purpose.trim(),
+      status: "PENDING",
+    });
 
-// GET /api/bookings/:id -> view booking detail (Manager/Admin)
-router.get(
-  "/:id",
-  authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
-  bookingController.getBookingById
-);
+    
+    res.status(201).json({
+      success: true,
+      message: "Booking created successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 
-// PATCH /api/bookings/:id/approve -> only Manager/Admin
-router.patch(
-  "/:id/approve",
-  authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
-  bookingController.approveBooking
-);
-
-// PATCH /api/bookings/:id/cancel -> user cancel own booking
-router.patch('/:id/cancel', authenticate, bookingController.cancelBooking);
+// GET /api/bookings/my-bookings
+router.get("/my-bookings", authenticate, async (req, res) => {
+  try {
+    const bookings = await Booking.find({ user_id: req.user._id })
+      .populate("room_id", "room_name room_code location")
+      .sort({ date: -1 });
+    
+    res.json({ success: true, data: { bookings } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 module.exports = router;

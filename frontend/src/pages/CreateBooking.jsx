@@ -75,15 +75,12 @@ const CreateBooking = () => {
     setLoading(true);
 
     try {
-      console.log('Submitting booking with data:', formData);
       const response = await createBooking(formData);
-      console.log('Booking response:', response);
       if (response.success) {
         alert('Booking created successfully! Waiting for approval.');
         navigate('/my-bookings');
       }
     } catch (err) {
-      console.error('Booking error:', err);
       setError(err.message || 'Failed to create booking');
     } finally {
       setLoading(false);
