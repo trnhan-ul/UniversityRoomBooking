@@ -1,4 +1,5 @@
 import axios from 'axios';
+import api from './authService';
 
 const API_URL = 'http://localhost:5000/api/users';
 
@@ -7,6 +8,40 @@ const getAuthHeader = () => {
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
+
+// ========== PROFILE MANAGEMENT ==========
+
+// Get current user profile
+export const getMyProfile = async () => {
+  try {
+    const response = await api.get('/users/me');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Network error' };
+  }
+};
+
+// Update user profile
+export const updateMyProfile = async (profileData) => {
+  try {
+    const response = await api.put('/users/me', profileData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Network error' };
+  }
+};
+
+// Change password
+export const changePassword = async (passwordData) => {
+  try {
+    const response = await api.put('/users/me/password', passwordData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Network error' };
+  }
+};
+
+// ========== USER MANAGEMENT (ADMIN) ==========
 
 // UC41: Get user by ID
 export const getUserById = async (userId) => {

@@ -10,6 +10,7 @@ import UserManagement from "./pages/UserManagement";
 import PendingRequests from "./pages/PendingRequests";
 import MyBookings from "./pages/MyBookings";
 import HomePage from "./pages/HomePage";
+import MyProfile from "./pages/MyProfile";
 
 function App() {
   const isAdminRole = (role) =>
@@ -93,6 +94,7 @@ function App() {
               }
             />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/my-profile" element={<MyProfile />} />
             <Route
               path="/dashboard"
               element={<Navigate to={getDefaultPath(user.role)} replace />}

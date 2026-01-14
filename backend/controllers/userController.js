@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 // Danh sách role hợp lệ lấy từ enum của User
 const AVAILABLE_ROLES = [
@@ -279,9 +280,14 @@ exports.updateUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Update user error:", error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     res.status(500).json({
       success: false,
-      message: "Failed to update user",
+      message: error.message || 'Failed to update profile'
     });
   }
 };
@@ -336,3 +342,228 @@ exports.deleteUser = async (req, res) => {
     });
   }
 };
+
+// ============================================
+// USER PROFILE MANAGEMENT (Self-Service)
+// ============================================
+
+// UC-XX: Get My Profile
+exports.getMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id; // From authenticate middleware
+
+    // Find user without password
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Return user info (password already excluded by default select: false)
+    res.status(200).json({
+      success: true,
+      data: {
+        id: user._id,
+        email: user.email,
+        full_name: user.full_name,
+        phone_number: user.phone_number,
+        avatar_url: user.avatar_url,
+        role: user.role,
+        status: user.status,
+        is_email_verified: user.is_email_verified,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      }
+    });
+
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
+// UC-XX: Update My Profile
+exports.updateMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id; // From authenticate middleware
+    const { full_name, phone_number, avatar_url } = req.body;
+
+    // Build update object with only allowed fields
+    const updateData = {};
+
+    // Validate and add full_name
+    if (full_name !== undefined) {
+      if (typeof full_name !== 'string' || full_name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name cannot be empty'
+        });
+      }
+      updateData.full_name = full_name.trim();
+    }
+
+    // Validate and add phone_number
+    if (phone_number !== undefined) {
+      if (phone_number && !/^[0-9]{10,11}$/.test(phone_number)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Phone number must be 10-11 digits'
+        });
+      }
+      updateData.phone_number = phone_number;
+    }
+
+    // Add avatar_url
+    if (avatar_url !== undefined) {
+      // Validate base64 image size (max ~5MB base64 string)
+      if (avatar_url && avatar_url.length > 7000000) {
+        return res.status(400).json({
+          success: false,
+          message: 'Avatar image is too large. Please use an image smaller than 5MB'
+        });
+      }
+      updateData.avatar_url = avatar_url;
+    }
+
+    // Check if there's anything to update
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update'
+      });
+    }
+
+    // Add metadata
+    updateData.updated_by = userId;
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Return updated user info
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        id: updatedUser._id,
+        email: updatedUser.email,
+        full_name: updatedUser.full_name,
+        phone_number: updatedUser.phone_number,
+        avatar_url: updatedUser.avatar_url,
+        role: updatedUser.role,
+        updated_at: updatedUser.updated_at
+      }
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: Object.values(error.errors)[0].message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
+// UC-XX: Change My Password
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id; // From authenticate middleware
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    // 1. Validate input
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password, new password and confirm password are required'
+      });
+    }
+
+    // 2. Validate new password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    // 3. Check if new password matches confirm password
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password and confirm password do not match'
+      });
+    }
+
+    // 4. Check if new password is same as current password
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+
+    // 5. Find user with password
+    const user = await User.findById(userId).select('+password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // 6. Verify current password
+    const isPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // 7. Update password (will be auto-hashed by pre-save hook)
+    user.password = newPassword;
+    user.updated_by = userId;
+    await user.save();
+
+    // 8. Return success response
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
