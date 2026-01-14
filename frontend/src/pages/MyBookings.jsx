@@ -38,18 +38,27 @@ const MyBookings = () => {
         statusFilter = "CANCELLED";
       }
 
+      console.log('Fetching bookings with params:', { page, statusFilter, timeFilter });
       const response = await getMyBookings(page, 20, statusFilter, timeFilter);
+      console.log('API Response:', response);
 
-      if (response.success) {
-        setBookings(response.data.bookings);
-        setTotal(response.data.pagination.total);
-        const limit = response.data.pagination.limit;
-        setTotalPages(Math.ceil(response.data.pagination.total / limit));
+      if (response.success && response.data) {
+        setBookings(response.data.bookings || []);
+        setTotal(response.data.pagination?.total || 0);
+        const limit = response.data.pagination?.limit || 20;
+        setTotalPages(Math.ceil((response.data.pagination?.total || 0) / limit));
       } else {
         setError(response.message || "Failed to load bookings");
+        setBookings([]);
+        setTotal(0);
+        setTotalPages(1);
       }
     } catch (err) {
+      console.error('Fetch bookings error:', err);
       setError(err.message || "An error occurred");
+      setBookings([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -203,11 +212,11 @@ const MyBookings = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-blue-600">
-                            <span>{getRoomIcon(booking.room_id?.name)}</span>
+                            <span>{getRoomIcon(booking.room_id?.room_name)}</span>
                           </div>
                           <div>
                             <p className="font-bold text-gray-900 dark:text-white">
-                              {booking.room_id?.name || "N/A"}
+                              {booking.room_id?.room_name || "N/A"}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {booking.room_id?.location || ""}
