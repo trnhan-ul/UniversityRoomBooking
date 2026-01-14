@@ -173,16 +173,16 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 p-8">
       {/* Top Header */}
-      <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
+      <header className="mb-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold">User Management</h1>
+          <h1 className="text-2xl font-semibold">User Management</h1>
           <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
             {pagination.total} Total Users
           </span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mt-4">
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-2"
@@ -194,7 +194,7 @@ const UserManagement = () => {
       </header>
 
       {/* Main Content */}
-      <div className="p-8">
+      <div>
         {/* Messages */}
         {error && (
           <div className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">

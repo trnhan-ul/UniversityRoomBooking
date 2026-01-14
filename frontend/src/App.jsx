@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthContext } from "./context/AuthContext";
+import { AdminLayout } from "./components/layout";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagement from "./pages/UserManagement";
@@ -45,17 +46,38 @@ function App() {
 
         {/* Protected Routes */}
         {user && isAdminRole(user.role) && (
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminLayout>
+                <AdminDashboard />
+              </AdminLayout>
+            }
+          />
         )}
 
         {user && user.role === "ADMINISTRATOR" && (
-          <Route path="/user-management" element={<UserManagement />} />
+          <Route
+            path="/user-management"
+            element={
+              <AdminLayout>
+                <UserManagement />
+              </AdminLayout>
+            }
+          />
         )}
 
         {user &&
           (user.role === "FACILITY_MANAGER" ||
             user.role === "ADMINISTRATOR") && (
-            <Route path="/pending-requests" element={<PendingRequests />} />
+            <Route
+              path="/pending-requests"
+              element={
+                <AdminLayout>
+                  <PendingRequests />
+                </AdminLayout>
+              }
+            />
           )}
 
         {user && (

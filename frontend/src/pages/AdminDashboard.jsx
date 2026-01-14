@@ -1,10 +1,6 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthContext } from "../context/AuthContext";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-  const { user: currentUser, logout } = useAuthContext();
   const [analytics] = useState({
     totalUsers: 12450,
     usersTrend: "+5.2%",
@@ -90,92 +86,10 @@ const AdminDashboard = () => {
     }
   };
 
-  const navigationItems = [
-    { label: "Dashboard", icon: "dashboard", active: true, action: null },
-    {
-      label: "User Management",
-      icon: "group",
-      active: false,
-      action: () => navigate("/user-management"),
-    },
-    {
-      label: "Room Inventory",
-      icon: "meeting_room",
-      active: false,
-      action: null,
-    },
-    { label: "Reports", icon: "analytics", active: false, action: null },
-    { label: "Settings", icon: "settings", active: false, action: null },
-  ];
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  const getRoleLabel = (role) => {
-    const labels = {
-      ADMIN: "System Admin",
-      STAFF: "Department Manager",
-      TEACHER: "Lecturer",
-      STUDENT: "Student",
-    };
-    return labels[role] || role;
-  };
-
   return (
-    <div className="light min-h-screen flex bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col h-screen sticky top-0 shadow-sm">
-        <div className="p-6 flex flex-col gap-8 h-full">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="bg-primary rounded-lg p-2 text-white">
-              <span className="material-symbols-outlined text-2xl">school</span>
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-slate-900 dark:text-white text-base font-bold leading-tight">
-                UniBooking SaaS
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-xs font-normal">
-                Super Admin Console
-              </p>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex flex-col gap-1 flex-grow">
-            {navigationItems.map((item, idx) => (
-              <button
-                key={idx}
-                onClick={item.action}
-                disabled={!item.action}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                  item.active
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                }`}
-              >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                <span className="text-sm">{item.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          {/* Support Button */}
-          <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-800">
-            <button className="w-full bg-primary text-white py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors">
-              <span className="material-symbols-outlined text-sm">
-                support_agent
-              </span>
-              Support Center
-            </button>
-          </div>
-        </div>
-      </aside>
-
+    <div className="min-h-screen bg-background-light dark:bg-background-dark">
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark">
+      <main className="flex-1 flex flex-col min-w-0">
         {/* Top Navigation Bar */}
         <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 px-8 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-4 flex-1">
@@ -200,24 +114,6 @@ const AdminDashboard = () => {
               <span className="material-symbols-outlined">notifications</span>
               <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
             </button>
-            <div className="h-8 w-[1px] bg-slate-200 dark:border-slate-700 mx-2"></div>
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden md:block">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {currentUser?.full_name || currentUser?.email || "Admin"}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {getRoleLabel(currentUser?.role)}
-                </p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="ml-2 p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                title="Logout"
-              >
-                <span className="material-symbols-outlined">logout</span>
-              </button>
-            </div>
           </div>
         </header>
 
