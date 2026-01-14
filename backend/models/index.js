@@ -4,7 +4,6 @@ module.exports = {
   Room: require('./Room'),
   Setting: require('./Setting'),
   PasswordReset: require('./PasswordReset'),
-  Role: require('./Role'),
   Booking: require('./Booking'),
   RoomSchedule: require('./RoomSchedule'),
   Equipment: require('./Equipment'),

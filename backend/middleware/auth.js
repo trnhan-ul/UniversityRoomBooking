@@ -28,7 +28,7 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// roles: array of allowed role names e.g. ['MANAGER','ADMIN']
+// roles: array of allowed role names e.g. ['ADMINISTRATOR', 'FACILITY_MANAGER']
 const authorizeRoles = (roles = []) => (req, res, next) => {
   try {
     if (!req.user) {
