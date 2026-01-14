@@ -33,8 +33,8 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 const authRoutes = require("./routes/authRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
-const userRoutes = require("./routes/userRoutes");
 const roomRoutes = require("./routes/roomRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
