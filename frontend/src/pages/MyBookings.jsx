@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { getMyBookings, cancelBooking } from "../services/bookingService";
 import {
   formatDate,
@@ -13,6 +14,7 @@ import { useAuthContext } from "../context/AuthContext";
 
 const MyBookings = () => {
   const { user } = useAuthContext();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,9 +40,7 @@ const MyBookings = () => {
         statusFilter = "CANCELLED";
       }
 
-      console.log('Fetching bookings with params:', { page, statusFilter, timeFilter });
       const response = await getMyBookings(page, 20, statusFilter, timeFilter);
-      console.log('API Response:', response);
 
       if (response.success && response.data) {
         setBookings(response.data.bookings || []);
@@ -54,7 +54,6 @@ const MyBookings = () => {
         setTotalPages(1);
       }
     } catch (err) {
-      console.error('Fetch bookings error:', err);
       setError(err.message || "An error occurred");
       setBookings([]);
       setTotal(0);
@@ -240,7 +239,10 @@ const MyBookings = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
-                          <button className="text-blue-600 text-sm font-semibold hover:underline">
+                          <button 
+                            onClick={() => navigate(`/booking-detail/${booking._id}`, { state: { booking } })}
+                            className="text-blue-600 text-sm font-semibold hover:underline"
+                          >
                             View Details
                           </button>
                           {["PENDING", "APPROVED"].includes(booking.status) && (
