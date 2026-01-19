@@ -21,6 +21,12 @@ const AdminLayout = ({ children }) => {
       roles: ["ADMINISTRATOR"],
     },
     {
+      path: "/pending-requests",
+      icon: "⏳",
+      label: "Pending Requests",
+      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
+    },
+    {
       path: "/room-inventory",
       icon: "🏛️",
       label: "Room Inventory",
