@@ -31,12 +31,45 @@ const Register = () => {
     e.preventDefault();
     setError('');
     
-    // Validation
-    if (!formData.email || !formData.password || !formData.confirmPassword || !formData.full_name) {
-      setError('Please fill in all required fields');
+    // 1. Validate required fields
+    if (!formData.full_name || !formData.full_name.trim()) {
+      setError('Full name is required');
+      return;
+    }
+
+    if (!formData.email || !formData.email.trim()) {
+      setError('Email is required');
+      return;
+    }
+
+    if (!formData.password) {
+      setError('Password is required');
+      return;
+    }
+
+    if (!formData.confirmPassword) {
+      setError('Please confirm your password');
       return;
     }
     
+    // 2. Validate full name format
+    if (formData.full_name.trim().length < 2) {
+      setError('Full name must be at least 2 characters');
+      return;
+    }
+
+    if (formData.full_name.trim().length > 100) {
+      setError('Full name is too long (maximum 100 characters)');
+      return;
+    }
+
+    // Check if name contains only valid characters (letters, spaces, Vietnamese characters)
+    if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(formData.full_name.trim())) {
+      setError('Full name should only contain letters and spaces');
+      return;
+    }
+    
+    // 3. Validate email format
     if (!validateEmail(formData.email)) {
       setError('Invalid email format');
       return;
@@ -47,14 +80,50 @@ const Register = () => {
       return;
     }
 
+    // 4. Validate password strength
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters long');
       return;
     }
 
+    if (formData.password.length > 50) {
+      setError('Password is too long (maximum 50 characters)');
+      return;
+    }
+
+    // Check password complexity (optional: at least one letter and one number)
+    if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(formData.password)) {
+      setError('Password must contain at least one letter and one number');
+      return;
+    }
+
+    // 5. Validate password match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
+    }
+
+    // 6. Validate phone number if provided
+    if (formData.phone_number && formData.phone_number.trim() !== '') {
+      const cleanPhone = formData.phone_number.replace(/\s/g, '');
+      
+      // Check if contains only digits
+      if (!/^[0-9]+$/.test(cleanPhone)) {
+        setError('Phone number must contain only digits');
+        return;
+      }
+
+      // Check length
+      if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+        setError('Phone number must be 10-11 digits');
+        return;
+      }
+
+      // Check Vietnamese phone format (starts with 0)
+      if (!cleanPhone.startsWith('0')) {
+        setError('Phone number must start with 0');
+        return;
+      }
     }
     
     // Register

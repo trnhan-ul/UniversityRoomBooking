@@ -8,21 +8,19 @@ const PasswordReset = require('../models/PasswordReset');
 const { PASSWORD_RESET_EXPIRY } = require('../config/constants');
 const { passwordResetTemplate, emailVerificationTemplate } = require('../templates/emailTemplates');
 
-// Tạo JWT token
 const generateToken = (userId) => {
     return jwt.sign(
         { id: userId },
         process.env.JWT_SECRET || 'your-secret-key',
-        { expiresIn: '7d' } // Token hết hạn sau 7 ngày
+        { expiresIn: '7d' }
     );
 };
 
-// Đăng nhập
+
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Kiểm tra email và password có được nhập không
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -30,7 +28,6 @@ const login = async (req, res) => {
             });
         }
 
-        // 2. Kiểm tra email có đúng định dạng @fpt.edu.vn không
         if (!email.endsWith('@fpt.edu.vn')) {
             return res.status(400).json({
                 success: false,
@@ -38,10 +35,8 @@ const login = async (req, res) => {
             });
         }
 
-        // 3. Tìm user trong database (kèm theo password để so sánh)
         const user = await User.findOne({ email }).select('+password');
 
-        // 4. Kiểm tra user có tồn tại không
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -49,7 +44,6 @@ const login = async (req, res) => {
             });
         }
 
-        // 5. So sánh password
         const isPasswordMatch = await bcrypt.compare(password, user.password);
 
         if (!isPasswordMatch) {
@@ -59,7 +53,6 @@ const login = async (req, res) => {
             });
         }
 
-        // 6. Kiểm tra trạng thái tài khoản
         if (user.status !== 'ACTIVE') {
             return res.status(403).json({
                 success: false,
@@ -67,7 +60,6 @@ const login = async (req, res) => {
             });
         }
 
-        // 7. Kiểm tra email đã được xác thực chưa
         if (!user.is_email_verified) {
             return res.status(403).json({
                 success: false,
@@ -75,10 +67,8 @@ const login = async (req, res) => {
             });
         }
 
-        // 8. Tạo token
         const token = generateToken(user._id);
 
-        // 9. Trả về thông tin user và token (không trả password)
         res.status(200).json({
             success: true,
             message: 'Login successful',
@@ -106,11 +96,6 @@ const login = async (req, res) => {
     }
 };
 
-// ============================================
-// EMAIL VERIFICATION FUNCTIONS (REGISTER)
-// ============================================
-
-// Helper: Tạo email transporter
 const createEmailTransporter = () => {
     return nodemailer.createTransport({
         host: process.env.EMAIL_HOST || 'smtp.gmail.com',
@@ -123,7 +108,6 @@ const createEmailTransporter = () => {
     });
 };
 
-// Helper: Gửi email verification link
 const sendVerificationEmail = async (email, token) => {
     try {
         const transporter = createEmailTransporter();
@@ -144,12 +128,10 @@ const sendVerificationEmail = async (email, token) => {
     }
 };
 
-// Register new user
 const register = async (req, res) => {
     try {
         const { email, password, full_name, phone_number } = req.body;
 
-        // 1. Validate required fields
         if (!email || !password || !full_name) {
             return res.status(400).json({
                 success: false,
@@ -157,7 +139,36 @@ const register = async (req, res) => {
             });
         }
 
-        // 2. Validate FPT email
+        const trimmedName = full_name.trim();
+        if (trimmedName.length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: 'Full name must be at least 2 characters'
+            });
+        }
+
+        if (trimmedName.length > 100) {
+            return res.status(400).json({
+                success: false,
+                message: 'Full name is too long (maximum 100 characters)'
+            });
+        }
+
+        if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(trimmedName)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Full name should only contain letters and spaces'
+            });
+        }
+
+        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email format'
+            });
+        }
+
         if (!email.endsWith('@fpt.edu.vn')) {
             return res.status(400).json({
                 success: false,
@@ -165,7 +176,6 @@ const register = async (req, res) => {
             });
         }
 
-        // 3. Validate password strength
         if (password.length < 6) {
             return res.status(400).json({
                 success: false,
@@ -173,7 +183,45 @@ const register = async (req, res) => {
             });
         }
 
-        // 4. Check if email already exists
+        if (password.length > 50) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password is too long (maximum 50 characters)'
+            });
+        }
+
+        if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must contain at least one letter and one number'
+            });
+        }
+
+        if (phone_number) {
+            const cleanPhone = phone_number.replace(/\s/g, '');
+
+            if (!/^[0-9]+$/.test(cleanPhone)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Phone number must contain only digits'
+                });
+            }
+
+            if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Phone number must be 10-11 digits'
+                });
+            }
+
+            if (!cleanPhone.startsWith('0')) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Phone number must start with 0'
+                });
+            }
+        }
+
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({
@@ -182,38 +230,32 @@ const register = async (req, res) => {
             });
         }
 
-        // 5. Create new user (password will be auto-hashed by pre-save hook)
         const user = await User.create({
             email,
             password,
             full_name,
-            phone_number: phone_number || null,
-            role: 'STUDENT', // Default role
+            phone_number: phone_number ? phone_number.replace(/\s/g, '') : null,
+            role: 'STUDENT',
             is_email_verified: false,
             status: 'ACTIVE'
         });
 
-        // 6. Generate verification token (valid for 24 hours)
         const verificationToken = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 24);
 
-        // 7. Save verification token
         await EmailVerification.create({
             user_id: user._id,
             token: verificationToken,
             expires_at: expiresAt
         });
 
-        // 8. Send verification email
         const emailResult = await sendVerificationEmail(email, verificationToken);
 
         if (!emailResult.success) {
             console.error('Failed to send verification email:', emailResult.error);
-            // Don't fail registration, user can resend later
         }
 
-        // 9. Return success response
         res.status(201).json({
             success: true,
             message: 'Registration successful! Please check your email to verify your account.',
@@ -225,6 +267,22 @@ const register = async (req, res) => {
 
     } catch (error) {
         console.error('Register error:', error);
+
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                success: false,
+                message: messages.join(', ')
+            });
+        }
+
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email already exists'
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: 'Server error. Please try again later.'
@@ -245,10 +303,9 @@ const verifyEmail = async (req, res) => {
             });
         }
 
-        // 2. Find verification record
+        // 2. Find verification record (bao gồm cả token đã verified)
         const verification = await EmailVerification.findOne({
             token,
-            verified_at: null,
             expires_at: { $gt: new Date() }
         });
 
@@ -259,7 +316,7 @@ const verifyEmail = async (req, res) => {
             });
         }
 
-        // 3. Find and update user
+        // 3. Find user
         const user = await User.findById(verification.user_id);
 
         if (!user) {
@@ -269,15 +326,23 @@ const verifyEmail = async (req, res) => {
             });
         }
 
-        // 4. Update user verification status
+        // 4. Kiểm tra nếu email đã được verify rồi (idempotent - cho phép gọi nhiều lần)
+        if (user.is_email_verified && verification.verified_at) {
+            return res.status(200).json({
+                success: true,
+                message: 'Email already verified! You can now login to your account.'
+            });
+        }
+
+        // 5. Update user verification status
         user.is_email_verified = true;
         await user.save();
 
-        // 5. Mark verification as completed
+        // 6. Mark verification as completed
         verification.verified_at = new Date();
         await verification.save();
 
-        // 6. Return success
+        // 7. Return success
         res.status(200).json({
             success: true,
             message: 'Email verified successfully! You can now login to your account.'
@@ -589,11 +654,39 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const verifyToken = async (req, res) => {
+    try {
+        res.status(200).json({
+            success: true,
+            message: 'Token is valid',
+            data: {
+                user: {
+                    id: req.user._id,
+                    email: req.user.email,
+                    full_name: req.user.full_name,
+                    role: req.user.role,
+                    phone_number: req.user.phone_number,
+                    avatar_url: req.user.avatar_url,
+                    is_email_verified: req.user.is_email_verified,
+                    status: req.user.status
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Verify token error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error. Please try again later.'
+        });
+    }
+};
+
 module.exports = {
     login,
     register,
     verifyEmail,
     resendVerificationEmail,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    verifyToken
 };
