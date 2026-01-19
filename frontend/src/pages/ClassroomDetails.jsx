@@ -1,12 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import { getRoomById } from '../services/roomService';
 
 const ClassroomDetails = () => {
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const [searchParams] = useSearchParams();
   const roomId = searchParams.get('roomId');
+  const [room, setRoom] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // Fetch room data from API
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      if (!roomId) return;
+      
+      try {
+        setLoading(true);
+        const response = await getRoomById(roomId);
+        if (response.success) {
+          setRoom(response.data);
+        } else {
+          // Fallback to mock data if API fails
+          const mockRooms = window.mockRooms || [];
+          const mockRoom = mockRooms.find(r => r._id === roomId) || mockRooms[0] || {};
+          setRoom(mockRoom);
+        }
+      } catch (error) {
+        console.error('Error fetching room:', error);
+        // Fallback to mock data
+        const mockRooms = window.mockRooms || [];
+        const mockRoom = mockRooms.find(r => r._id === roomId) || mockRooms[0] || {};
+        setRoom(mockRoom);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRoomData();
+  }, [roomId]);
+
+  // Equipment icon mapping
+  const equipmentIcons = {
+    projector: { icon: 'videocam', title: 'Projector' },
+    ac: { icon: 'ac_unit', title: 'Air Conditioning' },
+    whiteboard: { icon: 'draw', title: 'Whiteboard' },
+    computer: { icon: 'desktop_windows', title: 'Workstations' },
+    natural_light: { icon: 'wb_sunny', title: 'Natural Light' }
+  };
+
+  // Get room image
+  const roomImages = window.roomImages || [];
+  const mockRooms = window.mockRooms || [];
+  const roomIndex = mockRooms.findIndex(r => r._id === roomId);
+  const roomImage = roomImages[roomIndex >= 0 ? roomIndex : 0] || roomImages[0];
+
+  if (loading) {
+    return (
+      <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Loading room details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
@@ -23,8 +82,6 @@ const ClassroomDetails = () => {
             <nav className="hidden md:flex items-center gap-6">
               <a onClick={() => navigate('/search-classrooms')} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors cursor-pointer">Classrooms</a>
               <a onClick={() => navigate('/my-bookings')} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors cursor-pointer">My Bookings</a>
-              <a className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors cursor-pointer" href="#">Buildings</a>
-              <a className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors cursor-pointer" href="#">Reports</a>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -49,16 +106,16 @@ const ClassroomDetails = () => {
             {/* Hero Section & Gallery */}
             <section className="space-y-4">
               <div className="relative group h-[400px] w-full rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800">
-                <div className="absolute inset-0 bg-cover bg-center" data-alt="Wide shot of a modern university lecture hall with rows of wooden desks" style={{backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuBqC1cwG6SnpEPcMUZRjCIjrfpNl8LOl4vb1NZLJHc-eJNUn5teQn2C7YgmlrO9xJT44X0yusnI-vwZe967vjrSPSZPkYgSEX8R6eEGc9MxbWoelRnhPXYphHBhHhfjxMwDbR996tXfJFsOW1AE3oo0vriJJCkeDDfDvuzRxXvQV96tctEj5n36jqHM6iI-xCSn4Zhh0-wTatI3eIhdZRKIBGpjn7x6iA23Yh-oIvAIN3CD62aj1j7wMGq1-7vndbkhI-EyaTZXZMA')"}}></div>
+                <div className="absolute inset-0 bg-cover bg-center" data-alt={`Wide shot of ${room.room_name}`} style={{backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%), url('${roomImage}')`}}></div>
                 <div className="absolute bottom-6 left-6 text-white">
-                  <h2 className="text-3xl font-bold">Lecture Hall B-204</h2>
+                  <h2 className="text-3xl font-bold">{room.room_name}</h2>
                   <p className="text-slate-200 flex items-center gap-2">
                     <span className="material-symbols-outlined text-sm">location_on</span>
-                    2nd Floor, Engineering Block
+                    {room.location}
                   </p>
                 </div>
                 <div className="absolute top-6 right-6 flex gap-2">
-                  <span className="px-3 py-1 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg">AVAILABLE</span>
+                  <span className={`px-3 py-1 ${room.status === 'AVAILABLE' ? 'bg-green-500' : 'bg-slate-500'} text-white text-sm font-bold rounded-full shadow-lg`}>{room.status === 'AVAILABLE' ? 'AVAILABLE' : 'OCCUPIED'}</span>
                   <button className="p-2 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors">
                     <span className="material-symbols-outlined">favorite</span>
                   </button>
@@ -77,7 +134,7 @@ const ClassroomDetails = () => {
                   <span className="material-symbols-outlined text-primary">groups</span>
                   <div>
                     <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Capacity</p>
-                    <p className="font-semibold">85 Persons</p>
+                    <p className="font-semibold">{room.capacity} Persons</p>
                   </div>
                 </div>
                 <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/50 flex flex-col gap-2">
@@ -109,27 +166,24 @@ const ClassroomDetails = () => {
               <h3 className="text-xl font-bold mb-4">Technical Equipment</h3>
               <div className="bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                  <li className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg"><span className="material-symbols-outlined">videocam</span></div>
-                      <span className="font-medium">4K PTZ Camera System</span>
-                    </div>
-                    <span className="text-sm text-slate-500">Hybrid Teaching Ready</span>
-                  </li>
-                  <li className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg"><span className="material-symbols-outlined">cast</span></div>
-                      <span className="font-medium">Dual 85" Interactive Displays</span>
-                    </div>
-                    <span className="text-sm text-slate-500">Apple AirPlay / Chromecast</span>
-                  </li>
-                  <li className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg"><span className="material-symbols-outlined">mic</span></div>
-                      <span className="font-medium">Ceiling Array Microphone</span>
-                    </div>
-                    <span className="text-sm text-slate-500">Auto-tracking audio</span>
-                  </li>
+                  {(room.equipment || []).map((eq, idx) => {
+                    const equipIcon = equipmentIcons[eq];
+                    if (!equipIcon) return null;
+                    return (
+                      <li key={idx} className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg"><span className="material-symbols-outlined">{equipIcon.icon}</span></div>
+                          <span className="font-medium">{equipIcon.title}</span>
+                        </div>
+                        <span className="text-sm text-slate-500">Available</span>
+                      </li>
+                    );
+                  })}
+                  {(!room.equipment || room.equipment.length === 0) && (
+                    <li className="p-4 text-center text-slate-500">
+                      No equipment information available
+                    </li>
+                  )}
                 </ul>
               </div>
             </section>
@@ -203,12 +257,12 @@ const ClassroomDetails = () => {
                 <div className="p-6 space-y-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="text-2xl font-bold">B-204</h4>
-                      <p className="text-slate-500 text-sm">Large Lecture Theater</p>
+                      <h4 className="text-2xl font-bold">{room.room_name}</h4>
+                      <p className="text-slate-500 text-sm">{room.location}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-slate-500 uppercase font-bold">Type</p>
-                      <p className="font-semibold text-primary">Premium Room</p>
+                      <p className="text-xs text-slate-500 uppercase font-bold">Status</p>
+                      <p className={`font-semibold ${room.status === 'AVAILABLE' ? 'text-green-500' : 'text-slate-500'}`}>{room.status}</p>
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -281,7 +335,7 @@ const ClassroomDetails = () => {
         <div className="max-w-[1280px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-slate-400">
             <span className="material-symbols-outlined">domain</span>
-            <p className="text-sm">© 2023 UniReserve SaaS. All rights reserved.</p>
+            <p className="text-sm">© 2026 UniBooking. All rights reserved.</p>
           </div>
           <div className="flex gap-6 text-sm font-medium text-slate-500">
             <a className="hover:text-primary" href="#">Terms</a>

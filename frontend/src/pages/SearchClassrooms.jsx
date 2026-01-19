@@ -23,8 +23,8 @@ const SearchClassrooms = () => {
     minCapacity: 0,
     maxCapacity: 250,
     equipment: {
-      projector: true,
-      ac: true,
+      projector: false,
+      ac: false,
       whiteboard: false
     }
   });
@@ -38,12 +38,16 @@ const SearchClassrooms = () => {
   const fetchRooms = async () => {
     try {
       setLoading(true);
-      const response = await getRooms('');
-      if (response.success) {
+      const response = await getRooms(''); // Get all rooms regardless of status
+      if (response.success && response.data.length > 0) {
         setRooms(response.data);
+        console.log('Loaded rooms from API:', response.data.length);
+      } else {
+        console.log('No rooms from API, using mock data');
       }
     } catch (error) {
       console.error('Error fetching rooms:', error);
+      console.log('Using mock data as fallback');
     } finally {
       setLoading(false);
     }
@@ -74,10 +78,6 @@ const SearchClassrooms = () => {
     }));
   };
 
-  const handleBookRoom = (roomId) => {
-    navigate(`/create-booking?roomId=${roomId}`);
-  };
-
   // Mock data for display (if no data from backend)
   const mockRooms = [
     {
@@ -93,7 +93,7 @@ const SearchClassrooms = () => {
       room_name: 'Grand Hall C1',
       location: 'Bldg C, 1st Floor',
       capacity: 250,
-      status: 'OCCUPIED',
+      status: 'AVAILABLE',
       equipment: ['projector', 'ac']
     },
     {
@@ -109,10 +109,13 @@ const SearchClassrooms = () => {
       room_name: 'Creative Studio 1',
       location: 'Arts Annex',
       capacity: 20,
-      status: 'AVAILABLE',
+      status: 'OCCUPIED',
       equipment: ['natural_light', 'whiteboard']
     }
   ];
+
+  // Export for use in ClassroomDetails
+  window.mockRooms = mockRooms;
 
   // Equipment icon mapping
   const equipmentIcons = {
@@ -156,6 +159,9 @@ const SearchClassrooms = () => {
     'https://lh3.googleusercontent.com/aida-public/AB6AXuBlwTjokCuO7115DTwtDwywW61aJ82qyedWC8quDals7xYGsvLSNRmdHuid3UmXK0Z4yM5lpclT34300Vti1WyM8Qji0bDJFn4hVmk-hyaehrZhx1_MzhdL_PJTl6XQp5OEScj_qhFaoOpY3lGCQSM0PUxJyUcv-xMCMGizy8uLK8oKUwSAXsNfeqBj3DPd7-faEizr6230Lw5rWf2KU1-4d-U9M7qIkFIRr7GzElf_-RR66ZoqJ8yph0KJOVufErVKKRqtQcd73sI',
     'https://lh3.googleusercontent.com/aida-public/AB6AXuAX3Vs09lG6OYrQPDVXWSftUNI2rNBn_0E2kL_WdRZYqmZLjTem2SqACWzVUXD--oFklHQWMoswitWSeY7onNiyyYc4DF6Br7ChBxdF_cE02FyTRryHdEVWin6u7dHOK7MncJHVxAyh5SaD24AqImEbdLgcpRo6Bt-QTPdjLV-tzwD4JErdyDwqc_7su3K_kCwA24jzKbyu0MHGZ9wpvWEIiaZFLivolCulDbbhMf-wGXRMRFtGwGBYj8Spz_z1iFPM7pXCVxOhA20'
   ];
+
+  // Export for use in ClassroomDetails
+  window.roomImages = roomImages;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-background-dark text-black dark:text-slate-50">
@@ -352,7 +358,7 @@ const SearchClassrooms = () => {
                   activeTab === 'all'
                     ? 'bg-primary/10 text-primary'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                } text-[10px] px-2 py-0.5 rounded-full`}>{rooms.length}</span>
+                } text-[10px] px-2 py-0.5 rounded-full`}>{displayRooms.length}</span>
               </button>
               <button 
                 onClick={() => setActiveTab('available')}
@@ -367,7 +373,7 @@ const SearchClassrooms = () => {
                   activeTab === 'available'
                     ? 'bg-primary/10 text-primary'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                } text-[10px] px-2 py-0.5 rounded-full`}>{rooms.filter(r => r.status === 'AVAILABLE').length}</span>
+                } text-[10px] px-2 py-0.5 rounded-full`}>{displayRooms.filter(r => r.status === 'AVAILABLE').length}</span>
               </button>
             </div>
           </div>
@@ -386,8 +392,10 @@ const SearchClassrooms = () => {
               {filteredRooms.map((room, index) => (
                 <div key={room._id} className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col">
                   <div 
-                    className="relative h-48 w-full overflow-hidden cursor-pointer"
-                    onClick={() => navigate(`/classroom-details?roomId=${room._id}`)}
+                    className={`relative h-48 w-full overflow-hidden ${
+                      room.status === 'AVAILABLE' ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+                    }`}
+                    onClick={() => room.status === 'AVAILABLE' && navigate(`/classroom-details?roomId=${room._id}`)}
                   >
                     <div className={`absolute top-4 left-4 z-10 ${
                       room.status === 'AVAILABLE' ? 'bg-emerald-500' : 'bg-slate-500'
@@ -396,7 +404,9 @@ const SearchClassrooms = () => {
                     </div>
                     <img 
                       alt={room.room_name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      className={`w-full h-full object-cover transition-transform duration-500 ${
+                        room.status === 'AVAILABLE' ? 'group-hover:scale-105' : ''
+                      }`}
                       src={roomImages[index % roomImages.length]}
                     />
                     <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold shadow-sm">
@@ -470,7 +480,7 @@ const SearchClassrooms = () => {
           {/* Footer Pagination */}
           {!loading && filteredRooms.length > 0 && (
             <div className="mt-12 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-6">
-              <p className="text-sm text-slate-500">Showing {filteredRooms.length} of {rooms.length} classrooms</p>
+              <p className="text-sm text-slate-500">Showing {filteredRooms.length} of {displayRooms.length} classrooms</p>
               <div className="flex gap-2">
                 <button className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50" disabled>
                   Previous

@@ -24,8 +24,6 @@ const ClassroomScheduleGrid = () => {
             <nav className="hidden md:flex items-center gap-6">
               <a onClick={() => navigate('/schedule-grid')} className="text-primary text-sm font-semibold border-b-2 border-primary pb-1 cursor-pointer">Dashboard</a>
               <a onClick={() => navigate('/search-classrooms')} className="text-[#4c6c9a] dark:text-slate-400 text-sm font-medium cursor-pointer">Classrooms</a>
-              <a className="text-[#4c6c9a] dark:text-slate-400 text-sm font-medium cursor-pointer" href="#">Schedules</a>
-              <a className="text-[#4c6c9a] dark:text-slate-400 text-sm font-medium cursor-pointer" href="#">Maintenance</a>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -106,7 +104,7 @@ const ClassroomScheduleGrid = () => {
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div className="space-y-1">
                   <h1 className="text-3xl font-black text-[#0d131b] dark:text-white">Classroom Schedule Grid</h1>
-                  <p className="text-[#4c6c9a] dark:text-slate-400 font-medium">Building A • Friday, Oct 24, 2023</p>
+                  <p className="text-[#4c6c9a] dark:text-slate-400 font-medium">Building A • Friday, Jan 19, 2026</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1 bg-background-light dark:bg-slate-800 p-1 rounded-lg border border-[#e7ecf3] dark:border-slate-700">
