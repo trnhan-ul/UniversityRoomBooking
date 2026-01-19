@@ -75,6 +75,21 @@ export const verifyEmail = async (token) => {
     }
 };
 
+// Kiểm tra token còn hợp lệ không
+export const verifyToken = async () => {
+    try {
+        const response = await api.get('/auth/verify-token');
+        return response.data;
+    } catch (error) {
+        // Nếu token invalid/expired, xóa localStorage
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+        }
+        throw error.response?.data || { success: false, message: 'Network error' };
+    }
+};
+
 // Gửi lại email xác thực
 export const resendVerificationEmail = async (email) => {
     try {

@@ -6,20 +6,16 @@ const {
     verifyEmail,
     resendVerificationEmail,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    verifyToken
 } = require('../controllers/authController');
+const { authenticate } = require('../middleware/auth');
 
-// POST /api/auth/login - Đăng nhập
 router.post('/login', login);
-
-// POST /api/auth/register - Đăng ký tài khoản mới
 router.post('/register', register);
-
-// GET /api/auth/verify-email?token=xxx - Xác thực email
 router.get('/verify-email', verifyEmail);
-
-// POST /api/auth/resend-verification - Gửi lại email xác thực
 router.post('/resend-verification', resendVerificationEmail);
+router.get('/verify-token', authenticate, verifyToken);
 
 // POST /api/auth/forgot-password - UC-04: Yêu cầu mã reset password
 router.post('/forgot-password', forgotPassword);

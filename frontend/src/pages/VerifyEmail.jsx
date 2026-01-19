@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import fptLogo from '../assets/images/fptlogo.png';
 import { verifyEmail } from '../services/authService';
@@ -10,39 +10,50 @@ const VerifyEmail = () => {
   
   const [status, setStatus] = useState('verifying'); // verifying, success, error
   const [message, setMessage] = useState('');
+  const verificationAttempted = useRef(false); // Ngăn double API call trong StrictMode
+
+  const handleVerify = async () => {
+    if (!token) {
+      setStatus('error');
+      setMessage('Invalid verification link. No token provided.');
+      return;
+    }
+
+    setStatus('verifying');
+    setMessage('');
+
+    try {
+      const result = await verifyEmail(token);
+
+      if (result.success) {
+        setStatus('success');
+        setMessage(result.message);
+        
+        // Redirect to login after 3 seconds
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+      } else {
+        setStatus('error');
+        setMessage(result.message || 'Email verification failed');
+      }
+    } catch (err) {
+      console.error('Verify error:', err);
+      setStatus('error');
+      setMessage(err.message || 'Email verification failed. Please try again.');
+    }
+  };
 
   useEffect(() => {
-    const verify = async () => {
-      if (!token) {
-        setStatus('error');
-        setMessage('Invalid verification link. No token provided.');
-        return;
-      }
+    // Ngăn gọi API nhiều lần (do React StrictMode)
+    if (verificationAttempted.current) {
+      return;
+    }
+    verificationAttempted.current = true;
 
-      try {
-        const result = await verifyEmail(token);
-
-        if (result.success) {
-          setStatus('success');
-          setMessage(result.message);
-          
-          // Redirect to login after 3 seconds
-          setTimeout(() => {
-            navigate('/login');
-          }, 3000);
-        } else {
-          setStatus('error');
-          setMessage(result.message || 'Email verification failed');
-        }
-      } catch (err) {
-        console.error('Verify error:', err);
-        setStatus('error');
-        setMessage(err.message || 'Email verification failed. Please try again.');
-      }
-    };
-
-    verify();
-  }, [token, navigate]);
+    handleVerify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f8f8f8] flex flex-col font-display">
@@ -117,15 +128,27 @@ const VerifyEmail = () => {
                 {message}
               </div>
               <p className="text-slate-600 text-center mb-6">
-                The verification link may be invalid or expired. Please request a new verification email.
+                {message.includes('Network') || message.includes('Server') 
+                  ? 'There was a problem connecting to the server. Please try again.'
+                  : 'The verification link may be invalid or expired. Please request a new verification email.'}
               </p>
               <div className="w-full flex flex-col gap-3">
+                {/* Hiển thị nút Retry nếu là lỗi network/server */}
+                {(message.includes('Network') || message.includes('Server') || message.includes('try again')) && (
+                  <button
+                    onClick={handleVerify}
+                    className="w-full bg-[#136dec] hover:bg-[#136dec]/90 text-white font-semibold py-3 px-6 rounded-lg shadow-lg shadow-[#136dec]/20 flex items-center justify-center gap-2 transition-all active:scale-95"
+                  >
+                    <span className="material-symbols-outlined">refresh</span>
+                    <span>Try Again</span>
+                  </button>
+                )}
                 <button
-                  onClick={() => navigate('/register')}
+                  onClick={() => navigate('/email-verification', { state: { email: null } })}
                   className="w-full bg-[#FF6C00] hover:bg-[#FF6C00]/90 text-white font-semibold py-3 px-6 rounded-lg shadow-lg shadow-[#FF6C00]/20 flex items-center justify-center gap-2 transition-all active:scale-95"
                 >
-                  <span className="material-symbols-outlined">person_add</span>
-                  <span>Register Again</span>
+                  <span className="material-symbols-outlined">mail</span>
+                  <span>Resend Verification Email</span>
                 </button>
                 <button
                   onClick={() => navigate('/login')}
