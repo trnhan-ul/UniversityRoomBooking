@@ -13,14 +13,8 @@ router.get('/', roleController.getAllRoles);
 // UC40: Get role by ID
 router.get('/:id', roleController.getRoleById);
 
-// UC40: Create new role
-router.post('/', roleController.createRole);
-
 // UC40: Update role
 router.patch('/:id', roleController.updateRole);
-
-// UC40: Delete role
-router.delete('/:id', roleController.deleteRole);
 
 // UC41: Assign permissions to role
 router.patch('/:id/permissions', roleController.assignPermissions);

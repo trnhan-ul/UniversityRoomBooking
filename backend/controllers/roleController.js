@@ -79,14 +79,6 @@ const getRoleById = async (req, res) => {
   }
 };
 
-// UC40: Create new role (disabled)
-const createRole = async (_req, res) => {
-  return res.status(403).json({
-    success: false,
-    message: 'Role creation is disabled. Use existing system roles only.'
-  });
-};
-
 // UC40: Update role
 const updateRole = async (req, res) => {
   try {
@@ -140,14 +132,6 @@ const updateRole = async (req, res) => {
       message: 'Failed to update role'
     });
   }
-};
-
-// UC40: Delete role (disabled)
-const deleteRole = async (_req, res) => {
-  return res.status(403).json({
-    success: false,
-    message: 'Không được phép xóa role hệ thống'
-  });
 };
 
 // UC41: Assign permissions to role
@@ -229,10 +213,8 @@ const getAvailablePermissions = async (req, res) => {
       { id: 'user.delete', name: 'Delete User', category: 'User' },
 
       // Role permissions
-      { id: 'role.create', name: 'Create Role', category: 'Role' },
       { id: 'role.read', name: 'View Role', category: 'Role' },
       { id: 'role.update', name: 'Update Role', category: 'Role' },
-      { id: 'role.delete', name: 'Delete Role', category: 'Role' },
 
       // System permissions
       { id: 'system.settings', name: 'Manage Settings', category: 'System' },
@@ -257,9 +239,7 @@ const getAvailablePermissions = async (req, res) => {
 module.exports = {
   getAllRoles,
   getRoleById,
-  createRole,
   updateRole,
-  deleteRole,
   assignPermissions,
   getAvailablePermissions
 };

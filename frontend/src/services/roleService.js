@@ -40,19 +40,6 @@ export const getRoleById = async (roleId) => {
   }
 };
 
-// UC40: Create new role
-export const createRole = async (roleData) => {
-  try {
-    const response = await axios.post(`${API_URL}/roles`, roleData, {
-      headers: getAuthHeader()
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Create role error:', error);
-    throw error.response?.data || error;
-  }
-};
-
 // UC40: Update role
 export const updateRole = async (roleId, roleData) => {
   try {
@@ -66,18 +53,6 @@ export const updateRole = async (roleId, roleData) => {
   }
 };
 
-// UC40: Delete role
-export const deleteRole = async (roleId) => {
-  try {
-    const response = await axios.delete(`${API_URL}/roles/${roleId}`, {
-      headers: getAuthHeader()
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Delete role error:', error);
-    throw error.response?.data || error;
-  }
-};
 
 // UC41: Assign permissions to role
 export const assignPermissions = async (roleId, permissions) => {
