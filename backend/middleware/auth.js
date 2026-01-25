@@ -39,30 +39,28 @@ const authenticate = async (req, res, next) => {
 };
 
 // roles: array of allowed role names e.g. ['ADMINISTRATOR', 'FACILITY_MANAGER']
-const authorizeRoles =
-  (roles = []) =>
-  (req, res, next) => {
-    try {
-      if (!req.user) {
-        return res
-          .status(401)
-          .json({ success: false, message: "Unauthorized" });
-      }
-
-      const userRole = (req.user.role || "").toUpperCase();
-      const allowed = roles.map((r) => r.toUpperCase());
-
-      if (!allowed.includes(userRole)) {
-        return res
-          .status(403)
-          .json({ success: false, message: "Forbidden: insufficient role" });
-      }
-
-      next();
-    } catch (error) {
-      console.error("Authorization error:", error);
-      res.status(500).json({ success: false, message: "Server error" });
+// Can be called as: authorizeRoles('ADMIN', 'MANAGER') or authorizeRoles(['ADMIN', 'MANAGER'])
+const authorizeRoles = (...roles) => (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-  };
+
+    // Support both authorizeRoles('A', 'B') and authorizeRoles(['A', 'B'])
+    const allowedRoles = Array.isArray(roles[0]) ? roles[0] : roles;
+    
+    const userRole = (req.user.role || '').toUpperCase();
+    const allowed = allowedRoles.map(r => r.toUpperCase());
+
+    if (!allowed.includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: insufficient role' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Authorization error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 
 module.exports = { authenticate, authorizeRoles };

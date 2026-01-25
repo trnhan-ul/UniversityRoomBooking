@@ -19,6 +19,8 @@ import BookingDetail from "./pages/BookingDetail";
 import SearchClassrooms from "./pages/SearchClassrooms";
 import ClassroomDetails from "./pages/ClassroomDetails";
 import ClassroomScheduleGrid from "./pages/ClassroomScheduleGrid";
+import RoomInventory from "./pages/RoomInventory";
+import CreateClassroom from "./pages/CreateClassroom";
 
 function App() {
   const isAdminRole = (role) =>
@@ -87,6 +89,28 @@ function App() {
             element={
               <AdminLayout>
                 <UserManagement />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/room-inventory"
+            element={
+              <AdminLayout>
+                <RoomInventory />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/create-classroom"
+            element={
+              <AdminLayout>
+                <CreateClassroom />
               </AdminLayout>
             }
           />

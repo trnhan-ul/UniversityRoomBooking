@@ -1,12 +1,36 @@
 const express = require("express");
 const router = express.Router();
 const roomController = require("../controllers/roomController");
-const { authenticate } = require("../middleware/auth");
+const { authenticate, authorizeRoles } = require("../middleware/auth");
 
 // GET /api/rooms - Get all rooms (authenticated users)
 router.get("/", authenticate, roomController.getRooms);
 
 // GET /api/rooms/:id - Get room by ID
 router.get("/:id", authenticate, roomController.getRoomById);
+
+// POST /api/rooms - Create new room (Admin/Facility Manager only)
+router.post(
+  "/",
+  authenticate,
+  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
+  roomController.createRoom
+);
+
+// PUT /api/rooms/:id - Update room (Admin/Facility Manager only)
+router.put(
+  "/:id",
+  authenticate,
+  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
+  roomController.updateRoom
+);
+
+// DELETE /api/rooms/:id - Delete room (Admin only)
+router.delete(
+  "/:id",
+  authenticate,
+  authorizeRoles("ADMINISTRATOR"),
+  roomController.deleteRoom
+);
 
 module.exports = router;

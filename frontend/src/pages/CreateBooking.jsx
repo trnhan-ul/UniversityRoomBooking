@@ -7,6 +7,14 @@ const CreateBooking = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Get URL search params
+  const searchParams = new URLSearchParams(location.search);
+  const urlRoomId = searchParams.get('roomId');
+  const urlDate = searchParams.get('date');
+  const urlStartTime = searchParams.get('startTime');
+  const urlEndTime = searchParams.get('endTime');
+  const urlPurpose = searchParams.get('purpose');
+  
   // Get room data from navigation state (if user clicked from room list)
   const preSelectedRoom = location.state?.room;
   const preSelectedDate = location.state?.date;
@@ -18,13 +26,13 @@ const CreateBooking = () => {
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
 
-  // Form state
+  // Form state - prioritize URL params over state
   const [formData, setFormData] = useState({
-    room_id: preSelectedRoom?._id || '',
-    date: preSelectedDate || '',
-    start_time: preSelectedTime?.start || '08:00',
-    end_time: preSelectedTime?.end || '10:00',
-    purpose: '',
+    room_id: urlRoomId || preSelectedRoom?._id || '',
+    date: urlDate || preSelectedDate || '',
+    start_time: urlStartTime || preSelectedTime?.start || '08:00',
+    end_time: urlEndTime || preSelectedTime?.end || '10:00',
+    purpose: urlPurpose || '',
   });
 
   // Fetch rooms from database

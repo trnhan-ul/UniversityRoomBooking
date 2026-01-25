@@ -10,6 +10,13 @@ const ClassroomDetails = () => {
   const roomId = searchParams.get('roomId');
   const [room, setRoom] = useState({});
   const [loading, setLoading] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [bookingData, setBookingData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    startTime: '09:00',
+    endTime: '11:00',
+    purpose: 'Academic Lecture'
+  });
 
   // Fetch room data from API
   useEffect(() => {
@@ -50,11 +57,20 @@ const ClassroomDetails = () => {
     natural_light: { icon: 'wb_sunny', title: 'Natural Light' }
   };
 
-  // Get room image
-  const roomImages = window.roomImages || [];
-  const mockRooms = window.mockRooms || [];
-  const roomIndex = mockRooms.findIndex(r => r._id === roomId);
-  const roomImage = roomImages[roomIndex >= 0 ? roomIndex : 0] || roomImages[0];
+  // Get room images - use images from room data if available
+  const roomImages = (room.images && room.images.length > 0) 
+    ? room.images 
+    : [(window.roomImages && window.roomImages[0]) || 'https://via.placeholder.com/800x400?text=Classroom'];
+
+  const roomImage = roomImages[currentImageIndex] || roomImages[0];
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % roomImages.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + roomImages.length) % roomImages.length);
+  };
 
   if (loading) {
     return (
@@ -120,7 +136,44 @@ const ClassroomDetails = () => {
                     <span className="material-symbols-outlined">favorite</span>
                   </button>
                 </div>
+                {roomImages.length > 1 && (
+                  <>
+                    <button 
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <span className="material-symbols-outlined">chevron_left</span>
+                    </button>
+                    <button 
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <span className="material-symbols-outlined">chevron_right</span>
+                    </button>
+                    <div className="absolute bottom-6 right-6 bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">photo_library</span>
+                      {currentImageIndex + 1} / {roomImages.length}
+                    </div>
+                  </>
+                )}
               </div>
+              {roomImages.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {roomImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        idx === currentImageIndex 
+                          ? 'border-primary scale-105' 
+                          : 'border-slate-300 dark:border-slate-700 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt={`${room.room_name} view ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </section>
 
             {/* Room Specifications Grid */}
@@ -187,66 +240,6 @@ const ClassroomDetails = () => {
                 </ul>
               </div>
             </section>
-
-            {/* Weekly Calendar */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Weekly Availability</h3>
-                <div className="flex gap-2">
-                  <button className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><span className="material-symbols-outlined">chevron_left</span></button>
-                  <button className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg font-medium text-sm">Oct 23 - Oct 29, 2023</button>
-                  <button className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><span className="material-symbols-outlined">chevron_right</span></button>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
-                <div className="min-w-[800px]">
-                  <div className="grid grid-cols-8 border-b border-slate-200 dark:border-slate-700">
-                    <div className="p-4 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"></div>
-                    <div className="p-4 text-center border-r border-slate-200 dark:border-slate-700"><p className="text-xs text-slate-500">MON</p><p className="font-bold">23</p></div>
-                    <div className="p-4 text-center border-r border-slate-200 dark:border-slate-700"><p className="text-xs text-slate-500">TUE</p><p className="font-bold">24</p></div>
-                    <div className="p-4 text-center border-r border-slate-200 dark:border-slate-700"><p className="text-xs text-slate-500">WED</p><p className="font-bold">25</p></div>
-                    <div className="p-4 text-center border-r border-slate-200 dark:border-slate-700 bg-primary/5"><p className="text-xs text-primary">THU</p><p className="font-bold text-primary">26</p></div>
-                    <div className="p-4 text-center border-r border-slate-200 dark:border-slate-700"><p className="text-xs text-slate-500">FRI</p><p className="font-bold">27</p></div>
-                    <div className="p-4 text-center border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-400"><p className="text-xs">SAT</p><p className="font-bold">28</p></div>
-                    <div className="p-4 text-center bg-slate-50 dark:bg-slate-900/50 text-slate-400"><p className="text-xs">SUN</p><p className="font-bold">29</p></div>
-                  </div>
-                  <div className="grid grid-cols-8 h-[400px]">
-                    <div className="border-r border-slate-200 dark:border-slate-700 flex flex-col">
-                      <div className="h-20 p-2 text-xs text-slate-400 border-b border-slate-100 dark:border-slate-800">08:00 AM</div>
-                      <div className="h-20 p-2 text-xs text-slate-400 border-b border-slate-100 dark:border-slate-800">10:00 AM</div>
-                      <div className="h-20 p-2 text-xs text-slate-400 border-b border-slate-100 dark:border-slate-800">12:00 PM</div>
-                      <div className="h-20 p-2 text-xs text-slate-400 border-b border-slate-100 dark:border-slate-800">02:00 PM</div>
-                      <div className="h-20 p-2 text-xs text-slate-400">04:00 PM</div>
-                    </div>
-                    {/* Monday */}
-                    <div className="border-r border-slate-200 dark:border-slate-700 relative bg-slate-50/30 dark:bg-slate-900/10">
-                      <div className="absolute top-0 left-1 right-1 h-32 bg-slate-100 dark:bg-slate-700 border-l-4 border-slate-400 rounded p-2 text-[10px] font-bold">ENG 101 Lecture</div>
-                    </div>
-                    {/* Tuesday */}
-                    <div className="border-r border-slate-200 dark:border-slate-700 relative">
-                      <div className="absolute top-20 left-1 right-1 h-20 bg-slate-100 dark:bg-slate-700 border-l-4 border-slate-400 rounded p-2 text-[10px] font-bold">Faculty Meeting</div>
-                    </div>
-                    {/* Wednesday */}
-                    <div className="border-r border-slate-200 dark:border-slate-700 relative">
-                      <div className="absolute top-40 left-1 right-1 h-40 bg-slate-100 dark:bg-slate-700 border-l-4 border-slate-400 rounded p-2 text-[10px] font-bold">ENG 204 Workshop</div>
-                    </div>
-                    {/* Thursday (Current Day) */}
-                    <div className="border-r border-slate-200 dark:border-slate-700 relative bg-primary/5">
-                      <div className="absolute top-20 left-1 right-1 h-24 bg-primary/10 border-l-4 border-primary rounded p-2 text-[10px] font-bold text-primary">In Use: CS Lab</div>
-                      {/* Current Time Line */}
-                      <div className="absolute top-64 w-full border-t-2 border-red-500 z-10 flex items-center">
-                        <div className="size-2 rounded-full bg-red-500 -ml-1"></div>
-                      </div>
-                    </div>
-                    {/* Friday */}
-                    <div className="border-r border-slate-200 dark:border-slate-700 relative"></div>
-                    {/* Sat/Sun */}
-                    <div className="border-r border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-900/50"></div>
-                    <div className="bg-slate-100/50 dark:bg-slate-900/50"></div>
-                  </div>
-                </div>
-              </div>
-            </section>
           </div>
 
           {/* Right Column: Booking Sidebar */}
@@ -270,26 +263,46 @@ const ClassroomDetails = () => {
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Select Date</span>
                       <div className="mt-1 relative">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">calendar_today</span>
-                        <input className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" type="text" defaultValue="Thursday, Oct 26"/>
+                        <input 
+                          className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                          type="date" 
+                          value={bookingData.date}
+                          onChange={(e) => setBookingData(prev => ({ ...prev, date: e.target.value }))}
+                          min={new Date().toISOString().split('T')[0]}
+                        />
                       </div>
                     </label>
                     <div className="grid grid-cols-2 gap-4">
                       <label className="block">
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Start Time</span>
                         <div className="mt-1 relative">
-                          <input className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" type="text" defaultValue="09:00 AM"/>
+                          <input 
+                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                            type="time" 
+                            value={bookingData.startTime}
+                            onChange={(e) => setBookingData(prev => ({ ...prev, startTime: e.target.value }))}
+                          />
                         </div>
                       </label>
                       <label className="block">
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">End Time</span>
                         <div className="mt-1 relative">
-                          <input className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" type="text" defaultValue="11:00 AM"/>
+                          <input 
+                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                            type="time" 
+                            value={bookingData.endTime}
+                            onChange={(e) => setBookingData(prev => ({ ...prev, endTime: e.target.value }))}
+                          />
                         </div>
                       </label>
                     </div>
                     <label className="block">
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Booking Purpose</span>
-                      <select className="mt-1 w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                      <select 
+                        className="mt-1 w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                        value={bookingData.purpose}
+                        onChange={(e) => setBookingData(prev => ({ ...prev, purpose: e.target.value }))}
+                      >
                         <option>Academic Lecture</option>
                         <option>Student Society Meeting</option>
                         <option>Exam / Assessment</option>
@@ -298,11 +311,12 @@ const ClassroomDetails = () => {
                     </label>
                   </div>
                   <button 
-                    onClick={() => navigate(`/create-booking?roomId=${roomId}`)}
+                    onClick={() => navigate(`/create-booking?roomId=${roomId}&date=${bookingData.date}&startTime=${bookingData.startTime}&endTime=${bookingData.endTime}&purpose=${bookingData.purpose}`)}
                     className="w-full py-4 bg-primary text-white rounded-xl font-bold text-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                    disabled={room.status !== 'AVAILABLE'}
                   >
                     <span className="material-symbols-outlined">bolt</span>
-                    Book Now
+                    {room.status === 'AVAILABLE' ? 'Book Now' : 'Not Available'}
                   </button>
                   <p className="text-center text-xs text-slate-400">
                     This room requires faculty approval for bookings longer than 3 hours.

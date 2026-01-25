@@ -8,6 +8,7 @@ const SearchClassrooms = () => {
   const { user } = useAuthContext();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentImageIndexes, setCurrentImageIndexes] = useState({});
   
   // Get current time in HH:mm format
   const getCurrentTime = () => {
@@ -39,15 +40,12 @@ const SearchClassrooms = () => {
     try {
       setLoading(true);
       const response = await getRooms(''); // Get all rooms regardless of status
-      if (response.success && response.data.length > 0) {
+      if (response.success) {
+        console.log('Rooms data:', response.data); // Debug: Check if images are included
         setRooms(response.data);
-        console.log('Loaded rooms from API:', response.data.length);
-      } else {
-        console.log('No rooms from API, using mock data');
       }
     } catch (error) {
       console.error('Error fetching rooms:', error);
-      console.log('Using mock data as fallback');
     } finally {
       setLoading(false);
     }
@@ -78,45 +76,6 @@ const SearchClassrooms = () => {
     }));
   };
 
-  // Mock data for display (if no data from backend)
-  const mockRooms = [
-    {
-      _id: '1',
-      room_name: 'Seminar Room 302',
-      location: 'Bldg A, 3rd Floor',
-      capacity: 45,
-      status: 'AVAILABLE',
-      equipment: ['projector', 'ac', 'whiteboard']
-    },
-    {
-      _id: '2',
-      room_name: 'Grand Hall C1',
-      location: 'Bldg C, 1st Floor',
-      capacity: 250,
-      status: 'AVAILABLE',
-      equipment: ['projector', 'ac']
-    },
-    {
-      _id: '3',
-      room_name: 'IT Lab 204',
-      location: 'Bldg B, 2nd Floor',
-      capacity: 30,
-      status: 'AVAILABLE',
-      equipment: ['projector', 'ac', 'computer']
-    },
-    {
-      _id: '4',
-      room_name: 'Creative Studio 1',
-      location: 'Arts Annex',
-      capacity: 20,
-      status: 'OCCUPIED',
-      equipment: ['natural_light', 'whiteboard']
-    }
-  ];
-
-  // Export for use in ClassroomDetails
-  window.mockRooms = mockRooms;
-
   // Equipment icon mapping
   const equipmentIcons = {
     projector: { icon: 'videocam', title: 'Projector' },
@@ -126,10 +85,7 @@ const SearchClassrooms = () => {
     natural_light: { icon: 'wb_sunny', title: 'Natural Light' }
   };
 
-  // Use mock data if no real data available
-  const displayRooms = rooms.length > 0 ? rooms : mockRooms;
-
-  const filteredRooms = displayRooms.filter(room => {
+  const filteredRooms = rooms.filter(room => {
     // Filter by capacity range
     if (room.capacity < filters.minCapacity || room.capacity > filters.maxCapacity) {
       return false;
@@ -181,7 +137,7 @@ const SearchClassrooms = () => {
             <nav className="flex items-center gap-9">
               <button onClick={() => navigate('/search-classrooms')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">Classrooms</button>
               <button onClick={() => navigate('/my-bookings')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">My Bookings</button>
-              <button onClick={() => navigate('/schedule-grid')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">Dashboard</button>
+              <button onClick={() => navigate('/schedule-grid')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">Schedule Grid</button>
             </nav>
           </div>
           <div className="flex flex-1 justify-end gap-6 items-center">
@@ -213,7 +169,7 @@ const SearchClassrooms = () => {
         <main className="px-10 py-8 max-w-[1440px] mx-auto w-full">
           {/* Headline Section */}
           <div className="mb-8">
-            <h1 className="text-black dark:text-slate-50 tracking-tight text-4xl font-bold leading-tight pb-2">Search & Classrooms</h1>
+            <h1 className="text-black dark:text-slate-50 tracking-tight text-4xl font-bold leading-tight pb-2">Classrooms</h1>
             <p className="text-slate-500 dark:text-slate-400">Discover and book rooms across campus in real-time.</p>
           </div>
 
@@ -358,7 +314,7 @@ const SearchClassrooms = () => {
                   activeTab === 'all'
                     ? 'bg-primary/10 text-primary'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                } text-[10px] px-2 py-0.5 rounded-full`}>{displayRooms.length}</span>
+                } text-[10px] px-2 py-0.5 rounded-full`}>{rooms.length}</span>
               </button>
               <button 
                 onClick={() => setActiveTab('available')}
@@ -373,7 +329,7 @@ const SearchClassrooms = () => {
                   activeTab === 'available'
                     ? 'bg-primary/10 text-primary'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                } text-[10px] px-2 py-0.5 rounded-full`}>{displayRooms.filter(r => r.status === 'AVAILABLE').length}</span>
+                } text-[10px] px-2 py-0.5 rounded-full`}>{rooms.filter(r => r.status === 'AVAILABLE').length}</span>
               </button>
             </div>
           </div>
@@ -396,6 +352,29 @@ const SearchClassrooms = () => {
                       room.status === 'AVAILABLE' ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
                     }`}
                     onClick={() => room.status === 'AVAILABLE' && navigate(`/classroom-details?roomId=${room._id}`)}
+                    onMouseEnter={() => {
+                      if (room.images && room.images.length > 1) {
+                        const interval = setInterval(() => {
+                          setCurrentImageIndexes(prev => ({
+                            ...prev,
+                            [room._id]: ((prev[room._id] || 0) + 1) % room.images.length
+                          }));
+                        }, 2000);
+                        setCurrentImageIndexes(prev => ({ ...prev, [`${room._id}_interval`]: interval }));
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      const interval = currentImageIndexes[`${room._id}_interval`];
+                      if (interval) {
+                        clearInterval(interval);
+                        setCurrentImageIndexes(prev => {
+                          const newIndexes = { ...prev };
+                          delete newIndexes[`${room._id}_interval`];
+                          newIndexes[room._id] = 0;
+                          return newIndexes;
+                        });
+                      }
+                    }}
                   >
                     <div className={`absolute top-4 left-4 z-10 ${
                       room.status === 'AVAILABLE' ? 'bg-emerald-500' : 'bg-slate-500'
@@ -404,11 +383,28 @@ const SearchClassrooms = () => {
                     </div>
                     <img 
                       alt={room.room_name}
-                      className={`w-full h-full object-cover transition-transform duration-500 ${
+                      className={`w-full h-full object-cover transition-all duration-700 ${
                         room.status === 'AVAILABLE' ? 'group-hover:scale-105' : ''
                       }`}
-                      src={roomImages[index % roomImages.length]}
+                      src={(room.images && room.images.length > 0) 
+                        ? room.images[currentImageIndexes[room._id] || 0] 
+                        : roomImages[index % roomImages.length]
+                      }
                     />
+                    {room.images && room.images.length > 1 && (
+                      <div className="absolute bottom-4 left-4 flex gap-1.5">
+                        {room.images.map((_, idx) => (
+                          <div
+                            key={idx}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                              idx === (currentImageIndexes[room._id] || 0)
+                                ? 'w-6 bg-white'
+                                : 'w-1.5 bg-white/50'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
                     <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold shadow-sm">
                       {room.location}
                     </div>
@@ -480,7 +476,7 @@ const SearchClassrooms = () => {
           {/* Footer Pagination */}
           {!loading && filteredRooms.length > 0 && (
             <div className="mt-12 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-6">
-              <p className="text-sm text-slate-500">Showing {filteredRooms.length} of {displayRooms.length} classrooms</p>
+              <p className="text-sm text-slate-500">Showing {filteredRooms.length} of {rooms.length} classrooms</p>
               <div className="flex gap-2">
                 <button className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50" disabled>
                   Previous
