@@ -216,12 +216,96 @@ const approveBooking = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Invalid booking id" });
     }
-    const { action, reject_reason } = req.body;
 
-    if (!["APPROVE", "REJECT"].includes(action)) {
+    const booking = await Booking.findById(bookingId)
+      .populate("user_id", "full_name email")
+      .populate("room_id", "name location");
+
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    }
+
+    if (booking.status !== "PENDING") {
       return res
         .status(400)
-        .json({ success: false, message: "Invalid action" });
+        .json({ success: false, message: "Booking is not pending" });
+    }
+
+    const conflicts = await Booking.findOne({
+      _id: { $ne: bookingId },
+      room_id: booking.room_id,
+      date: booking.date,
+      status: "APPROVED",
+      $or: [
+        {
+          start_time: { $lt: booking.end_time },
+          end_time: { $gt: booking.start_time },
+        },
+      ],
+    });
+
+    if (conflicts) {
+      return res.status(409).json({
+        success: false,
+        message: "Time slot conflict with another approved booking",
+      });
+    }
+
+    booking.status = "APPROVED";
+    booking.approved_at = new Date();
+    booking.approved_by = req.user._id;
+
+    await booking.save();
+    await booking.populate("user_id", "full_name email");
+    await booking.populate("room_id", "name location");
+
+    await Notification.create({
+      user_id: booking.user_id._id,
+      title: "Booking Approved",
+      message: `Your booking for ${booking.room_id.name} on ${booking.date.toDateString()} (${booking.start_time}-${booking.end_time}) has been approved.`,
+      type: "BOOKING",
+      target_type: "Booking",
+      target_id: booking._id,
+      is_read: false,
+    });
+
+    await sendApprovalEmail(
+      booking.user_id,
+      booking,
+      booking.room_id,
+      "APPROVED",
+      null,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Booking approved successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("approveBooking error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+const rejectBooking = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid booking id" });
+    }
+
+    const { reject_reason } = req.body;
+
+    if (!reject_reason || reject_reason.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Rejection reason required (min 10 characters)",
+      });
     }
 
     const booking = await Booking.findById(bookingId)
@@ -240,42 +324,10 @@ const approveBooking = async (req, res) => {
         .json({ success: false, message: "Booking is not pending" });
     }
 
-    if (action === "APPROVE") {
-      const conflicts = await Booking.findOne({
-        _id: { $ne: bookingId },
-        room_id: booking.room_id,
-        date: booking.date,
-        status: "APPROVED",
-        $or: [
-          {
-            start_time: { $lt: booking.end_time },
-            end_time: { $gt: booking.start_time },
-          },
-        ],
-      });
-
-      if (conflicts) {
-        return res.status(409).json({
-          success: false,
-          message: "Time slot conflict with another approved booking",
-        });
-      }
-
-      booking.status = "APPROVED";
-      booking.approved_at = new Date();
-      booking.approved_by = req.user._id;
-    } else {
-      if (!reject_reason || reject_reason.trim().length < 10) {
-        return res.status(400).json({
-          success: false,
-          message: "Rejection reason required (min 10 characters)",
-        });
-      }
-      booking.status = "REJECTED";
-      booking.reject_reason = reject_reason.trim();
-      booking.approved_at = new Date();
-      booking.approved_by = req.user._id;
-    }
+    booking.status = "REJECTED";
+    booking.reject_reason = reject_reason.trim();
+    booking.approved_at = new Date();
+    booking.approved_by = req.user._id;
 
     await booking.save();
     await booking.populate("user_id", "full_name email");
@@ -283,11 +335,8 @@ const approveBooking = async (req, res) => {
 
     await Notification.create({
       user_id: booking.user_id._id,
-      title: action === "APPROVE" ? "Booking Approved" : "Booking Rejected",
-      message:
-        action === "APPROVE"
-          ? `Your booking for ${booking.room_id.name} on ${booking.date.toDateString()} (${booking.start_time}-${booking.end_time}) has been approved.`
-          : `Your booking for ${booking.room_id.name} has been rejected. Reason: ${booking.reject_reason}`,
+      title: "Booking Rejected",
+      message: `Your booking for ${booking.room_id.name} has been rejected. Reason: ${booking.reject_reason}`,
       type: "BOOKING",
       target_type: "Booking",
       target_id: booking._id,
@@ -298,22 +347,20 @@ const approveBooking = async (req, res) => {
       booking.user_id,
       booking,
       booking.room_id,
-      action,
-      action === "REJECT" ? booking.reject_reason : null,
+      "REJECTED",
+      booking.reject_reason,
     );
 
     res.status(200).json({
       success: true,
-      message: `Booking ${action === "APPROVE" ? "approved" : "rejected"} successfully`,
+      message: "Booking rejected successfully",
       data: booking,
     });
   } catch (error) {
-    console.error("approveBooking error:", error);
+    console.error("rejectBooking error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-// User xem danh sách booking của chính mình (UC19)
 const getMyBookings = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -444,6 +491,7 @@ module.exports = {
   getPendingBookings,
   getBookingById,
   approveBooking,
+  rejectBooking,
   getMyBookings,
   cancelBooking,
   getBookingStatistics,
