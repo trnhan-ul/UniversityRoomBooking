@@ -1,5 +1,7 @@
 const Booking = require("../models/Booking");
 const Room = require("../models/Room");
+const { Notification } = require("../models");
+const { sendApprovalEmail } = require("../services/emailService");
 const mongoose = require("mongoose");
 
 // UC14 - Create Booking
@@ -214,7 +216,7 @@ const approveBooking = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Invalid booking id" });
     }
-    const { action, reject_reason } = req.body; // action: 'APPROVE' or 'REJECT'
+    const { action, reject_reason } = req.body;
 
     if (!["APPROVE", "REJECT"].includes(action)) {
       return res
@@ -222,7 +224,10 @@ const approveBooking = async (req, res) => {
         .json({ success: false, message: "Invalid action" });
     }
 
-    const booking = await Booking.findById(bookingId);
+    const booking = await Booking.findById(bookingId)
+      .populate("user_id", "full_name email")
+      .populate("room_id", "name location");
+
     if (!booking) {
       return res
         .status(404)
@@ -236,19 +241,72 @@ const approveBooking = async (req, res) => {
     }
 
     if (action === "APPROVE") {
+      const conflicts = await Booking.findOne({
+        _id: { $ne: bookingId },
+        room_id: booking.room_id,
+        date: booking.date,
+        status: "APPROVED",
+        $or: [
+          {
+            start_time: { $lt: booking.end_time },
+            end_time: { $gt: booking.start_time },
+          },
+        ],
+      });
+
+      if (conflicts) {
+        return res.status(409).json({
+          success: false,
+          message: "Time slot conflict with another approved booking",
+        });
+      }
+
       booking.status = "APPROVED";
       booking.approved_at = new Date();
-      booking.approved_by = req.user ? req.user._id : null;
+      booking.approved_by = req.user._id;
     } else {
+      if (!reject_reason || reject_reason.trim().length < 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Rejection reason required (min 10 characters)",
+        });
+      }
       booking.status = "REJECTED";
-      booking.reject_reason = reject_reason || null;
+      booking.reject_reason = reject_reason.trim();
       booking.approved_at = new Date();
-      booking.approved_by = req.user ? req.user._id : null;
+      booking.approved_by = req.user._id;
     }
 
     await booking.save();
+    await booking.populate("user_id", "full_name email");
+    await booking.populate("room_id", "name location");
 
-    res.status(200).json({ success: true, data: booking });
+    await Notification.create({
+      user_id: booking.user_id._id,
+      title: action === "APPROVE" ? "Booking Approved" : "Booking Rejected",
+      message:
+        action === "APPROVE"
+          ? `Your booking for ${booking.room_id.name} on ${booking.date.toDateString()} (${booking.start_time}-${booking.end_time}) has been approved.`
+          : `Your booking for ${booking.room_id.name} has been rejected. Reason: ${booking.reject_reason}`,
+      type: "BOOKING",
+      target_type: "Booking",
+      target_id: booking._id,
+      is_read: false,
+    });
+
+    await sendApprovalEmail(
+      booking.user_id,
+      booking,
+      booking.room_id,
+      action,
+      action === "REJECT" ? booking.reject_reason : null,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Booking ${action === "APPROVE" ? "approved" : "rejected"} successfully`,
+      data: booking,
+    });
   } catch (error) {
     console.error("approveBooking error:", error);
     res.status(500).json({ success: false, message: "Server error" });
