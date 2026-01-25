@@ -41,3 +41,33 @@ export const getRoomById = async (roomId) => {
     throw error.response?.data || { success: false, message: "Network error" };
   }
 };
+
+// Create new room
+export const createRoom = async (roomData) => {
+  try {
+    const response = await api.post('/rooms', roomData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Update room
+export const updateRoom = async (roomId, roomData) => {
+  try {
+    const response = await api.put(`/rooms/${roomId}`, roomData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Delete room
+export const deleteRoom = async (roomId) => {
+  try {
+    const response = await api.delete(`/rooms/${roomId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};

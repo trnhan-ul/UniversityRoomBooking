@@ -5,3 +5,5 @@ export { default as StudentDashboard } from './HomePage';
 export { default as LecturerDashboard } from './LecturerDashboard';
 export { default as FacilityManagerDashboard } from './FacilityManagerDashboard';
 export { default as AdministratorDashboard } from './AdministratorDashboard';
+export { default as RoomInventory } from './RoomInventory';
+export { default as CreateClassroom } from './CreateClassroom';

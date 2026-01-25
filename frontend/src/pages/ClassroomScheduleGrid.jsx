@@ -22,7 +22,7 @@ const ClassroomScheduleGrid = () => {
               <h2 className="text-[#0d131b] dark:text-slate-50 text-xl font-bold tracking-tight">UniBooking Grid</h2>
             </div>
             <nav className="hidden md:flex items-center gap-6">
-              <a onClick={() => navigate('/schedule-grid')} className="text-primary text-sm font-semibold border-b-2 border-primary pb-1 cursor-pointer">Dashboard</a>
+              <a onClick={() => navigate('/schedule-grid')} className="text-primary text-sm font-semibold border-b-2 border-primary pb-1 cursor-pointer">Schedule Grid</a>
               <a onClick={() => navigate('/search-classrooms')} className="text-[#4c6c9a] dark:text-slate-400 text-sm font-medium cursor-pointer">Classrooms</a>
             </nav>
           </div>
