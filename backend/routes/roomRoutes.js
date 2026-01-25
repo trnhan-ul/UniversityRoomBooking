@@ -33,4 +33,12 @@ router.delete(
   roomController.deleteRoom
 );
 
+// POST /api/rooms/block - Block time slot (Admin/Facility Manager only)
+router.post(
+  "/block",
+  authenticate,
+  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
+  roomController.blockTimeSlot
+);
+
 module.exports = router;
