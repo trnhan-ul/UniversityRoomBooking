@@ -73,9 +73,21 @@ export const getBookingById = async (bookingId) => {
 };
 
 // Approve or reject booking (Manager/Admin)
-export const approveBooking = async (bookingId, payload) => {
+export const approveBooking = async (bookingId) => {
   try {
-    const response = await api.patch(`/bookings/${bookingId}/approve`, payload);
+    const response = await api.patch(`/bookings/${bookingId}/approve`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Reject booking (Manager/Admin)
+export const rejectBooking = async (bookingId, rejectReason) => {
+  try {
+    const response = await api.patch(`/bookings/${bookingId}/reject`, {
+      reject_reason: rejectReason,
+    });
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: "Network error" };

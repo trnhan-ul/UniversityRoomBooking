@@ -54,12 +54,20 @@ router.get(
   bookingController.getPendingBookings,
 );
 
-// PATCH /api/bookings/:id/approve - approve or reject booking (Manager/Admin)
+// PATCH /api/bookings/:id/approve - approve booking (Manager/Admin)
 router.patch(
   "/:id/approve",
   authenticate,
   authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
   bookingController.approveBooking,
+);
+
+// PATCH /api/bookings/:id/reject - reject booking (Manager/Admin)
+router.patch(
+  "/:id/reject",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.rejectBooking,
 );
 
 module.exports = router;
