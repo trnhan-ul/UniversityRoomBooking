@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { cancelBooking } from "../services/bookingService";
+import { cancelBooking, updateBooking } from "../services/bookingService";
+import { getRooms } from "../services/roomService";
 import { formatDate, getStatusVariant, getStatusLabel } from "../utils/helpers";
 import Badge from "../components/common/Badge";
 import Header from "../components/layout/Header";
@@ -16,6 +17,91 @@ const BookingDetail = () => {
   const booking = location.state?.booking;
 
   const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [formData, setFormData] = useState({
+    room_id: booking?.room_id?._id || "",
+    date: booking?.date ? new Date(booking.date).toISOString().split('T')[0] : "",
+    start_time: booking?.start_time || "",
+    end_time: booking?.end_time || "",
+    purpose: booking?.purpose || "",
+  });
+
+  // Fetch available rooms when edit mode is enabled
+  useEffect(() => {
+    if (isEditing) {
+      const fetchRooms = async () => {
+        try {
+          setLoadingRooms(true);
+          const response = await getRooms('AVAILABLE');
+          if (response.success) {
+            setRooms(response.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch rooms:", err);
+        } finally {
+          setLoadingRooms(false);
+        }
+      };
+      fetchRooms();
+    }
+  }, [isEditing]);
+
+  const handleEditClick = () => {
+    setIsEditing(true);
+    setError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setError(null);
+    // Reset form data to original booking data
+    setFormData({
+      room_id: booking?.room_id?._id || "",
+      date: booking?.date ? new Date(booking.date).toISOString().split('T')[0] : "",
+      start_time: booking?.start_time || "",
+      end_time: booking?.end_time || "",
+      purpose: booking?.purpose || "",
+    });
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      setError(null);
+      
+      // Validate required fields
+      if (!formData.room_id || !formData.date || !formData.start_time || !formData.end_time || !formData.purpose) {
+        setError("All fields are required");
+        return;
+      }
+
+      // Validate time
+      if (formData.end_time <= formData.start_time) {
+        setError("End time must be after start time");
+        return;
+      }
+
+      const response = await updateBooking(id, formData);
+      
+      if (response.success) {
+        alert("Booking updated successfully");
+        navigate("/my-bookings");
+      }
+    } catch (err) {
+      const errorMsg = err.message || "Failed to update booking";
+      setError(errorMsg);
+      alert(errorMsg);
+    }
+  };
 
   const handleCancelBooking = async () => {
     if (!window.confirm("Are you sure you want to cancel this booking?")) {
@@ -95,63 +181,140 @@ const BookingDetail = () => {
           {/* Room Information */}
           <div className="px-6 py-6 border-b border-gray-200">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Room Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Room Name</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {booking.room_id?.room_name || "N/A"}
-                </p>
+            {isEditing ? (
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-2">Select Room</label>
+                  {loadingRooms ? (
+                    <p className="text-sm text-gray-500">Loading rooms...</p>
+                  ) : (
+                    <select
+                      name="room_id"
+                      value={formData.room_id}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="">Select a room</option>
+                      {rooms.map((room) => (
+                        <option key={room._id} value={room._id}>
+                          {room.room_name} - {room.room_code} ({room.location}) - Capacity: {room.capacity}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Room Code</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {booking.room_id?.room_code || "N/A"}
-                </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Room Name</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {booking.room_id?.room_name || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Room Code</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {booking.room_id?.room_code || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Location</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {booking.room_id?.location || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Capacity</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {booking.room_id?.capacity || "N/A"} seats
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Location</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {booking.room_id?.location || "N/A"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Capacity</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {booking.room_id?.capacity || "N/A"} seats
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Booking Schedule */}
           <div className="px-6 py-6 border-b border-gray-200">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Schedule</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Date</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {formatDate(booking.date)}
-                </p>
+            {isEditing ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-2">Date</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-2">Start Time</label>
+                  <input
+                    type="time"
+                    name="start_time"
+                    value={formData.start_time}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-2">End Time</label>
+                  <input
+                    type="time"
+                    name="end_time"
+                    value={formData.end_time}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Start Time</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {booking.start_time}
-                </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Date</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {formatDate(booking.date)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Start Time</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {booking.start_time}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">End Time</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {booking.end_time}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">End Time</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {booking.end_time}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Purpose */}
           <div className="px-6 py-6 border-b border-gray-200">
             <h2 className="text-lg font-bold text-gray-900 mb-2">Purpose</h2>
-            <p className="text-base text-gray-700">{booking.purpose || "N/A"}</p>
+            {isEditing ? (
+              <textarea
+                name="purpose"
+                value={formData.purpose}
+                onChange={handleInputChange}
+                rows={4}
+                placeholder="Enter the purpose of your booking"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            ) : (
+              <p className="text-base text-gray-700">{booking.purpose || "N/A"}</p>
+            )}
           </div>
 
           {/* Requester Information */}
@@ -198,19 +361,47 @@ const BookingDetail = () => {
             {error && (
               <div className="flex-1 text-sm text-red-600">{error}</div>
             )}
-            <button
-              onClick={() => navigate("/my-bookings")}
-              className="px-6 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-100"
-            >
-              Close
-            </button>
-            {["PENDING", "APPROVED"].includes(booking.status) && (
-              <button
-                onClick={handleCancelBooking}
-                className="px-6 py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700"
-              >
-                Cancel Booking
-              </button>
+            
+            {isEditing ? (
+              <>
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-6 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-100"
+                >
+                  Cancel Edit
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
+                >
+                  Save Changes
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigate("/my-bookings")}
+                  className="px-6 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-100"
+                >
+                  Close
+                </button>
+                {booking.status === "PENDING" && (
+                  <button
+                    onClick={handleEditClick}
+                    className="px-6 py-2.5 bg-yellow-600 text-white rounded-lg text-sm font-semibold hover:bg-yellow-700"
+                  >
+                    Edit Booking
+                  </button>
+                )}
+                {["PENDING", "APPROVED"].includes(booking.status) && (
+                  <button
+                    onClick={handleCancelBooking}
+                    className="px-6 py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700"
+                  >
+                    Cancel Booking
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
