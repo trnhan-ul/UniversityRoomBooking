@@ -275,7 +275,7 @@ const RoomInventory = () => {
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
-                            onClick={() => navigate(`/edit-classroom/${room._id}`)}
+                            onClick={() => navigate(`/update-classroom/${room._id}`)}
                             className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
                             title="Edit room"
                           >

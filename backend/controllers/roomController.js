@@ -193,7 +193,7 @@ const createRoom = async (req, res) => {
 const updateRoom = async (req, res) => {
   try {
     const roomId = req.params.id;
-    const { room_code, room_name, capacity, location, description, status, equipment } = req.body;
+    const { room_code, room_name, capacity, location, description, status, equipment, images } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
       return res.status(400).json({
@@ -250,6 +250,23 @@ const updateRoom = async (req, res) => {
           created_by: req.user.id,
         }));
         await Equipment.insertMany(equipmentDocs);
+      }
+    }
+
+    // Update images if provided
+    if (images && Array.isArray(images)) {
+      // Remove old images
+      await RoomImage.deleteMany({ room_id: roomId });
+      
+      // Add new images
+      if (images.length > 0) {
+        const imageDocs = images.map((img, index) => ({
+          room_id: roomId,
+          image_url: img,
+          is_cover: index === 0, // First image is cover
+          uploaded_by: req.user.id,
+        }));
+        await RoomImage.insertMany(imageDocs);
       }
     }
 
