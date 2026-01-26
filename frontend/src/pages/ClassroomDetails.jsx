@@ -5,12 +5,14 @@ import { getRoomById } from '../services/roomService';
 
 const ClassroomDetails = () => {
   const navigate = useNavigate();
-  const { user } = useAuthContext();
+  const { user, logout } = useAuthContext();
   const [searchParams] = useSearchParams();
   const roomId = searchParams.get('roomId');
   const [room, setRoom] = useState({});
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [menuTimeout, setMenuTimeout] = useState(null);
   const [bookingData, setBookingData] = useState({
     date: new Date().toISOString().split('T')[0],
     startTime: '09:00',
@@ -72,6 +74,26 @@ const ClassroomDetails = () => {
     setCurrentImageIndex((prev) => (prev - 1 + roomImages.length) % roomImages.length);
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleMenuEnter = () => {
+    if (menuTimeout) {
+      clearTimeout(menuTimeout);
+      setMenuTimeout(null);
+    }
+    setShowProfileMenu(true);
+  };
+
+  const handleMenuLeave = () => {
+    const timeout = setTimeout(() => {
+      setShowProfileMenu(false);
+    }, 300);
+    setMenuTimeout(timeout);
+  };
+
   if (loading) {
     return (
       <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex items-center justify-center">
@@ -101,15 +123,55 @@ const ClassroomDetails = () => {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <div className="relative hidden sm:block">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
-              <input className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-primary transition-all" placeholder="Find a room..." type="text"/>
-            </div>
             <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
               <span className="material-symbols-outlined">notifications</span>
             </button>
-            <div className="size-9 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden border border-slate-300 dark:border-slate-600">
-              <img className="w-full h-full object-cover" data-alt="User profile avatar portrait" src={`https://ui-avatars.com/api/?name=${user?.full_name || 'User'}&background=136dec&color=fff`}/>
+            <div 
+              className="relative"
+              onMouseEnter={handleMenuEnter}
+              onMouseLeave={handleMenuLeave}
+            >
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="size-9 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden border-2 border-primary hover:border-blue-600 transition-colors cursor-pointer"
+              >
+                <img className="w-full h-full object-cover" data-alt="User profile avatar portrait" src={`https://ui-avatars.com/api/?name=${user?.full_name || 'User'}&background=136dec&color=fff`}/>
+              </button>
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-2 z-50">
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigate('/my-profile');
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">person</span>
+                    Profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigate('/my-profile');
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">lock</span>
+                    Change Password
+                  </button>
+                  <hr className="my-2 border-slate-200 dark:border-slate-700" />
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      handleLogout();
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">logout</span>
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -125,16 +187,11 @@ const ClassroomDetails = () => {
                 <div className="absolute inset-0 bg-cover bg-center" data-alt={`Wide shot of ${room.room_name}`} style={{backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%), url('${roomImage}')`}}></div>
                 <div className="absolute bottom-6 left-6 text-white">
                   <h2 className="text-3xl font-bold">{room.room_name}</h2>
+                  <p className="text-slate-300 text-sm font-semibold mb-1">{room.room_code}</p>
                   <p className="text-slate-200 flex items-center gap-2">
                     <span className="material-symbols-outlined text-sm">location_on</span>
                     {room.location}
                   </p>
-                </div>
-                <div className="absolute top-6 right-6 flex gap-2">
-                  <span className={`px-3 py-1 ${room.status === 'AVAILABLE' ? 'bg-green-500' : 'bg-slate-500'} text-white text-sm font-bold rounded-full shadow-lg`}>{room.status === 'AVAILABLE' ? 'AVAILABLE' : 'OCCUPIED'}</span>
-                  <button className="p-2 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors">
-                    <span className="material-symbols-outlined">favorite</span>
-                  </button>
                 </div>
                 {roomImages.length > 1 && (
                   <>
