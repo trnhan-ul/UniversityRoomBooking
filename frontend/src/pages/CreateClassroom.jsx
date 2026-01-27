@@ -176,17 +176,12 @@ const CreateClassroom = () => {
         images: imagesPreviews // Send base64 images
       };
 
-      console.log('Submitting room data:', roomData); // Debug log
-
       const response = await createRoom(roomData);
-
-      console.log('Create room response:', response); // Debug log
 
       if (response.success) {
         setShowSuccessModal(true);
       }
     } catch (err) {
-      console.error('Create room error:', err); // Debug log
       setError(err.message || 'Failed to create classroom');
     } finally {
       setLoading(false);
