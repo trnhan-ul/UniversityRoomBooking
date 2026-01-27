@@ -19,7 +19,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // UC14 - Create booking
@@ -37,7 +37,7 @@ export const getMyBookings = async (
   page = 1,
   limit = 20,
   status = null,
-  time = null
+  time = null,
 ) => {
   try {
     let url = `/bookings/my-bookings?page=${page}&limit=${limit}`;
@@ -54,7 +54,7 @@ export const getMyBookings = async (
 export const getPendingBookings = async (page = 1, limit = 50) => {
   try {
     const response = await api.get(
-      `/bookings/pending?page=${page}&limit=${limit}`
+      `/bookings/pending?page=${page}&limit=${limit}`,
     );
     return response.data;
   } catch (error) {
@@ -98,6 +98,16 @@ export const rejectBooking = async (bookingId, rejectReason) => {
 export const cancelBooking = async (bookingId) => {
   try {
     const response = await api.patch(`/bookings/${bookingId}/cancel`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Update booking (User)
+export const updateBooking = async (bookingId, bookingData) => {
+  try {
+    const response = await api.patch(`/bookings/${bookingId}`, bookingData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: "Network error" };

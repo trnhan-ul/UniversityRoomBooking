@@ -70,4 +70,10 @@ router.patch(
   bookingController.rejectBooking,
 );
 
+// PATCH /api/bookings/:id/cancel - cancel booking (User)
+router.patch("/:id/cancel", authenticate, bookingController.cancelBooking);
+
+// PATCH /api/bookings/:id - update booking (User) - MUST be last
+router.patch("/:id", authenticate, bookingController.updateBooking);
+
 module.exports = router;
