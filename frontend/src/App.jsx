@@ -21,6 +21,7 @@ import ClassroomDetails from "./pages/ClassroomDetails";
 import ClassroomScheduleGrid from "./pages/ClassroomScheduleGrid";
 import RoomInventory from "./pages/RoomInventory";
 import CreateClassroom from "./pages/CreateClassroom";
+import NotificationPage from "./pages/NotificationPage";
 import UpdateClassroom from "./pages/UpdateClassroom";
 
 function App() {
@@ -150,12 +151,14 @@ function App() {
               }
             />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/bookings/:id" element={<BookingDetail />} />
             <Route path="/booking-detail/:id" element={<BookingDetail />} />
             <Route path="/my-profile" element={<MyProfile />} />
             <Route path="/create-booking" element={<CreateBooking />} />
             <Route path="/search-classrooms" element={<SearchClassrooms />} />
             <Route path="/classroom-details" element={<ClassroomDetails />} />
             <Route path="/schedule-grid" element={<ClassroomScheduleGrid />} />
+            <Route path="/notifications" element={<NotificationPage />} />
             <Route
               path="/dashboard"
               element={<Navigate to={getDefaultPath(user.role)} replace />}
@@ -181,3 +184,4 @@ function App() {
 }
 
 export default App;
+
