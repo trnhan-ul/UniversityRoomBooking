@@ -71,3 +71,13 @@ export const deleteRoom = async (roomId) => {
     throw error.response?.data || { success: false, message: "Network error" };
   }
 };
+
+// Block time slot
+export const blockTimeSlot = async (scheduleData) => {
+  try {
+    const response = await api.post('/rooms/block', scheduleData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to block time slot' };
+  }
+};

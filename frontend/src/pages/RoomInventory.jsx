@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRooms, deleteRoom } from '../services/roomService';
+import { getRooms, deleteRoom, blockTimeSlot } from '../services/roomService';
 
 const RoomInventory = () => {
   const navigate = useNavigate();
@@ -11,12 +11,26 @@ const RoomInventory = () => {
   const [totalRooms, setTotalRooms] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState(null);
   const [filters, setFilters] = useState({
     status: '',
     location: '',
   });
   const roomsPerPage = 5;
+
+  // Block Time Modal State
+  const [blockFormData, setBlockFormData] = useState({
+    room_id: '',
+    date: '',
+    start_time: '',
+    end_time: '',
+    status: 'BLOCKED',
+    reason: ''
+  });
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [conflicts, setConflicts] = useState(null);
+  const [errorCode, setErrorCode] = useState(null);
 
   useEffect(() => {
     fetchRooms();
@@ -75,6 +89,67 @@ const RoomInventory = () => {
     } catch (error) {
       console.error('Error deleting room:', error);
       alert(error.message || 'Failed to delete room');
+    }
+  };
+
+  // Block Time Modal Handlers
+  const handleBlockChange = (e) => {
+    setBlockFormData({
+      ...blockFormData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleBlockSubmit = async (e, force = false) => {
+    e.preventDefault();
+    
+    if (!blockFormData.room_id || !blockFormData.date || !blockFormData.start_time || !blockFormData.end_time || !blockFormData.reason) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    setBlockLoading(true);
+    setConflicts(null);
+    setErrorCode(null);
+
+    try {
+      const payload = { ...blockFormData, force };
+      const response = await blockTimeSlot(payload);
+
+      if (response.success) {
+        alert(response.message);
+        setShowBlockModal(false);
+        setBlockFormData({
+          room_id: '',
+          date: '',
+          start_time: '',
+          end_time: '',
+          status: 'BLOCKED',
+          reason: ''
+        });
+        setConflicts(null);
+        setErrorCode(null);
+      }
+    } catch (error) {
+      if (error.error_code === 'APPROVED_BOOKINGS_EXIST') {
+        // Hard block - cannot override
+        setErrorCode('APPROVED_BOOKINGS_EXIST');
+        setConflicts(error.conflicts);
+      } else if (error.error_code === 'PENDING_BOOKINGS_EXIST') {
+        // Soft warning - can override
+        setErrorCode('PENDING_BOOKINGS_EXIST');
+        setConflicts(error.conflicts);
+      } else {
+        alert(error.message || 'Failed to block time slot');
+      }
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const handleForceBlock = (e) => {
+    if (window.confirm('This will automatically reject all pending bookings. Continue?')) {
+      handleBlockSubmit(e, true);
     }
   };
 
@@ -170,13 +245,22 @@ const RoomInventory = () => {
           </h2>
           <p className="text-[#4c739a] text-sm">Manage and monitor all facility spaces in real-time.</p>
         </div>
-        <button 
-          onClick={() => navigate('/create-classroom')}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-bold text-sm shadow-md hover:bg-primary/90 transition-all active:scale-95"
-        >
-          <span className="material-symbols-outlined text-lg">add_circle</span>
-          <span>Add New Classroom</span>
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setShowBlockModal(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg font-bold text-sm shadow-md hover:bg-orange-700 transition-all active:scale-95"
+          >
+            <span className="material-symbols-outlined text-lg">block</span>
+            <span>Block Time Slot</span>
+          </button>
+          <button 
+            onClick={() => navigate('/create-classroom')}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-bold text-sm shadow-md hover:bg-primary/90 transition-all active:scale-95"
+          >
+            <span className="material-symbols-outlined text-lg">add_circle</span>
+            <span>Add New Classroom</span>
+          </button>
+        </div>
       </header>
 
       {/* Toolbar & Search */}
@@ -275,7 +359,7 @@ const RoomInventory = () => {
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
-                            onClick={() => navigate(`/edit-classroom/${room._id}`)}
+                            onClick={() => navigate(`/update-classroom/${room._id}`)}
                             className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
                             title="Edit room"
                           >
@@ -432,6 +516,234 @@ const RoomInventory = () => {
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block Time Modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Block Time Slot</h2>
+              <button
+                onClick={() => {
+                  setShowBlockModal(false);
+                  setBlockFormData({
+                    room_id: '',
+                    date: '',
+                    start_time: '',
+                    end_time: '',
+                    status: 'BLOCKED',
+                    reason: ''
+                  });
+                  setConflicts(null);
+                  setErrorCode(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Conflict Alerts */}
+            {errorCode === 'APPROVED_BOOKINGS_EXIST' && (
+              <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-red-600 mt-0.5">error</span>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-900 mb-2">Cannot Block Time Slot</h3>
+                    <p className="text-sm text-red-700 mb-3">
+                      The following approved bookings exist. You must contact users to reschedule before blocking this time.
+                    </p>
+                    <div className="space-y-2">
+                      {conflicts?.approved?.map((booking, idx) => (
+                        <div key={idx} className="bg-white p-3 rounded border border-red-200">
+                          <div className="text-sm">
+                            <span className="font-semibold">{booking.user}</span> ({booking.email})
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {booking.time} • {booking.purpose}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {errorCode === 'PENDING_BOOKINGS_EXIST' && (
+              <div className="mx-6 mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-yellow-600 mt-0.5">warning</span>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-yellow-900 mb-2">Pending Bookings Found</h3>
+                    <p className="text-sm text-yellow-700 mb-3">
+                      The following pending bookings will be automatically rejected if you proceed:
+                    </p>
+                    <div className="space-y-2">
+                      {conflicts?.pending?.map((booking, idx) => (
+                        <div key={idx} className="bg-white p-3 rounded border border-yellow-200">
+                          <div className="text-sm">
+                            <span className="font-semibold">{booking.user}</span> ({booking.email})
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {booking.time} • {booking.purpose}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleForceBlock}
+                      disabled={blockLoading}
+                      className="mt-4 w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    >
+                      {blockLoading ? 'Processing...' : 'Proceed and Reject Pending Bookings'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleBlockSubmit} className="p-6 space-y-4">
+              {/* Room Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Room <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="room_id"
+                  value={blockFormData.room_id}
+                  onChange={handleBlockChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  required
+                >
+                  <option value="">Select a room</option>
+                  {rooms?.map((room) => (
+                    <option key={room._id} value={room._id}>
+                      {room.room_code} - {room.room_name} ({room.location})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="date"
+                  value={blockFormData.date}
+                  onChange={handleBlockChange}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  required
+                />
+              </div>
+
+              {/* Time Range */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    name="start_time"
+                    value={blockFormData.start_time}
+                    onChange={handleBlockChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    name="end_time"
+                    value={blockFormData.end_time}
+                    onChange={handleBlockChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Block Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Block Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="status"
+                  value={blockFormData.status}
+                  onChange={handleBlockChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  required
+                >
+                  <option value="BLOCKED">Blocked</option>
+                  <option value="MAINTENANCE">Maintenance</option>
+                  <option value="EVENT">Special Event</option>
+                </select>
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="reason"
+                  value={blockFormData.reason}
+                  onChange={handleBlockChange}
+                  rows="3"
+                  placeholder="Explain why this time slot needs to be blocked..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                  required
+                />
+              </div>
+
+              {/* Action Buttons */}
+              {errorCode !== 'APPROVED_BOOKINGS_EXIST' && (
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBlockModal(false);
+                      setBlockFormData({
+                        room_id: '',
+                        date: '',
+                        start_time: '',
+                        end_time: '',
+                        status: 'BLOCKED',
+                        reason: ''
+                      });
+                      setConflicts(null);
+                      setErrorCode(null);
+                    }}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  {errorCode !== 'PENDING_BOOKINGS_EXIST' && (
+                    <button
+                      type="submit"
+                      disabled={blockLoading}
+                      className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {blockLoading ? 'Checking...' : 'Block Time Slot'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </form>
           </div>
         </div>
       )}

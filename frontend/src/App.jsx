@@ -22,6 +22,7 @@ import ClassroomScheduleGrid from "./pages/ClassroomScheduleGrid";
 import RoomInventory from "./pages/RoomInventory";
 import CreateClassroom from "./pages/CreateClassroom";
 import NotificationPage from "./pages/NotificationPage";
+import UpdateClassroom from "./pages/UpdateClassroom";
 
 function App() {
   const isAdminRole = (role) =>
@@ -117,6 +118,17 @@ function App() {
           />
         )}
 
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/update-classroom/:id"
+            element={
+              <AdminLayout>
+                <UpdateClassroom />
+              </AdminLayout>
+            }
+          />
+        )}
+
         {user &&
           (user.role === "FACILITY_MANAGER" ||
             user.role === "ADMINISTRATOR") && (
@@ -172,3 +184,4 @@ function App() {
 }
 
 export default App;
+

@@ -447,6 +447,148 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+// User update their own booking
+const updateBooking = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid booking id" });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    }
+
+    // Check ownership
+    if (booking.user_id.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden: not your booking" });
+    }
+
+    // Only PENDING bookings can be updated
+    if (booking.status !== "PENDING") {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Only pending bookings can be updated",
+        });
+    }
+
+    const { room_id, date, start_time, end_time, purpose } = req.body;
+
+    // Validate time format and logic if provided
+    if (start_time || end_time) {
+      const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      const newStartTime = start_time || booking.start_time;
+      const newEndTime = end_time || booking.end_time;
+
+      if (!timeRegex.test(newStartTime) || !timeRegex.test(newEndTime)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid time format. Use HH:mm",
+        });
+      }
+
+      const [startHour, startMin] = newStartTime.split(":").map(Number);
+      const [endHour, endMin] = newEndTime.split(":").map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+
+      if (endMinutes <= startMinutes) {
+        return res.status(400).json({
+          success: false,
+          message: "End time must be after start time",
+        });
+      }
+    }
+
+    // Validate date is not in the past if provided
+    if (date) {
+      const bookingDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (bookingDate < today) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot book room in the past",
+        });
+      }
+    }
+
+    // Check if room exists if room_id is being changed
+    if (room_id && room_id !== booking.room_id.toString()) {
+      const room = await Room.findById(room_id);
+      if (!room) {
+        return res.status(404).json({
+          success: false,
+          message: "Room not found",
+        });
+      }
+
+      if (room.status !== "AVAILABLE") {
+        return res.status(400).json({
+          success: false,
+          message: "Room is not available",
+        });
+      }
+    }
+
+    // Check for booking conflicts
+    const checkRoomId = room_id || booking.room_id;
+    const checkDate = date ? new Date(date) : booking.date;
+    const checkStartTime = start_time || booking.start_time;
+    const checkEndTime = end_time || booking.end_time;
+
+    const conflicts = await Booking.find({
+      _id: { $ne: bookingId }, // Exclude current booking
+      room_id: checkRoomId,
+      date: checkDate,
+      status: { $in: ["PENDING", "APPROVED"] },
+      $or: [
+        {
+          start_time: { $lt: checkEndTime },
+          end_time: { $gt: checkStartTime },
+        },
+      ],
+    });
+
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "This time slot is already booked",
+      });
+    }
+
+    // Update booking fields
+    if (room_id) booking.room_id = room_id;
+    if (date) booking.date = new Date(date);
+    if (start_time) booking.start_time = start_time;
+    if (end_time) booking.end_time = end_time;
+    if (purpose) booking.purpose = purpose;
+
+    await booking.save();
+    await booking.populate("room_id", "room_name room_code location capacity");
+    await booking.populate("user_id", "full_name email phone_number");
+
+    res.status(200).json({
+      success: true,
+      data: booking,
+      message: "Booking updated successfully",
+    });
+  } catch (error) {
+    console.error("updateBooking error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 // Get booking statistics
 const getBookingStatistics = async (req, res) => {
   try {
@@ -494,5 +636,6 @@ module.exports = {
   rejectBooking,
   getMyBookings,
   cancelBooking,
+  updateBooking,
   getBookingStatistics,
 };

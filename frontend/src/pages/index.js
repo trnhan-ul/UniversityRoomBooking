@@ -8,3 +8,4 @@ export { default as AdministratorDashboard } from './AdministratorDashboard';
 export { default as RoomInventory } from './RoomInventory';
 export { default as CreateClassroom } from './CreateClassroom';
 export { default as NotificationPage } from './NotificationPage';
+export { default as UpdateClassroom } from './UpdateClassroom';
