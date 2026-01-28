@@ -21,7 +21,9 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Include SERVER_START_TIME to reject tokens from previous server sessions
+    const secret = `${process.env.JWT_SECRET}_${global.SERVER_START_TIME || ''}`;
+    const decoded = jwt.verify(token, secret);
     const user = await User.findById(decoded.id);
 
     if (!user) {
@@ -48,7 +50,7 @@ const authorizeRoles = (...roles) => (req, res, next) => {
 
     // Support both authorizeRoles('A', 'B') and authorizeRoles(['A', 'B'])
     const allowedRoles = Array.isArray(roles[0]) ? roles[0] : roles;
-    
+
     const userRole = (req.user.role || '').toUpperCase();
     const allowed = allowedRoles.map(r => r.toUpperCase());
 

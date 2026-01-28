@@ -9,6 +9,11 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+// Generate unique server instance ID on startup
+// This ensures old tokens become invalid when server restarts
+global.SERVER_START_TIME = Date.now();
+console.log('Server instance started at:', new Date(global.SERVER_START_TIME).toISOString());
+
 const connectDB = require("./config/db");
 const initDatabase = require("./config/init");
 
@@ -35,11 +40,13 @@ const authRoutes = require("./routes/authRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const roomRoutes = require("./routes/roomRoutes");
 const userRoutes = require("./routes/userRoutes");
+const scheduleRoutes = require("./routes/scheduleRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/schedules", scheduleRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {

@@ -18,10 +18,10 @@ import CreateBooking from "./pages/CreateBooking";
 import BookingDetail from "./pages/BookingDetail";
 import SearchClassrooms from "./pages/SearchClassrooms";
 import ClassroomDetails from "./pages/ClassroomDetails";
-import ClassroomScheduleGrid from "./pages/ClassroomScheduleGrid";
 import RoomInventory from "./pages/RoomInventory";
 import CreateClassroom from "./pages/CreateClassroom";
 import UpdateClassroom from "./pages/UpdateClassroom";
+import ScheduleManagement from "./pages/ScheduleManagement";
 
 function App() {
   const isAdminRole = (role) =>
@@ -128,6 +128,17 @@ function App() {
           />
         )}
 
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/schedule-management"
+            element={
+              <AdminLayout>
+                <ScheduleManagement />
+              </AdminLayout>
+            }
+          />
+        )}
+
         {user &&
           (user.role === "FACILITY_MANAGER" ||
             user.role === "ADMINISTRATOR") && (
@@ -155,7 +166,6 @@ function App() {
             <Route path="/create-booking" element={<CreateBooking />} />
             <Route path="/search-classrooms" element={<SearchClassrooms />} />
             <Route path="/classroom-details" element={<ClassroomDetails />} />
-            <Route path="/schedule-grid" element={<ClassroomScheduleGrid />} />
             <Route
               path="/dashboard"
               element={<Navigate to={getDefaultPath(user.role)} replace />}

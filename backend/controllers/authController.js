@@ -9,9 +9,11 @@ const { PASSWORD_RESET_EXPIRY } = require('../config/constants');
 const { passwordResetTemplate, emailVerificationTemplate } = require('../templates/emailTemplates');
 
 const generateToken = (userId) => {
+    // Include SERVER_START_TIME to invalidate old tokens after server restart
+    const secret = `${process.env.JWT_SECRET}_${global.SERVER_START_TIME || ''}`;
     return jwt.sign(
         { id: userId },
-        process.env.JWT_SECRET || 'your-secret-key',
+        secret,
         { expiresIn: '7d' }
     );
 };
