@@ -187,7 +187,6 @@ const SearchClassrooms = () => {
             <nav className="flex items-center gap-9">
               <button onClick={() => navigate('/search-classrooms')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">Classrooms</button>
               <button onClick={() => navigate('/my-bookings')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">My Bookings</button>
-              <button onClick={() => navigate('/schedule-grid')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">Schedule Grid</button>
             </nav>
           </div>
           <div className="flex flex-1 justify-end gap-6 items-center">
