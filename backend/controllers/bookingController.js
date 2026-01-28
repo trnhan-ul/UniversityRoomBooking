@@ -268,7 +268,7 @@ const approveBooking = async (req, res) => {
       type: "BOOKING",
       target_type: "Booking",
       target_id: booking._id,
-      is_read: false,
+      is_read: false
     });
 
     await sendApprovalEmail(
@@ -340,7 +340,7 @@ const rejectBooking = async (req, res) => {
       type: "BOOKING",
       target_type: "Booking",
       target_id: booking._id,
-      is_read: false,
+      is_read: false
     });
 
     await sendApprovalEmail(
