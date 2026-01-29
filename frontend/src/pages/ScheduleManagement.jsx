@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import moment from 'moment';
 import { getCalendarData } from '../services/scheduleService';
-import { getRooms, blockTimeSlot } from '../services/roomService';
+import { getRooms, blockTimeSlot, unblockTimeSlot } from '../services/roomService';
+import { useAuth } from '../hooks/useAuth';
 
 const ScheduleManagement = () => {
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState('');
@@ -127,7 +129,9 @@ const ScheduleManagement = () => {
   };
 
   const handleBlockSubmit = async (e, force = false) => {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     
     if (!blockFormData.room_id || !blockFormData.date || !blockFormData.start_time || !blockFormData.end_time || !blockFormData.reason) {
       alert('Please fill all required fields');
@@ -135,11 +139,16 @@ const ScheduleManagement = () => {
     }
 
     setBlockLoading(true);
-    setConflicts(null);
-    setErrorCode(null);
+    
+    // Only clear conflicts/errorCode if this is NOT a force retry
+    if (!force) {
+      setConflicts(null);
+      setErrorCode(null);
+    }
 
     try {
       const payload = { ...blockFormData, force };
+      console.log('Submitting block request:', payload);
       const response = await blockTimeSlot(payload);
 
       if (response.success) {
@@ -158,24 +167,77 @@ const ScheduleManagement = () => {
         fetchCalendarData(); // Refresh calendar
       }
     } catch (error) {
+      console.log('Block error:', error);
       if (error.error_code === 'APPROVED_BOOKINGS_EXIST') {
+        // Hard block - show error and stop
         setErrorCode('APPROVED_BOOKINGS_EXIST');
         setConflicts(error.conflicts);
       } else if (error.error_code === 'PENDING_BOOKINGS_EXIST') {
+        // Soft warning - show conflicts and allow force
         setErrorCode('PENDING_BOOKINGS_EXIST');
         setConflicts(error.conflicts);
       } else {
+        // Other errors
         alert(error.message || 'Failed to block time slot');
+        setConflicts(null);
+        setErrorCode(null);
       }
     } finally {
       setBlockLoading(false);
     }
   };
 
-  const handleForceBlock = (e) => {
-    if (window.confirm('This will automatically reject all pending bookings. Continue?')) {
-      handleBlockSubmit(e, true);
+  const handleForceBlock = async (e) => {
+    e.preventDefault();
+    if (!window.confirm('This will automatically reject all pending bookings. Continue?')) {
+      return;
     }
+    
+    // Call with force=true to reject pending bookings and create block
+    await handleBlockSubmit(null, true);
+  };
+
+  // Unblock time slot handler
+  const handleUnblock = async () => {
+    if (!selectedEvent || !selectedEvent.id) {
+      alert('Invalid schedule selection');
+      return;
+    }
+
+    // Check if event has already passed
+    const eventEnd = moment(selectedEvent.end);
+    if (eventEnd.isBefore(moment())) {
+      alert('Cannot unblock a time slot that has already passed');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to unblock this time slot?')) {
+      return;
+    }
+
+    try {
+      const response = await unblockTimeSlot(selectedEvent.id);
+      if (response.success) {
+        alert('Time slot unblocked successfully');
+        setShowDetailModal(false);
+        setSelectedEvent(null);
+        fetchCalendarData(); // Refresh calendar
+      }
+    } catch (error) {
+      alert(error.message || 'Failed to unblock time slot');
+    }
+  };
+
+  // Check if user can unblock (Admin or Facility Manager)
+  const canUnblock = () => {
+    return user && (user.role === 'ADMINISTRATOR' || user.role === 'FACILITY_MANAGER');
+  };
+
+  // Check if event can be unblocked (not in the past)
+  const canUnblockEvent = (event) => {
+    if (!event) return false;
+    const eventEnd = moment(event.end);
+    return eventEnd.isAfter(moment());
   };
 
   // Get color for event
@@ -702,12 +764,38 @@ const ScheduleManagement = () => {
 
             {/* Modal Footer */}
             <div className="border-t border-[#cfdbe7] dark:border-slate-800 px-6 py-4">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="w-full px-4 py-2.5 bg-background-light dark:bg-slate-800 text-[#0d141b] dark:text-white rounded-lg font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-              >
-                Close
-              </button>
+              {selectedEvent?.type === 'blocked' && canUnblock() ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={handleUnblock}
+                    disabled={!canUnblockEvent(selectedEvent)}
+                    className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${
+                      canUnblockEvent(selectedEvent)
+                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                        : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    }`}
+                    title={!canUnblockEvent(selectedEvent) ? 'Cannot unblock time slots in the past' : 'Unblock this time slot'}
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-sm">lock_open</span>
+                      {canUnblockEvent(selectedEvent) ? 'Unblock Time Slot' : 'Cannot Unblock (Past)'}
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="w-full px-4 py-2.5 bg-background-light dark:bg-slate-800 text-[#0d141b] dark:text-white rounded-lg font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Close
+                </button>
+              )}
             </div>
           </div>
         </div>

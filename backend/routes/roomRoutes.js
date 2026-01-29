@@ -41,4 +41,12 @@ router.post(
   roomController.blockTimeSlot
 );
 
+// DELETE /api/rooms/unblock/:schedule_id - Unblock time slot (Admin/Facility Manager only)
+router.delete(
+  "/unblock/:schedule_id",
+  authenticate,
+  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
+  roomController.unblockTimeSlot
+);
+
 module.exports = router;
