@@ -260,7 +260,7 @@ const updateRoom = async (req, res) => {
     if (images && Array.isArray(images)) {
       // Remove old images
       await RoomImage.deleteMany({ room_id: roomId });
-      
+
       // Add new images
       if (images.length > 0) {
         const imageDocs = images.map((img, index) => ({
@@ -350,15 +350,38 @@ const blockTimeSlot = async (req, res) => {
       });
     }
 
+    // Parse date properly (set to start of day in local timezone)
+    const blockDate = new Date(date);
+    blockDate.setHours(0, 0, 0, 0);
+
+    // Create end of day for date range query
+    const blockDateEnd = new Date(date);
+    blockDateEnd.setHours(23, 59, 59, 999);
+
+    // First, let's check ALL bookings for this room and date to debug
+    const allBookingsForDate = await Booking.find({
+      room_id,
+      date: {
+        $gte: blockDate,
+        $lte: blockDateEnd
+      }
+    }).populate('user_id', 'full_name email');
+
     // Check for overlapping bookings
     const overlappingBookings = await Booking.find({
       room_id,
-      date: new Date(date),
+      date: {
+        $gte: blockDate,
+        $lte: blockDateEnd
+      },
       status: { $in: ['APPROVED', 'PENDING'] },
       $or: [
+        // Case 1: Booking starts before block ends AND booking ends after block starts
         {
-          start_time: { $lt: end_time },
-          end_time: { $gt: start_time }
+          $and: [
+            { start_time: { $lt: end_time } },
+            { end_time: { $gt: start_time } }
+          ]
         }
       ]
     }).populate('user_id', 'full_name email');
@@ -411,19 +434,28 @@ const blockTimeSlot = async (req, res) => {
     // If force=true, reject all pending bookings
     if (pendingBookings.length > 0 && force) {
       for (const booking of pendingBookings) {
-        booking.status = 'REJECTED';
-        booking.rejection_reason = `Time slot blocked for ${status.toLowerCase()}: ${reason}`;
-        await booking.save();
+        try {
+          booking.status = 'REJECTED';
+          booking.rejection_reason = `Time slot blocked for ${status.toLowerCase()}: ${reason}`;
+          await booking.save();
 
-        // Create notification for rejected booking
-        await Notification.create({
-          user_id: booking.user_id._id,
-          type: 'BOOKING_REJECTED',
-          title: 'Booking Request Rejected',
-          message: `Your booking for ${room.room_code} on ${new Date(date).toLocaleDateString()} has been rejected due to schedule blocking.`,
-          related_booking: booking._id,
-          is_read: false
-        });
+          // Get user_id (handle both populated and non-populated cases)
+          const userId = booking.user_id?._id || booking.user_id;
+
+          // Create notification for rejected booking
+          await Notification.create({
+            user_id: userId,
+            type: 'BOOKING',
+            title: 'Booking Request Rejected',
+            message: `Your booking for ${room.room_code} on ${new Date(date).toLocaleDateString()} has been rejected due to schedule blocking.`,
+            target_type: 'Booking',
+            target_id: booking._id,
+            is_read: false
+          });
+        } catch (error) {
+          console.error(`Error rejecting booking ${booking._id}:`, error);
+          // Continue with other bookings even if one fails
+        }
       }
     }
 
@@ -482,6 +514,53 @@ const blockTimeSlot = async (req, res) => {
   }
 };
 
+// Unblock time slot
+const unblockTimeSlot = async (req, res) => {
+  try {
+    const { schedule_id } = req.params;
+
+    // Find the schedule block
+    const schedule = await RoomSchedule.findById(schedule_id);
+
+    if (!schedule) {
+      return res.status(404).json({
+        success: false,
+        message: 'Schedule block not found'
+      });
+    }
+
+    // Check if the time slot has already passed
+    const scheduleDateTime = new Date(schedule.date);
+    const [endHours, endMinutes] = schedule.end_time.split(':');
+    scheduleDateTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+
+    const now = new Date();
+    if (scheduleDateTime < now) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot unblock a time slot that has already passed',
+        schedule_end: scheduleDateTime.toISOString()
+      });
+    }
+
+    // Delete the schedule block
+    await RoomSchedule.findByIdAndDelete(schedule_id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Time slot unblocked successfully'
+    });
+
+  } catch (error) {
+    console.error('Unblock time slot error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to unblock time slot',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getRooms,
   getRoomById,
@@ -489,4 +568,5 @@ module.exports = {
   updateRoom,
   deleteRoom,
   blockTimeSlot,
+  unblockTimeSlot,
 };

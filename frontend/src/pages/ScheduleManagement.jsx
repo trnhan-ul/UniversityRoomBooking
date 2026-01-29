@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import moment from 'moment';
 import { getCalendarData } from '../services/scheduleService';
-import { getRooms } from '../services/roomService';
+import { getRooms, blockTimeSlot, unblockTimeSlot } from '../services/roomService';
+import { useAuth } from '../hooks/useAuth';
 
 const ScheduleManagement = () => {
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState('');
@@ -14,6 +16,20 @@ const ScheduleManagement = () => {
   const [selectedDate, setSelectedDate] = useState(moment());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // Block Time Modal State
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [blockFormData, setBlockFormData] = useState({
+    room_id: '',
+    date: '',
+    start_time: '',
+    end_time: '',
+    status: 'BLOCKED',
+    reason: ''
+  });
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [conflicts, setConflicts] = useState(null);
+  const [errorCode, setErrorCode] = useState(null);
 
   // Generate time slots (7:00 AM - 9:00 PM)
   const timeSlots = [];
@@ -103,6 +119,126 @@ const ScheduleManagement = () => {
   useEffect(() => {
     fetchCalendarData();
   }, [fetchCalendarData]);
+
+  // Block Time Modal Handlers
+  const handleBlockChange = (e) => {
+    setBlockFormData({
+      ...blockFormData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleBlockSubmit = async (e, force = false) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    
+    if (!blockFormData.room_id || !blockFormData.date || !blockFormData.start_time || !blockFormData.end_time || !blockFormData.reason) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    setBlockLoading(true);
+    
+    // Only clear conflicts/errorCode if this is NOT a force retry
+    if (!force) {
+      setConflicts(null);
+      setErrorCode(null);
+    }
+
+    try {
+      const payload = { ...blockFormData, force };
+      console.log('Submitting block request:', payload);
+      const response = await blockTimeSlot(payload);
+
+      if (response.success) {
+        alert(response.message);
+        setShowBlockModal(false);
+        setBlockFormData({
+          room_id: '',
+          date: '',
+          start_time: '',
+          end_time: '',
+          status: 'BLOCKED',
+          reason: ''
+        });
+        setConflicts(null);
+        setErrorCode(null);
+        fetchCalendarData(); // Refresh calendar
+      }
+    } catch (error) {
+      console.log('Block error:', error);
+      if (error.error_code === 'APPROVED_BOOKINGS_EXIST') {
+        // Hard block - show error and stop
+        setErrorCode('APPROVED_BOOKINGS_EXIST');
+        setConflicts(error.conflicts);
+      } else if (error.error_code === 'PENDING_BOOKINGS_EXIST') {
+        // Soft warning - show conflicts and allow force
+        setErrorCode('PENDING_BOOKINGS_EXIST');
+        setConflicts(error.conflicts);
+      } else {
+        // Other errors
+        alert(error.message || 'Failed to block time slot');
+        setConflicts(null);
+        setErrorCode(null);
+      }
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const handleForceBlock = async (e) => {
+    e.preventDefault();
+    if (!window.confirm('This will automatically reject all pending bookings. Continue?')) {
+      return;
+    }
+    
+    // Call with force=true to reject pending bookings and create block
+    await handleBlockSubmit(null, true);
+  };
+
+  // Unblock time slot handler
+  const handleUnblock = async () => {
+    if (!selectedEvent || !selectedEvent.id) {
+      alert('Invalid schedule selection');
+      return;
+    }
+
+    // Check if event has already passed
+    const eventEnd = moment(selectedEvent.end);
+    if (eventEnd.isBefore(moment())) {
+      alert('Cannot unblock a time slot that has already passed');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to unblock this time slot?')) {
+      return;
+    }
+
+    try {
+      const response = await unblockTimeSlot(selectedEvent.id);
+      if (response.success) {
+        alert('Time slot unblocked successfully');
+        setShowDetailModal(false);
+        setSelectedEvent(null);
+        fetchCalendarData(); // Refresh calendar
+      }
+    } catch (error) {
+      alert(error.message || 'Failed to unblock time slot');
+    }
+  };
+
+  // Check if user can unblock (Admin or Facility Manager)
+  const canUnblock = () => {
+    return user && (user.role === 'ADMINISTRATOR' || user.role === 'FACILITY_MANAGER');
+  };
+
+  // Check if event can be unblocked (not in the past)
+  const canUnblockEvent = (event) => {
+    if (!event) return false;
+    const eventEnd = moment(event.end);
+    return eventEnd.isAfter(moment());
+  };
 
   // Get color for event
   const getEventColor = (event) => {
@@ -205,6 +341,14 @@ const ScheduleManagement = () => {
 
         {/* Controls */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowBlockModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">block</span>
+            Block Time Slot
+          </button>
+          
           <select
             value={selectedRoom}
             onChange={(e) => setSelectedRoom(e.target.value)}
@@ -620,13 +764,267 @@ const ScheduleManagement = () => {
 
             {/* Modal Footer */}
             <div className="border-t border-[#cfdbe7] dark:border-slate-800 px-6 py-4">
+              {selectedEvent?.type === 'blocked' && canUnblock() ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={handleUnblock}
+                    disabled={!canUnblockEvent(selectedEvent)}
+                    className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${
+                      canUnblockEvent(selectedEvent)
+                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                        : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    }`}
+                    title={!canUnblockEvent(selectedEvent) ? 'Cannot unblock time slots in the past' : 'Unblock this time slot'}
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-sm">lock_open</span>
+                      {canUnblockEvent(selectedEvent) ? 'Unblock Time Slot' : 'Cannot Unblock (Past)'}
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="w-full px-4 py-2.5 bg-background-light dark:bg-slate-800 text-[#0d141b] dark:text-white rounded-lg font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block Time Modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Block Time Slot</h2>
               <button
-                onClick={() => setShowDetailModal(false)}
-                className="w-full px-4 py-2.5 bg-background-light dark:bg-slate-800 text-[#0d141b] dark:text-white rounded-lg font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                onClick={() => {
+                  setShowBlockModal(false);
+                  setBlockFormData({
+                    room_id: '',
+                    date: '',
+                    start_time: '',
+                    end_time: '',
+                    status: 'BLOCKED',
+                    reason: ''
+                  });
+                  setConflicts(null);
+                  setErrorCode(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
-                Close
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
+
+            {/* Conflict Alerts */}
+            {errorCode === 'APPROVED_BOOKINGS_EXIST' && (
+              <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 mt-0.5">error</span>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-900 dark:text-red-300 mb-2">Cannot Block Time Slot</h3>
+                    <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+                      The following approved bookings exist. You must contact users to reschedule before blocking this time.
+                    </p>
+                    <div className="space-y-2">
+                      {conflicts?.approved?.map((booking, idx) => (
+                        <div key={idx} className="bg-white dark:bg-slate-900 p-3 rounded border border-red-200 dark:border-red-800">
+                          <div className="text-sm text-gray-900 dark:text-white">
+                            <span className="font-semibold">{booking.user}</span> ({booking.email})
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            {booking.time} • {booking.purpose}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {errorCode === 'PENDING_BOOKINGS_EXIST' && (
+              <div className="mx-6 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 mt-0.5">warning</span>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">Pending Bookings Found</h3>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-3">
+                      The following pending bookings will be automatically rejected if you proceed:
+                    </p>
+                    <div className="space-y-2">
+                      {conflicts?.pending?.map((booking, idx) => (
+                        <div key={idx} className="bg-white dark:bg-slate-900 p-3 rounded border border-yellow-200 dark:border-yellow-800">
+                          <div className="text-sm text-gray-900 dark:text-white">
+                            <span className="font-semibold">{booking.user}</span> ({booking.email})
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            {booking.time} • {booking.purpose}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleForceBlock}
+                      disabled={blockLoading}
+                      className="mt-4 w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    >
+                      {blockLoading ? 'Processing...' : 'Proceed and Reject Pending Bookings'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleBlockSubmit} className="p-6 space-y-4">
+              {/* Room Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Room <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="room_id"
+                  value={blockFormData.room_id}
+                  onChange={handleBlockChange}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                  required
+                >
+                  <option value="">Select a room</option>
+                  {rooms?.map((room) => (
+                    <option key={room._id} value={room._id}>
+                      {room.room_code} - {room.room_name} ({room.location})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="date"
+                  value={blockFormData.date}
+                  onChange={handleBlockChange}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                  required
+                />
+              </div>
+
+              {/* Time Range */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Start Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    name="start_time"
+                    value={blockFormData.start_time}
+                    onChange={handleBlockChange}
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    End Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    name="end_time"
+                    value={blockFormData.end_time}
+                    onChange={handleBlockChange}
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Block Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Block Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="status"
+                  value={blockFormData.status}
+                  onChange={handleBlockChange}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                  required
+                >
+                  <option value="BLOCKED">Blocked</option>
+                  <option value="MAINTENANCE">Maintenance</option>
+                  <option value="EVENT">Special Event</option>
+                </select>
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="reason"
+                  value={blockFormData.reason}
+                  onChange={handleBlockChange}
+                  rows="3"
+                  placeholder="Explain why this time slot needs to be blocked..."
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none dark:text-white"
+                  required
+                />
+              </div>
+
+              {/* Action Buttons */}
+              {errorCode !== 'APPROVED_BOOKINGS_EXIST' && (
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBlockModal(false);
+                      setBlockFormData({
+                        room_id: '',
+                        date: '',
+                        start_time: '',
+                        end_time: '',
+                        status: 'BLOCKED',
+                        reason: ''
+                      });
+                      setConflicts(null);
+                      setErrorCode(null);
+                    }}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  {errorCode !== 'PENDING_BOOKINGS_EXIST' && (
+                    <button
+                      type="submit"
+                      disabled={blockLoading}
+                      className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {blockLoading ? 'Checking...' : 'Block Time Slot'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </form>
           </div>
         </div>
       )}

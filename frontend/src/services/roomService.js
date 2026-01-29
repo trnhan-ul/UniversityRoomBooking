@@ -81,3 +81,13 @@ export const blockTimeSlot = async (scheduleData) => {
     throw error.response?.data || { success: false, message: 'Failed to block time slot' };
   }
 };
+
+// Unblock time slot
+export const unblockTimeSlot = async (scheduleId) => {
+  try {
+    const response = await api.delete(`/rooms/unblock/${scheduleId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to unblock time slot' };
+  }
+};
