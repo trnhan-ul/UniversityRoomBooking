@@ -54,7 +54,6 @@ router.get(
   bookingController.getPendingBookings,
 );
 
-// PATCH /api/bookings/:id/approve - approve booking (Manager/Admin)
 router.patch(
   "/:id/approve",
   authenticate,
