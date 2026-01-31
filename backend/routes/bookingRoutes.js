@@ -61,7 +61,6 @@ router.patch(
   bookingController.approveBooking,
 );
 
-// PATCH /api/bookings/:id/reject - reject booking (Manager/Admin)
 router.patch(
   "/:id/reject",
   authenticate,
