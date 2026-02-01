@@ -22,6 +22,7 @@ import RoomInventory from "./pages/RoomInventory";
 import CreateClassroom from "./pages/CreateClassroom";
 import NotificationPage from "./pages/NotificationPage";
 import UpdateClassroom from "./pages/UpdateClassroom";
+import DeleteClassroom from "./pages/DeleteClassroom";
 import ScheduleManagement from "./pages/ScheduleManagement";
 
 function App() {
@@ -124,6 +125,17 @@ function App() {
             element={
               <AdminLayout>
                 <UpdateClassroom />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/delete-classroom/:id"
+            element={
+              <AdminLayout>
+                <DeleteClassroom />
               </AdminLayout>
             }
           />
