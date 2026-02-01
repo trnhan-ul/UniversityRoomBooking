@@ -41,7 +41,6 @@ const UpdateClassroom = () => {
       if (response.success) {
         const room = response.data;
         
-        // Map equipment to amenities (Air Cond. and Wi-Fi default to true)
         const amenities = {
           projector: room.equipment?.includes('Projector') || false,
           whiteboard: room.equipment?.includes('Whiteboard') || false,
