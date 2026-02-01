@@ -23,9 +23,10 @@ api.interceptors.request.use(
 );
 
 // Get all available rooms
-export const getRooms = async (status = "AVAILABLE") => {
+export const getRooms = async (status = "") => {
   try {
-    const response = await api.get(`/rooms?status=${status}`);
+    const url = status ? `/rooms?status=${status}` : '/rooms';
+    const response = await api.get(url);
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: "Network error" };
