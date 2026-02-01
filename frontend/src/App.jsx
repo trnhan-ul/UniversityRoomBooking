@@ -24,6 +24,7 @@ import NotificationPage from "./pages/NotificationPage";
 import UpdateClassroom from "./pages/UpdateClassroom";
 import DeleteClassroom from "./pages/DeleteClassroom";
 import ScheduleManagement from "./pages/ScheduleManagement";
+import WorkingHoursSettings from "./pages/WorkingHoursSettings";
 
 function App() {
   const isAdminRole = (role) =>
@@ -147,6 +148,17 @@ function App() {
             element={
               <AdminLayout>
                 <ScheduleManagement />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/working-hours-settings"
+            element={
+              <AdminLayout>
+                <WorkingHoursSettings />
               </AdminLayout>
             }
           />

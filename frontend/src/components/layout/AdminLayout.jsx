@@ -39,6 +39,12 @@ const AdminLayout = ({ children }) => {
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
     {
+      path: "/working-hours-settings",
+      icon: "🕐",
+      label: "Working Hours",
+      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
+    },
+    {
       path: "/reports",
       icon: "📈",
       label: "Reports",

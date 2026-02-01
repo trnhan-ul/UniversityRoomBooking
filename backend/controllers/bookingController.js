@@ -1,5 +1,6 @@
 const Booking = require("../models/Booking");
 const Room = require("../models/Room");
+const Setting = require("../models/Setting");
 const { Notification } = require("../models");
 const { sendApprovalEmail } = require("../services/emailService");
 const mongoose = require("mongoose");
@@ -64,6 +65,22 @@ const createBooking = async (req, res) => {
         success: false,
         message: "End time must be after start time",
       });
+    }
+
+    // Validate working hours
+    const workingHoursStart = await Setting.findOne({ key: 'WORKING_HOURS_START' });
+    const workingHoursEnd = await Setting.findOne({ key: 'WORKING_HOURS_END' });
+    
+    if (workingHoursStart && workingHoursEnd) {
+      const whStart = workingHoursStart.value;
+      const whEnd = workingHoursEnd.value;
+      
+      if (start_time < whStart || end_time > whEnd) {
+        return res.status(400).json({
+          success: false,
+          message: `Bookings must be within working hours (${whStart} - ${whEnd})`,
+        });
+      }
     }
 
     // Check for booking conflicts
