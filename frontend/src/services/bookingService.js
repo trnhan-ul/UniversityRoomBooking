@@ -123,3 +123,23 @@ export const getBookingStatistics = async () => {
     throw error.response?.data || { success: false, message: "Network error" };
   }
 };
+
+// Booking report with filters (Manager/Admin)
+export const getBookingReport = async (filters = {}) => {
+  try {
+    const { startDate, endDate, status, room_id, groupBy = "date" } = filters;
+    const params = new URLSearchParams();
+    
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    if (status) params.append("status", status);
+    if (room_id) params.append("room_id", room_id);
+    params.append("groupBy", groupBy);
+    
+    const response = await api.get(`/bookings/report?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
