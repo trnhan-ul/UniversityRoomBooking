@@ -176,7 +176,7 @@ const CreateClassroom = () => {
         images: imagesPreviews // Send base64 images
       };
 
-      console.log('Submitting room data:', roomData); // Debug log
+      console.log('Submitting room data:', roomData); 
 
       const response = await createRoom(roomData);
 
