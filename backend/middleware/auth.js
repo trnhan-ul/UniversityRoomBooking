@@ -35,7 +35,6 @@ const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error("Authentication error:", error.message);
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 };

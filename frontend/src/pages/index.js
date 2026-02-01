@@ -10,3 +10,4 @@ export { default as CreateClassroom } from './CreateClassroom';
 export { default as NotificationPage } from './NotificationPage';
 export { default as UpdateClassroom } from './UpdateClassroom';
 export { default as ScheduleManagement } from './ScheduleManagement';
+export { default as EquipmentManagement } from './EquipmentManagement';

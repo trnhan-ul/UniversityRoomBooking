@@ -23,6 +23,7 @@ import CreateClassroom from "./pages/CreateClassroom";
 import NotificationPage from "./pages/NotificationPage";
 import UpdateClassroom from "./pages/UpdateClassroom";
 import ScheduleManagement from "./pages/ScheduleManagement";
+import EquipmentManagement from "./pages/EquipmentManagement";
 
 function App() {
   const isAdminRole = (role) =>
@@ -135,6 +136,17 @@ function App() {
             element={
               <AdminLayout>
                 <ScheduleManagement />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/equipment-management"
+            element={
+              <AdminLayout>
+                <EquipmentManagement />
               </AdminLayout>
             }
           />

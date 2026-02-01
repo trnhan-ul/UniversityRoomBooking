@@ -43,6 +43,7 @@ const roomRoutes = require("./routes/roomRoutes");
 const userRoutes = require("./routes/userRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const equipmentRoutes = require("./routes/equipmentRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
@@ -50,6 +51,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/schedules", scheduleRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/equipment", equipmentRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {
