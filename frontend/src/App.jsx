@@ -23,6 +23,7 @@ import CreateClassroom from "./pages/CreateClassroom";
 import NotificationPage from "./pages/NotificationPage";
 import UpdateClassroom from "./pages/UpdateClassroom";
 import ScheduleManagement from "./pages/ScheduleManagement";
+import BookingReport from "./pages/BookingReport";
 
 function App() {
   const isAdminRole = (role) =>
@@ -152,6 +153,17 @@ function App() {
               }
             />
           )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/booking-report"
+            element={
+              <AdminLayout>
+                <BookingReport />
+              </AdminLayout>
+            }
+          />
+        )}
 
         {user && (
           <>

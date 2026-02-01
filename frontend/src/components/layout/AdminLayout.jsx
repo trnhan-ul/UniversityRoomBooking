@@ -39,7 +39,7 @@ const AdminLayout = ({ children }) => {
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
     {
-      path: "/reports",
+      path: "/booking-report",
       icon: "📈",
       label: "Reports",
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],

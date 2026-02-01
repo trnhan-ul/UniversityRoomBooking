@@ -628,6 +628,185 @@ const getBookingStatistics = async (req, res) => {
   }
 };
 
+// Get booking report with filters
+const getBookingReport = async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      status,
+      room_id,
+      groupBy = "date", // date, room, status
+    } = req.query;
+
+    // Build match query
+    const matchQuery = {};
+
+    if (startDate && endDate) {
+      matchQuery.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    if (status) {
+      matchQuery.status = status;
+    }
+
+    if (room_id) {
+      matchQuery.room = new mongoose.Types.ObjectId(room_id);
+    }
+
+    // Aggregate based on groupBy parameter
+    let groupStage = {};
+    let sortStage = {};
+
+    switch (groupBy) {
+      case "date":
+        groupStage = {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+          },
+          total: { $sum: 1 },
+          approved: {
+            $sum: { $cond: [{ $eq: ["$status", "APPROVED"] }, 1, 0] },
+          },
+          rejected: {
+            $sum: { $cond: [{ $eq: ["$status", "REJECTED"] }, 1, 0] },
+          },
+          pending: {
+            $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] },
+          },
+          cancelled: {
+            $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] },
+          },
+        };
+        sortStage = { "_id.date": 1 };
+        break;
+
+      case "room":
+        groupStage = {
+          _id: {
+            room_id: "$room",
+            room_name: "$room_details.name",
+          },
+          total: { $sum: 1 },
+          approved: {
+            $sum: { $cond: [{ $eq: ["$status", "APPROVED"] }, 1, 0] },
+          },
+          rejected: {
+            $sum: { $cond: [{ $eq: ["$status", "REJECTED"] }, 1, 0] },
+          },
+          pending: {
+            $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] },
+          },
+          cancelled: {
+            $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] },
+          },
+        };
+        sortStage = { total: -1 };
+        break;
+
+      case "status":
+        groupStage = {
+          _id: { status: "$status" },
+          total: { $sum: 1 },
+          bookings: {
+            $push: {
+              booking_id: "$_id",
+              room_name: "$room_details.name",
+              date: "$date",
+              user_name: "$user_details.full_name",
+            },
+          },
+        };
+        sortStage = { total: -1 };
+        break;
+
+      default:
+        groupStage = {
+          _id: null,
+          total: { $sum: 1 },
+          approved: {
+            $sum: { $cond: [{ $eq: ["$status", "APPROVED"] }, 1, 0] },
+          },
+          rejected: {
+            $sum: { $cond: [{ $eq: ["$status", "REJECTED"] }, 1, 0] },
+          },
+          pending: {
+            $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] },
+          },
+          cancelled: {
+            $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] },
+          },
+        };
+    }
+
+    const pipeline = [
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: "rooms",
+          localField: "room",
+          foreignField: "_id",
+          as: "room_details",
+        },
+      },
+      { $unwind: { path: "$room_details", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "user",
+          foreignField: "_id",
+          as: "user_details",
+        },
+      },
+      { $unwind: { path: "$user_details", preserveNullAndEmptyArrays: true } },
+      { $group: groupStage },
+    ];
+
+    if (Object.keys(sortStage).length > 0) {
+      pipeline.push({ $sort: sortStage });
+    }
+
+    const reportData = await Booking.aggregate(pipeline);
+
+    // Get summary statistics
+    const summary = await Booking.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: null,
+          totalBookings: { $sum: 1 },
+          approved: {
+            $sum: { $cond: [{ $eq: ["$status", "APPROVED"] }, 1, 0] },
+          },
+          rejected: {
+            $sum: { $cond: [{ $eq: ["$status", "REJECTED"] }, 1, 0] },
+          },
+          pending: { $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] } },
+          cancelled: {
+            $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        groupBy,
+        report: reportData,
+        summary: summary.length > 0 ? summary[0] : null,
+        filters: { startDate, endDate, status, room_id },
+      },
+    });
+  } catch (error) {
+    console.error("getBookingReport error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 module.exports = {
   createBooking,
   getPendingBookings,
@@ -638,4 +817,5 @@ module.exports = {
   cancelBooking,
   updateBooking,
   getBookingStatistics,
+  getBookingReport,
 };
