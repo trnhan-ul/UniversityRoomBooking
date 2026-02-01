@@ -33,6 +33,12 @@ const AdminLayout = ({ children }) => {
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
     {
+      path: "/schedule-management",
+      icon: "📅",
+      label: "Schedule Management",
+      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
+    },
+    {
       path: "/reports",
       icon: "📈",
       label: "Reports",

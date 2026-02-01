@@ -54,4 +54,24 @@ router.get(
   bookingController.getPendingBookings,
 );
 
+router.patch(
+  "/:id/approve",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.approveBooking,
+);
+
+router.patch(
+  "/:id/reject",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.rejectBooking,
+);
+
+// PATCH /api/bookings/:id/cancel - cancel booking (User)
+router.patch("/:id/cancel", authenticate, bookingController.cancelBooking);
+
+// PATCH /api/bookings/:id - update booking (User) - MUST be last
+router.patch("/:id", authenticate, bookingController.updateBooking);
+
 module.exports = router;

@@ -5,10 +5,13 @@ import { getRooms } from '../services/roomService';
 
 const SearchClassrooms = () => {
   const navigate = useNavigate();
-  const { user } = useAuthContext();
+  const { user, logout } = useAuthContext();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentImageIndexes, setCurrentImageIndexes] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [menuTimeout, setMenuTimeout] = useState(null);
   
   // Get current time in HH:mm format
   const getCurrentTime = () => {
@@ -30,11 +33,20 @@ const SearchClassrooms = () => {
     }
   });
   const [activeTab, setActiveTab] = useState('all');
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState(() => {
+    // Load favorites from localStorage on initial render
+    const savedFavorites = localStorage.getItem('roomFavorites');
+    return savedFavorites ? JSON.parse(savedFavorites) : [];
+  });
 
   useEffect(() => {
     fetchRooms();
   }, []);
+
+  // Save favorites to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('roomFavorites', JSON.stringify(favorites));
+  }, [favorites]);
 
   const fetchRooms = async () => {
     try {
@@ -57,6 +69,26 @@ const SearchClassrooms = () => {
         ? prev.filter(id => id !== roomId)
         : [...prev, roomId]
     );
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleMenuEnter = () => {
+    if (menuTimeout) {
+      clearTimeout(menuTimeout);
+      setMenuTimeout(null);
+    }
+    setShowProfileMenu(true);
+  };
+
+  const handleMenuLeave = () => {
+    const timeout = setTimeout(() => {
+      setShowProfileMenu(false);
+    }, 300); // 300ms delay
+    setMenuTimeout(timeout);
   };
 
   const handleFilterChange = (field, value) => {
@@ -86,6 +118,17 @@ const SearchClassrooms = () => {
   };
 
   const filteredRooms = rooms.filter(room => {
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesName = room.room_name?.toLowerCase().includes(query);
+      const matchesCode = room.room_code?.toLowerCase().includes(query);
+      const matchesLocation = room.location?.toLowerCase().includes(query);
+      if (!matchesName && !matchesCode && !matchesLocation) {
+        return false;
+      }
+    }
+    
     // Filter by capacity range
     if (room.capacity < filters.minCapacity || room.capacity > filters.maxCapacity) {
       return false;
@@ -106,6 +149,13 @@ const SearchClassrooms = () => {
       return room.status === 'AVAILABLE';
     }
     return true;
+  }).sort((a, b) => {
+    // Sort: favorites first
+    const aIsFavorite = favorites.includes(a._id);
+    const bIsFavorite = favorites.includes(b._id);
+    if (aIsFavorite && !bIsFavorite) return -1;
+    if (!aIsFavorite && bIsFavorite) return 1;
+    return 0;
   });
 
   // Sample images for rooms
@@ -137,7 +187,6 @@ const SearchClassrooms = () => {
             <nav className="flex items-center gap-9">
               <button onClick={() => navigate('/search-classrooms')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">Classrooms</button>
               <button onClick={() => navigate('/my-bookings')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">My Bookings</button>
-              <button onClick={() => navigate('/schedule-grid')} className="text-sm font-medium leading-normal hover:text-primary transition-colors">Schedule Grid</button>
             </nav>
           </div>
           <div className="flex flex-1 justify-end gap-6 items-center">
@@ -149,6 +198,8 @@ const SearchClassrooms = () => {
                 <input 
                   className="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:outline-0 focus:ring-0 text-sm font-normal placeholder:text-slate-500 dark:placeholder:text-slate-400 px-4 pl-2" 
                   placeholder="Quick find room..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </label>
@@ -156,11 +207,52 @@ const SearchClassrooms = () => {
               <button className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <span className="material-symbols-outlined">notifications</span>
               </button>
-              <button 
-                onClick={() => navigate('/my-profile')}
-                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 h-10 border-2 border-primary cursor-pointer" 
-                style={{ backgroundImage: `url("https://ui-avatars.com/api/?name=${user?.full_name || 'User'}&background=136dec&color=fff")` }}
-              />
+              <div 
+                className="relative"
+                onMouseEnter={handleMenuEnter}
+                onMouseLeave={handleMenuLeave}
+              >
+                <button 
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 h-10 border-2 border-primary cursor-pointer hover:border-blue-600 transition-colors" 
+                  style={{ backgroundImage: `url("https://ui-avatars.com/api/?name=${user?.full_name || 'User'}&background=136dec&color=fff")` }}
+                />
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-2 z-50">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        navigate('/my-profile');
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg">person</span>
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        navigate('/my-profile');
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg">lock</span>
+                      Change Password
+                    </button>
+                    <hr className="my-2 border-slate-200 dark:border-slate-700" />
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        handleLogout();
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg">logout</span>
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -411,11 +503,16 @@ const SearchClassrooms = () => {
                   </div>
                   <div className="p-5 flex-1 flex flex-col">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-bold">{room.room_name}</h3>
+                      <div>
+                        <h3 className="text-lg font-bold">{room.room_name}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
+                          {room.room_code}
+                        </p>
+                      </div>
                       <button 
                         onClick={() => toggleFavorite(room._id)}
                         className={`transition-colors ${
-                          favorites.includes(room._id) ? 'text-primary' : 'text-slate-300 hover:text-rose-500'
+                          favorites.includes(room._id) ? 'text-red-500' : 'text-slate-300 hover:text-red-500'
                         }`}
                       >
                         <span 

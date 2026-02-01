@@ -18,9 +18,11 @@ import CreateBooking from "./pages/CreateBooking";
 import BookingDetail from "./pages/BookingDetail";
 import SearchClassrooms from "./pages/SearchClassrooms";
 import ClassroomDetails from "./pages/ClassroomDetails";
-import ClassroomScheduleGrid from "./pages/ClassroomScheduleGrid";
 import RoomInventory from "./pages/RoomInventory";
 import CreateClassroom from "./pages/CreateClassroom";
+import NotificationPage from "./pages/NotificationPage";
+import UpdateClassroom from "./pages/UpdateClassroom";
+import ScheduleManagement from "./pages/ScheduleManagement";
 
 function App() {
   const isAdminRole = (role) =>
@@ -116,6 +118,28 @@ function App() {
           />
         )}
 
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/update-classroom/:id"
+            element={
+              <AdminLayout>
+                <UpdateClassroom />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/schedule-management"
+            element={
+              <AdminLayout>
+                <ScheduleManagement />
+              </AdminLayout>
+            }
+          />
+        )}
+
         {user &&
           (user.role === "FACILITY_MANAGER" ||
             user.role === "ADMINISTRATOR") && (
@@ -138,12 +162,13 @@ function App() {
               }
             />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/bookings/:id" element={<BookingDetail />} />
             <Route path="/booking-detail/:id" element={<BookingDetail />} />
             <Route path="/my-profile" element={<MyProfile />} />
             <Route path="/create-booking" element={<CreateBooking />} />
             <Route path="/search-classrooms" element={<SearchClassrooms />} />
             <Route path="/classroom-details" element={<ClassroomDetails />} />
-            <Route path="/schedule-grid" element={<ClassroomScheduleGrid />} />
+            <Route path="/notifications" element={<NotificationPage />} />
             <Route
               path="/dashboard"
               element={<Navigate to={getDefaultPath(user.role)} replace />}
@@ -169,3 +194,4 @@ function App() {
 }
 
 export default App;
+
