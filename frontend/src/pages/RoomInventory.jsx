@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRooms, deleteRoom } from '../services/roomService';
+import { getRooms, deleteRoom, getRoomById, updateRoomImages } from '../services/roomService';
 
 const RoomInventory = () => {
   const navigate = useNavigate();
@@ -12,6 +12,8 @@ const RoomInventory = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
   const [filters, setFilters] = useState({
     status: '',
     location: '',
@@ -60,6 +62,11 @@ const RoomInventory = () => {
   const handleDelete = (room) => {
     setRoomToDelete(room);
     setShowDeleteModal(true);
+  };
+
+  const handleManageImages = (room) => {
+    setSelectedRoom(room);
+    setShowImageModal(true);
   };
 
   const confirmDelete = async () => {
@@ -277,6 +284,13 @@ const RoomInventory = () => {
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
+                            onClick={() => handleManageImages(room)}
+                            className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary dark:border-primary bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-primary transition-all"
+                            title="Manage images"
+                          >
+                            <span className="material-symbols-outlined text-lg">photo_library</span>
+                          </button>
+                          <button 
                             onClick={() => navigate(`/update-classroom/${room._id}`)}
                             className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
                             title="Edit room"
@@ -437,6 +451,291 @@ const RoomInventory = () => {
           </div>
         </div>
       )}
+
+      {/* Image Manager Modal */}
+      <ImageManagerModal
+        isOpen={showImageModal}
+        onClose={() => {
+          setShowImageModal(false);
+          setSelectedRoom(null);
+        }}
+        roomId={selectedRoom?._id}
+        roomName={selectedRoom?.room_name}
+        onSuccess={() => {
+          fetchRooms(); // Refresh room list after updating images
+        }}
+      />
+    </div>
+  );
+};
+
+// ImageManagerModal Component (embedded)
+const ImageManagerModal = ({ isOpen, onClose, roomId, roomName, onSuccess }) => {
+  const [images, setImages] = useState([]);
+  const [imagesPreviews, setImagesPreviews] = useState([]);
+  const [coverIndex, setCoverIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen && roomId) {
+      loadRoomImages();
+    }
+  }, [isOpen, roomId]);
+
+  const loadRoomImages = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await getRoomById(roomId);
+      
+      if (response.success) {
+        const roomImages = response.data.images || [];
+        setImagesPreviews(roomImages);
+        setImages(roomImages);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load images');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length + imagesPreviews.length > 10) {
+      setError('Maximum 10 images allowed');
+      e.target.value = '';
+      return;
+    }
+
+    setError('');
+    const newPreviews = [];
+    const newImages = [];
+
+    files.forEach((file) => {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('Each image must be less than 10MB');
+        return;
+      }
+
+      if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+        setError('Only PNG and JPG images are allowed');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push(reader.result);
+        if (newPreviews.length === files.length) {
+          setImagesPreviews((prev) => [...prev, ...newPreviews]);
+          setImages((prev) => [...prev, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+      newImages.push(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = (index) => {
+    setImagesPreviews((prev) => prev.filter((_, i) => i !== index));
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    
+    if (index === coverIndex) {
+      setCoverIndex(0);
+    } else if (index < coverIndex) {
+      setCoverIndex(prev => prev - 1);
+    }
+  };
+
+  const handleSetCover = (index) => {
+    setCoverIndex(index);
+  };
+
+  const handleSave = async () => {
+    if (images.length === 0) {
+      setError('At least 1 image is required');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError('');
+
+      const reorderedImages = [...images];
+      if (coverIndex !== 0) {
+        const coverImage = reorderedImages.splice(coverIndex, 1)[0];
+        reorderedImages.unshift(coverImage);
+      }
+
+      // Call new API endpoint for updating images only
+      const response = await updateRoomImages(roomId, reorderedImages);
+
+      if (response.success) {
+        onSuccess?.();
+        onClose();
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update images');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+                Manage Classroom Images
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {roomName}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              disabled={saving}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-slate-600 dark:text-slate-400">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
+                <p className="text-sm font-semibold text-red-800 dark:text-red-300">{error}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              Add New Images
+            </label>
+            <div className="relative">
+              <div className={`border-2 border-dashed ${imagesPreviews.length >= 10 ? 'border-slate-300 dark:border-slate-700 opacity-50 cursor-not-allowed' : 'border-primary hover:bg-blue-50 dark:hover:bg-slate-800 cursor-pointer'} rounded-xl p-8 transition-all flex flex-col items-center justify-center gap-3 text-center`}>
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-2xl">upload_file</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {imagesPreviews.length >= 10 ? 'Maximum 10 images reached' : 'Click to upload or drag & drop'}
+                  </p>
+                  <p className="text-xs text-slate-400 font-semibold mt-1">
+                    PNG, JPG up to 10MB ({imagesPreviews.length}/10 images)
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={handleImageUpload}
+                  disabled={imagesPreviews.length >= 10}
+                  className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+              Current Images ({imagesPreviews.length})
+            </h3>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+              </div>
+            ) : imagesPreviews.length === 0 ? (
+              <div className="text-center py-12">
+                <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-700">image</span>
+                <p className="text-slate-500 dark:text-slate-400 mt-2">No images yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {imagesPreviews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className={`relative group aspect-square rounded-xl overflow-hidden border-2 ${index === coverIndex ? 'border-yellow-500 shadow-lg' : 'border-slate-200 dark:border-slate-700'} bg-slate-100 dark:bg-slate-800 hover:border-primary transition-all`}
+                  >
+                    <img
+                      src={preview}
+                      alt={`Room image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+
+                    {index === coverIndex && (
+                      <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-md">
+                        <span className="material-symbols-outlined text-sm">star</span>
+                        Cover
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      {index !== coverIndex && (
+                        <button
+                          onClick={() => handleSetCover(index)}
+                          className="p-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors"
+                          title="Set as cover"
+                        >
+                          <span className="material-symbols-outlined text-lg">star</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRemoveImage(index)}
+                        className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                        title="Delete image"
+                      >
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
+            * Click star icon to set cover image. Cover image will be displayed first.
+          </p>
+        </div>
+
+        <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-lg transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || imagesPreviews.length === 0}
+            className="px-6 py-2.5 bg-primary hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {saving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

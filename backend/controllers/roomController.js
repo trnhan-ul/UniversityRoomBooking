@@ -320,6 +320,69 @@ const deleteRoom = async (req, res) => {
   }
 };
 
+// Update room images only
+const updateRoomImages = async (req, res) => {
+  try {
+    const { id: roomId } = req.params;
+    const { images } = req.body;
+
+    // Validate room exists
+    const room = await Room.findById(roomId);
+    if (!room) {
+      return res.status(404).json({
+        success: false,
+        message: "Room not found",
+      });
+    }
+
+    // Validate images array
+    if (!images || !Array.isArray(images)) {
+      return res.status(400).json({
+        success: false,
+        message: "Images must be an array",
+      });
+    }
+
+    if (images.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least 1 image is required",
+      });
+    }
+
+    if (images.length > 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Maximum 10 images allowed",
+      });
+    }
+
+    // Remove old images
+    await RoomImage.deleteMany({ room_id: roomId });
+
+    // Add new images
+    const imageDocs = images.map((img, index) => ({
+      room_id: roomId,
+      image_url: img,
+      is_cover: index === 0, // First image is cover
+      uploaded_by: req.user.id,
+    }));
+    await RoomImage.insertMany(imageDocs);
+
+    res.status(200).json({
+      success: true,
+      message: "Room images updated successfully",
+      data: {
+        roomId,
+        imagesCount: images.length,
+      },
+    });
+  } catch (error) {
+    console.error("updateRoomImages error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 // Block Time Slot with Smart Hybrid Conflict Detection
 const blockTimeSlot = async (req, res) => {
   try {
@@ -566,6 +629,7 @@ module.exports = {
   getRoomById,
   createRoom,
   updateRoom,
+  updateRoomImages,
   deleteRoom,
   blockTimeSlot,
   unblockTimeSlot,
