@@ -5,7 +5,6 @@ import {
   formatDate,
   getStatusVariant,
   getStatusLabel,
-  getRoomIcon,
 } from "../utils/helpers";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";

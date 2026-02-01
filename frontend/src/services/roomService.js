@@ -62,6 +62,16 @@ export const updateRoom = async (roomId, roomData) => {
   }
 };
 
+// Update room images only
+export const updateRoomImages = async (roomId, images) => {
+  try {
+    const response = await api.put(`/rooms/${roomId}/images`, { images });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
 // Delete room
 export const deleteRoom = async (roomId) => {
   try {
@@ -69,5 +79,25 @@ export const deleteRoom = async (roomId) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Block time slot
+export const blockTimeSlot = async (scheduleData) => {
+  try {
+    const response = await api.post('/rooms/block', scheduleData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to block time slot' };
+  }
+};
+
+// Unblock time slot
+export const unblockTimeSlot = async (scheduleId) => {
+  try {
+    const response = await api.delete(`/rooms/unblock/${scheduleId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to unblock time slot' };
   }
 };

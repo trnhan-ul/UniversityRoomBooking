@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   getPendingBookings,
   approveBooking,
+  rejectBooking,
   getBookingStatistics,
 } from "../services/bookingService";
 import { Button, Badge } from "../components/common";
@@ -31,6 +32,7 @@ const PendingRequests = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
   // Fetch pending bookings
@@ -100,10 +102,12 @@ const PendingRequests = () => {
   // Handle approve
   const handleApprove = async (bookingId) => {
     try {
-      const response = await approveBooking(bookingId, { action: "APPROVE" });
+      const response = await approveBooking(bookingId);
       if (response.success) {
         setSuccess("Booking approved successfully");
         setIsApproveModalOpen(false);
+        setIsRejecting(false);
+        setRejectReason("");
         setSelectedBooking(null);
         fetchPendingBookings();
         setTimeout(() => setSuccess(""), 3000);
@@ -120,13 +124,11 @@ const PendingRequests = () => {
       return;
     }
     try {
-      const response = await approveBooking(bookingId, {
-        action: "REJECT",
-        reject_reason: rejectReason,
-      });
+      const response = await rejectBooking(bookingId, rejectReason);
       if (response.success) {
         setSuccess("Booking rejected successfully");
         setIsApproveModalOpen(false);
+        setIsRejecting(false);
         setRejectReason("");
         setSelectedBooking(null);
         fetchPendingBookings();
@@ -145,6 +147,7 @@ const PendingRequests = () => {
   const openApproveModal = (booking) => {
     setSelectedBooking(booking);
     setIsApproveModalOpen(true);
+    setIsRejecting(false);
   };
 
   const getStatusColor = (hasConflict) => {
@@ -426,7 +429,7 @@ const PendingRequests = () => {
                         <td className="px-6 py-5 text-center">
                           <span
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(
-                              booking.has_conflict
+                              booking.has_conflict,
                             )}`}
                           >
                             {booking.has_conflict ? (
@@ -460,6 +463,7 @@ const PendingRequests = () => {
                               onClick={() => {
                                 setSelectedBooking(booking);
                                 setIsApproveModalOpen(true);
+                                setIsRejecting(true);
                               }}
                               className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500 text-white hover:bg-red-600"
                               title="Reject"
@@ -615,10 +619,10 @@ const PendingRequests = () => {
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
             <div className="p-6 border-b border-slate-200">
               <h2 className="text-xl font-bold">
-                {rejectReason ? "Reject Booking" : "Approve or Reject?"}
+                {isRejecting ? "Reject Booking" : "Approve or Reject?"}
               </h2>
             </div>
-            {!rejectReason ? (
+            {!isRejecting ? (
               <div className="p-6 space-y-4">
                 <p className="text-sm text-slate-600">
                   <strong>{selectedBooking.user?.full_name}</strong> is
@@ -633,7 +637,10 @@ const PendingRequests = () => {
                     ✓ Approve
                   </Button>
                   <Button
-                    onClick={() => setRejectReason("")}
+                    onClick={() => {
+                      setIsRejecting(true);
+                      setRejectReason("");
+                    }}
                     variant="danger"
                     className="flex-1"
                   >
@@ -644,6 +651,7 @@ const PendingRequests = () => {
                   onClick={() => {
                     setIsApproveModalOpen(false);
                     setRejectReason("");
+                    setIsRejecting(false);
                   }}
                   className="w-full px-4 py-2 text-sm text-slate-600 hover:text-slate-900"
                 >
@@ -672,7 +680,10 @@ const PendingRequests = () => {
                     Submit Rejection
                   </Button>
                   <Button
-                    onClick={() => setRejectReason("Approve")}
+                    onClick={() => {
+                      setIsRejecting(false);
+                      setRejectReason("");
+                    }}
                     variant="secondary"
                     className="flex-1"
                   >

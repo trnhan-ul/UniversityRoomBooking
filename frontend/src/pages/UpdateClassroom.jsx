@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createRoom } from '../services/roomService';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getRoomById, updateRoom } from '../services/roomService';
 
-const CreateClassroom = () => {
+const UpdateClassroom = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const { id } = useParams();
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -27,6 +29,50 @@ const CreateClassroom = () => {
 
   const [imagesPreviews, setImagesPreviews] = useState([]);
 
+  useEffect(() => {
+    loadRoomData();
+  }, [id]);
+
+  const loadRoomData = async () => {
+    try {
+      setLoading(true);
+      const response = await getRoomById(id);
+      
+      if (response.success) {
+        const room = response.data;
+        
+        // Map equipment to amenities (Air Cond. and Wi-Fi default to true)
+        const amenities = {
+          projector: room.equipment?.includes('Projector') || false,
+          whiteboard: room.equipment?.includes('Whiteboard') || false,
+          airConditioning: room.equipment?.includes('Air Conditioning') || true,
+          wifi: room.equipment?.includes('Wi-Fi') || true,
+        };
+
+        setFormData({
+          roomCode: room.room_code || '',
+          roomName: room.room_name || '',
+          building: room.location || '',
+          capacity: room.capacity || '',
+          roomType: room.description?.replace(' room', '') || '',
+          amenities,
+          availability: room.status === 'AVAILABLE',
+          images: room.images || [],
+        });
+
+        // Set existing images
+        if (room.images && room.images.length > 0) {
+          setImagesPreviews(room.images);
+        }
+      }
+    } catch (err) {
+      console.error('Load room error:', err);
+      setError(err.message || 'Failed to load room data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -47,11 +93,10 @@ const CreateClassroom = () => {
     if (files.length + imagesPreviews.length > 5) {
       setError('You can upload maximum 5 images');
       setFieldErrors(prev => ({ ...prev, images: 'Maximum 5 photos allowed' }));
-      e.target.value = ''; // Reset input
+      e.target.value = '';
       return;
     }
 
-    // Clear previous errors
     setError('');
     setFieldErrors(prev => {
       const { images, ...rest } = prev;
@@ -80,21 +125,11 @@ const CreateClassroom = () => {
         }
       };
       reader.readAsDataURL(file);
-      newImages.push(file);
     });
-
-    setFormData((prev) => ({
-      ...prev,
-      images: [...prev.images, ...newImages],
-    }));
   };
 
   const handleRemoveImage = (index) => {
     setImagesPreviews((prev) => prev.filter((_, i) => i !== index));
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
   };
 
   const validateForm = () => {
@@ -155,7 +190,7 @@ const CreateClassroom = () => {
     }
 
     try {
-      setLoading(true);
+      setSubmitting(true);
 
       // Prepare equipment array
       const equipment = [];
@@ -173,27 +208,47 @@ const CreateClassroom = () => {
         description: `${formData.roomType} room`,
         status: formData.availability ? 'AVAILABLE' : 'UNAVAILABLE',
         equipment: equipment,
-        images: imagesPreviews // Send base64 images
+        images: imagesPreviews
       };
 
-      const response = await createRoom(roomData);
+      console.log('Updating room data:', roomData);
+
+      const response = await updateRoom(id, roomData);
+
+      console.log('Update room response:', response);
 
       if (response.success) {
         setShowSuccessModal(true);
+        // Reload the room data to show updated information
+        await loadRoomData();
       }
     } catch (err) {
-      setError(err.message || 'Failed to create classroom');
+      console.error('Update room error:', err);
+      setError(err.message || 'Failed to update classroom');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600 dark:text-slate-400">Loading room data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark">
       {/* Header */}
       <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-10">
         <div className="flex items-center gap-4 flex-1">
-          <h2 className="text-2xl font-semibold text-slate-800 dark:text-white">Create New Classroom</h2>
+          <h2 className="text-2xl font-semibold text-slate-800 dark:text-white">Update Classroom {formData.roomCode}</h2>
         </div>
       </header>
 
@@ -209,11 +264,12 @@ const CreateClassroom = () => {
             Room Inventory
           </button>
           <span className="mx-2 text-slate-300 dark:text-slate-700">/</span>
-          <span className="text-slate-900 dark:text-white font-semibold">Create New Classroom</span>
+          <span className="text-slate-900 dark:text-white font-semibold">Update Classroom {formData.roomCode}</span>
         </nav>
 
         {/* Form Card */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">          {/* Error/Success Messages */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          {/* Error Messages */}
           {error && (
             <div className="mx-8 mt-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <div className="flex items-center gap-2">
@@ -225,9 +281,9 @@ const CreateClassroom = () => {
           
           {/* Header */}
           <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="text-xl font-bold text-slate-800 dark:text-white">Room Registration</h3>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white">Room Details</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Provide information and visual documentation to register a new classroom.
+              Provide information and visual documentation for this classroom.
             </p>
           </div>
 
@@ -235,7 +291,7 @@ const CreateClassroom = () => {
           <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800">
             {/* Left Column - Form Fields */}
             <div className="flex-1 p-8 space-y-8">
-              {/* Room Name & Building */}
+              {/* Room Code & Room Name */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -271,7 +327,7 @@ const CreateClassroom = () => {
                 </div>
               </div>
 
-              {/* Building & Capacity */}
+              {/* Building / Location */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -345,8 +401,8 @@ const CreateClassroom = () => {
                         className="peer hidden"
                         name="roomType"
                         type="radio"
-                        value="lecture"
-                        checked={formData.roomType === 'lecture'}
+                        value="Lecture"
+                        checked={formData.roomType === 'Lecture'}
                         onChange={handleInputChange}
                       />
                       <div className="h-full px-2 py-2.5 text-center text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-lg peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/30 peer-checked:border-primary peer-checked:text-primary transition-all">
@@ -358,8 +414,8 @@ const CreateClassroom = () => {
                         className="peer hidden"
                         name="roomType"
                         type="radio"
-                        value="lab"
-                        checked={formData.roomType === 'lab'}
+                        value="Lab"
+                        checked={formData.roomType === 'Lab'}
                         onChange={handleInputChange}
                       />
                       <div className="h-full px-2 py-2.5 text-center text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-lg peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/30 peer-checked:border-primary peer-checked:text-primary transition-all">
@@ -371,8 +427,8 @@ const CreateClassroom = () => {
                         className="peer hidden"
                         name="roomType"
                         type="radio"
-                        value="seminar"
-                        checked={formData.roomType === 'seminar'}
+                        value="Seminar"
+                        checked={formData.roomType === 'Seminar'}
                         onChange={handleInputChange}
                       />
                       <div className="h-full px-2 py-2.5 text-center text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-lg peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/30 peer-checked:border-primary peer-checked:text-primary transition-all">
@@ -560,13 +616,13 @@ const CreateClassroom = () => {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={submitting}
               className="px-10 py-3 bg-primary hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-xl shadow-blue-500/20 transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {loading ? (
+              {submitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Creating...</span>
+                  <span>Saving...</span>
                 </>
               ) : (
                 <span>Save Room</span>
@@ -580,7 +636,6 @@ const CreateClassroom = () => {
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-            {/* Modal Header */}
             <div className="p-8 text-center">
               <div className="w-20 h-20 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-5xl text-green-600 dark:text-green-400">
@@ -591,41 +646,19 @@ const CreateClassroom = () => {
                 Success!
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                Classroom created successfully and added to inventory.
+                Classroom updated successfully.
               </p>
             </div>
 
-            {/* Modal Actions */}
-            <div className="px-8 pb-8 flex gap-3">
+            <div className="px-8 pb-8">
               <button
                 onClick={() => {
                   setShowSuccessModal(false);
-                  // Reset form for creating another room
-                  setFormData({
-                    roomCode: '',
-                    roomName: '',
-                    building: '',
-                    capacity: 30,
-                    roomType: 'Lecture Hall',
-                    amenities: {
-                      projector: false,
-                      whiteboard: false,
-                      airConditioning: false,
-                      wifi: false,
-                    },
-                    availability: true,
-                  });
-                  setImagesPreviews([]);
+                  window.location.href = '/room-inventory';
                 }}
-                className="flex-1 px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-sm font-bold rounded-xl transition-all"
+                className="w-full px-6 py-3 bg-primary hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-xl shadow-blue-500/20 transition-all"
               >
-                Create Another
-              </button>
-              <button
-                onClick={() => navigate('/room-inventory')}
-                className="flex-1 px-6 py-3 bg-primary hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-xl shadow-blue-500/20 transition-all"
-              >
-                View Rooms
+                Back to Rooms
               </button>
             </div>
           </div>
@@ -635,4 +668,4 @@ const CreateClassroom = () => {
   );
 };
 
-export default CreateClassroom;
+export default UpdateClassroom;

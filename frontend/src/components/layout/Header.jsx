@@ -1,4 +1,5 @@
 import React from 'react';
+import NotificationBell from '../common/NotificationBell';
 
 const Header = ({ user }) => {
   return (
@@ -34,6 +35,7 @@ const Header = ({ user }) => {
           />
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
         </div>
+        <NotificationBell />
         <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
           {user?.full_name?.charAt(0) || 'U'}
         </div>
