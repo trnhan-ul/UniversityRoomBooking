@@ -25,6 +25,14 @@ router.put(
   roomController.updateRoom
 );
 
+// PUT /api/rooms/:id/images - Update room images only (Admin/Facility Manager only)
+router.put(
+  "/:id/images",
+  authenticate,
+  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
+  roomController.updateRoomImages
+);
+
 // DELETE /api/rooms/:id - Delete room (Admin only)
 router.delete(
   "/:id",

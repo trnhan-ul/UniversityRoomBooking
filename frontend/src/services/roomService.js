@@ -62,6 +62,16 @@ export const updateRoom = async (roomId, roomData) => {
   }
 };
 
+// Update room images only
+export const updateRoomImages = async (roomId, images) => {
+  try {
+    const response = await api.put(`/rooms/${roomId}/images`, { images });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
 // Delete room
 export const deleteRoom = async (roomId) => {
   try {
