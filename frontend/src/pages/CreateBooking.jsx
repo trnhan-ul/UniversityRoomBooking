@@ -34,8 +34,6 @@ const CreateBooking = () => {
     end_time: urlEndTime || preSelectedTime?.end || '10:00',
     purpose: urlPurpose || '',
   });
-
-  // Fetch rooms from database
   useEffect(() => {
     const fetchRooms = async () => {
       try {
