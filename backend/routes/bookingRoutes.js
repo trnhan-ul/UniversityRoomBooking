@@ -54,6 +54,22 @@ router.get(
   bookingController.getPendingBookings,
 );
 
+// GET /api/bookings/report - booking report with filters (Admin/Facility Manager)
+router.get(
+  "/report",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.getBookingReport,
+);
+
+// GET /api/bookings/statistics - booking statistics (Admin/Facility Manager)
+router.get(
+  "/statistics",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.getBookingStatistics,
+);
+
 router.patch(
   "/:id/approve",
   authenticate,

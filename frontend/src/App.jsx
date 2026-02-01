@@ -24,6 +24,7 @@ import NotificationPage from "./pages/NotificationPage";
 import UpdateClassroom from "./pages/UpdateClassroom";
 import DeleteClassroom from "./pages/DeleteClassroom";
 import ScheduleManagement from "./pages/ScheduleManagement";
+import BookingReport from "./pages/BookingReport";
 import WorkingHoursSettings from "./pages/WorkingHoursSettings";
 
 function App() {
@@ -176,6 +177,17 @@ function App() {
               }
             />
           )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/booking-report"
+            element={
+              <AdminLayout>
+                <BookingReport />
+              </AdminLayout>
+            }
+          />
+        )}
 
         {user && (
           <>
