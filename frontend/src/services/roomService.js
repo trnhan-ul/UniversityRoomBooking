@@ -19,13 +19,13 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Get all available rooms
 export const getRooms = async (status = "") => {
   try {
-    const url = status ? `/rooms?status=${status}` : '/rooms';
+    const url = status ? `/rooms?status=${status}` : "/rooms";
     const response = await api.get(url);
     return response.data;
   } catch (error) {
@@ -46,7 +46,7 @@ export const getRoomById = async (roomId) => {
 // Create new room
 export const createRoom = async (roomData) => {
   try {
-    const response = await api.post('/rooms', roomData);
+    const response = await api.post("/rooms", roomData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: "Network error" };
@@ -86,10 +86,15 @@ export const deleteRoom = async (roomId) => {
 // Block time slot
 export const blockTimeSlot = async (scheduleData) => {
   try {
-    const response = await api.post('/rooms/block', scheduleData);
+    const response = await api.post("/rooms/block", scheduleData);
     return response.data;
   } catch (error) {
-    throw error.response?.data || { success: false, message: 'Failed to block time slot' };
+    throw (
+      error.response?.data || {
+        success: false,
+        message: "Failed to block time slot",
+      }
+    );
   }
 };
 
@@ -99,6 +104,11 @@ export const unblockTimeSlot = async (scheduleId) => {
     const response = await api.delete(`/rooms/unblock/${scheduleId}`);
     return response.data;
   } catch (error) {
-    throw error.response?.data || { success: false, message: 'Failed to unblock time slot' };
+    throw (
+      error.response?.data || {
+        success: false,
+        message: "Failed to unblock time slot",
+      }
+    );
   }
 };

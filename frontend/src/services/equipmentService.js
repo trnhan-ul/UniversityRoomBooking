@@ -19,17 +19,17 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Get all equipment with optional filters
 export const getAllEquipment = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
-    if (filters.room_id) params.append('room_id', filters.room_id);
-    if (filters.status) params.append('status', filters.status);
-    if (filters.page) params.append('page', filters.page);
-    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.room_id) params.append("room_id", filters.room_id);
+    if (filters.status) params.append("status", filters.status);
+    if (filters.page) params.append("page", filters.page);
+    if (filters.limit) params.append("limit", filters.limit);
 
     const response = await api.get(`/equipment?${params.toString()}`);
     return response.data;

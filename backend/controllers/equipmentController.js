@@ -1,12 +1,12 @@
-const Equipment = require('../models/Equipment');
-const Room = require('../models/Room');
-const mongoose = require('mongoose');
+const Equipment = require("../models/Equipment");
+const Room = require("../models/Room");
+const mongoose = require("mongoose");
 
 // Get all equipment with optional filters
 exports.getAllEquipment = async (req, res) => {
   try {
     const { room_id, status, page = 1, limit = 10 } = req.query;
-    
+
     const filter = {};
     if (room_id) filter.room_id = room_id;
     if (status) filter.status = status;
@@ -14,9 +14,9 @@ exports.getAllEquipment = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const equipment = await Equipment.find(filter)
-      .populate('room_id', 'room_name room_code location')
-      .populate('created_by', 'name email')
-      .populate('updated_by', 'name email')
+      .populate("room_id", "room_name room_code location")
+      .populate("created_by", "name email")
+      .populate("updated_by", "name email")
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -30,15 +30,15 @@ exports.getAllEquipment = async (req, res) => {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(total / parseInt(limit))
-      }
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
     });
   } catch (error) {
-    console.error('Error fetching equipment:', error);
+    console.error("Error fetching equipment:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch equipment',
-      error: error.message
+      message: "Failed to fetch equipment",
+      error: error.message,
     });
   }
 };
@@ -51,26 +51,26 @@ exports.getEquipmentByRoom = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid room ID'
+        message: "Invalid room ID",
       });
     }
 
     const equipment = await Equipment.find({ room_id: roomId })
-      .populate('room_id', 'room_name room_code location')
-      .populate('created_by', 'name email')
-      .populate('updated_by', 'name email')
+      .populate("room_id", "room_name room_code location")
+      .populate("created_by", "name email")
+      .populate("updated_by", "name email")
       .sort({ created_at: -1 });
 
     res.json({
       success: true,
-      data: equipment
+      data: equipment,
     });
   } catch (error) {
-    console.error('Error fetching equipment by room:', error);
+    console.error("Error fetching equipment by room:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch equipment',
-      error: error.message
+      message: "Failed to fetch equipment",
+      error: error.message,
     });
   }
 };
@@ -83,32 +83,32 @@ exports.getEquipmentById = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid equipment ID'
+        message: "Invalid equipment ID",
       });
     }
 
     const equipment = await Equipment.findById(id)
-      .populate('room_id', 'room_name room_code location capacity')
-      .populate('created_by', 'name email')
-      .populate('updated_by', 'name email');
+      .populate("room_id", "room_name room_code location capacity")
+      .populate("created_by", "name email")
+      .populate("updated_by", "name email");
 
     if (!equipment) {
       return res.status(404).json({
         success: false,
-        message: 'Equipment not found'
+        message: "Equipment not found",
       });
     }
 
     res.json({
       success: true,
-      data: equipment
+      data: equipment,
     });
   } catch (error) {
-    console.error('Error fetching equipment:', error);
+    console.error("Error fetching equipment:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch equipment',
-      error: error.message
+      message: "Failed to fetch equipment",
+      error: error.message,
     });
   }
 };
@@ -122,7 +122,7 @@ exports.createEquipment = async (req, res) => {
     if (!room_id || !name) {
       return res.status(400).json({
         success: false,
-        message: 'Room and equipment name are required'
+        message: "Room and equipment name are required",
       });
     }
 
@@ -130,7 +130,7 @@ exports.createEquipment = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(room_id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid room ID'
+        message: "Invalid room ID",
       });
     }
 
@@ -138,7 +138,7 @@ exports.createEquipment = async (req, res) => {
     if (!room) {
       return res.status(404).json({
         success: false,
-        message: 'Room not found'
+        message: "Room not found",
       });
     }
 
@@ -147,29 +147,29 @@ exports.createEquipment = async (req, res) => {
       room_id,
       name,
       quantity: quantity || 1,
-      status: status || 'WORKING',
-      description: description || '',
+      status: status || "WORKING",
+      description: description || "",
       created_by: req.user.id,
-      updated_by: req.user.id
+      updated_by: req.user.id,
     });
 
     await equipment.save();
 
     // Populate the equipment before sending response
-    await equipment.populate('room_id', 'room_name room_code location');
-    await equipment.populate('created_by', 'name email');
+    await equipment.populate("room_id", "room_name room_code location");
+    await equipment.populate("created_by", "name email");
 
     res.status(201).json({
       success: true,
-      message: 'Equipment created successfully',
-      data: equipment
+      message: "Equipment created successfully",
+      data: equipment,
     });
   } catch (error) {
-    console.error('Error creating equipment:', error);
+    console.error("Error creating equipment:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create equipment',
-      error: error.message
+      message: "Failed to create equipment",
+      error: error.message,
     });
   }
 };
@@ -183,7 +183,7 @@ exports.updateEquipment = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid equipment ID'
+        message: "Invalid equipment ID",
       });
     }
 
@@ -191,7 +191,7 @@ exports.updateEquipment = async (req, res) => {
     if (!equipment) {
       return res.status(404).json({
         success: false,
-        message: 'Equipment not found'
+        message: "Equipment not found",
       });
     }
 
@@ -200,7 +200,7 @@ exports.updateEquipment = async (req, res) => {
       if (!mongoose.Types.ObjectId.isValid(room_id)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid room ID'
+          message: "Invalid room ID",
         });
       }
 
@@ -208,7 +208,7 @@ exports.updateEquipment = async (req, res) => {
       if (!room) {
         return res.status(404).json({
           success: false,
-          message: 'Room not found'
+          message: "Room not found",
         });
       }
       equipment.room_id = room_id;
@@ -224,20 +224,20 @@ exports.updateEquipment = async (req, res) => {
     await equipment.save();
 
     // Populate before sending response
-    await equipment.populate('room_id', 'room_name room_code location');
-    await equipment.populate('updated_by', 'name email');
+    await equipment.populate("room_id", "room_name room_code location");
+    await equipment.populate("updated_by", "name email");
 
     res.json({
       success: true,
-      message: 'Equipment updated successfully',
-      data: equipment
+      message: "Equipment updated successfully",
+      data: equipment,
     });
   } catch (error) {
-    console.error('Error updating equipment:', error);
+    console.error("Error updating equipment:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update equipment',
-      error: error.message
+      message: "Failed to update equipment",
+      error: error.message,
     });
   }
 };
@@ -250,7 +250,7 @@ exports.deleteEquipment = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid equipment ID'
+        message: "Invalid equipment ID",
       });
     }
 
@@ -258,7 +258,7 @@ exports.deleteEquipment = async (req, res) => {
     if (!equipment) {
       return res.status(404).json({
         success: false,
-        message: 'Equipment not found'
+        message: "Equipment not found",
       });
     }
 
@@ -266,14 +266,14 @@ exports.deleteEquipment = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Equipment deleted successfully'
+      message: "Equipment deleted successfully",
     });
   } catch (error) {
-    console.error('Error deleting equipment:', error);
+    console.error("Error deleting equipment:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete equipment',
-      error: error.message
+      message: "Failed to delete equipment",
+      error: error.message,
     });
   }
 };
