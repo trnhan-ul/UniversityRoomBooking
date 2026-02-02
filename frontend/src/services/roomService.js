@@ -24,6 +24,7 @@ api.interceptors.request.use(
 
 // Get all available rooms
 export const getRooms = async (status = "") => {
+export const getRooms = async (status = "") => {
   try {
     const url = status ? `/rooms?status=${status}` : "/rooms";
     const response = await api.get(url);

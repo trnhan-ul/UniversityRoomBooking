@@ -155,6 +155,17 @@ function App() {
           />
         )}
 
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/equipment-management"
+            element={
+              <AdminLayout>
+                <EquipmentManagement />
+              </AdminLayout>
+            }
+          />
+        )}
+
         {user &&
           (user.role === "FACILITY_MANAGER" ||
             user.role === "ADMINISTRATOR") && (

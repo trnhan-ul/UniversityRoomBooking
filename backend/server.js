@@ -46,8 +46,6 @@ const roomRoutes = require("./routes/roomRoutes");
 const userRoutes = require("./routes/userRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-const equipmentRoutes = require("./routes/equipmentRoutes");
-const settingRoutes = require("./routes/settingRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
