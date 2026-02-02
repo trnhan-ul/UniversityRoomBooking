@@ -10,5 +10,6 @@ module.exports = {
   RoomImage: require('./RoomImage'),
   Notification: require('./Notification'),
   AuditLog: require('./AuditLog'),
-  EmailVerification: require('./EmailVerification')
+  EmailVerification: require('./EmailVerification'),
+  Holiday: require('./Holiday')
 };

@@ -1,7 +1,7 @@
 const Booking = require("../models/Booking");
 const Room = require("../models/Room");
 const Setting = require("../models/Setting");
-const { Notification } = require("../models");
+const { Notification, Holiday } = require("../models");
 const { sendApprovalEmail } = require("../services/emailService");
 const mongoose = require("mongoose");
 
@@ -43,6 +43,31 @@ const createBooking = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Cannot book room in the past",
+      });
+    }
+
+    // Check if date is a holiday
+    const checkDate = new Date(bookingDate);
+    checkDate.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(bookingDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const holiday = await Holiday.findOne({
+      date: {
+        $gte: checkDate,
+        $lt: endOfDay,
+      },
+    });
+
+    if (holiday) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot book room on ${holiday.name}`,
+        holiday: {
+          name: holiday.name,
+          date: holiday.date,
+          description: holiday.description
+        }
       });
     }
 
