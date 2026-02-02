@@ -128,15 +128,13 @@ const createBooking = async (req, res) => {
   }
 };
 
-// Lấy danh sách booking đang ở trạng thái PENDING (cho Manager xem)
-// Sắp xếp theo date asc, sau đó theo room.name asc
+
 const getPendingBookings = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 50;
     const skip = (page - 1) * limit;
 
-    // Sử dụng aggregation để lookup room và user, rồi sort theo date và room.name
     const matchStage = { $match: { status: "PENDING" } };
     const lookupRoom = {
       $lookup: {
@@ -224,7 +222,6 @@ const getBookingById = async (req, res) => {
   }
 };
 
-// Manager approve or reject booking
 const approveBooking = async (req, res) => {
   try {
     const bookingId = req.params.id;
