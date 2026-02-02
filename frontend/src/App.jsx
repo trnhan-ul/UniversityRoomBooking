@@ -166,6 +166,17 @@ function App() {
           />
         )}
 
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/working-hours-settings"
+            element={
+              <AdminLayout>
+                <WorkingHoursSettings />
+              </AdminLayout>
+            }
+          />
+        )}
+
         {user &&
           (user.role === "FACILITY_MANAGER" ||
             user.role === "ADMINISTRATOR") && (

@@ -39,23 +39,19 @@ const AdminLayout = ({ children }) => {
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
     {
-<<<<<<< HEAD
       path: "/working-hours-settings",
       icon: "🕐",
       label: "Working Hours",
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
     {
-      path: "/booking-booking-report",
-=======
       path: "/equipment-management",
       icon: "🔧",
       label: "Equipment Management",
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
     {
-      path: "/reports",
->>>>>>> 4e2647d (feat(equipment): implement equipment management (#22))
+      path: "/booking-report",
       icon: "📈",
       label: "Reports",
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
