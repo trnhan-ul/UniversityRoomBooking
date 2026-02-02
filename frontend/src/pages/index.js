@@ -1,3 +1,22 @@
+<<<<<<< HEAD
+export { default as Login } from "./Login";
+export { default as UserManagement } from "./UserManagement";
+export { default as MyBookings } from "./MyBookings";
+export { default as StudentDashboard } from "./HomePage";
+export { default as LecturerDashboard } from "./LecturerDashboard";
+export { default as FacilityManagerDashboard } from "./FacilityManagerDashboard";
+export { default as AdministratorDashboard } from "./AdministratorDashboard";
+export { default as RoomInventory } from "./RoomInventory";
+export { default as CreateClassroom } from "./CreateClassroom";
+export { default as NotificationPage } from "./NotificationPage";
+export { default as UpdateClassroom } from "./UpdateClassroom";
+export { default as DeleteClassroom } from "./DeleteClassroom";
+export { default as ScheduleManagement } from "./ScheduleManagement";
+export { default as BookingReport } from "./BookingReport";
+export { default as PendingRequests } from "./PendingRequests";
+
+export { default as EquipmentManagement } from "./EquipmentManagement";
+=======
 export { default as Login } from './Login';
 export { default as UserManagement } from './UserManagement';
 export { default as MyBookings } from './MyBookings';
@@ -9,8 +28,6 @@ export { default as RoomInventory } from './RoomInventory';
 export { default as CreateClassroom } from './CreateClassroom';
 export { default as NotificationPage } from './NotificationPage';
 export { default as UpdateClassroom } from './UpdateClassroom';
-export { default as DeleteClassroom } from './DeleteClassroom';
 export { default as ScheduleManagement } from './ScheduleManagement';
-export { default as BookingReport } from "./BookingReport";
-export { default as PendingRequests } from "./PendingRequests";
-
+export { default as EquipmentManagement } from './EquipmentManagement';
+>>>>>>> 4e2647d5e75cf4162bdf767fbe13d917725c729b
