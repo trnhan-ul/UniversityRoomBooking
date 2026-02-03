@@ -27,6 +27,7 @@ import ScheduleManagement from "./pages/ScheduleManagement";
 import BookingReport from "./pages/BookingReport";
 import WorkingHoursSettings from "./pages/WorkingHoursSettings";
 import EquipmentManagement from "./pages/EquipmentManagement";
+import HolidayManagement from "./pages/HolidayManagement";
 
 function App() {
   const isAdminRole = (role) =>
@@ -172,6 +173,17 @@ function App() {
             element={
               <AdminLayout>
                 <WorkingHoursSettings />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && user.role === "FACILITY_MANAGER" && (
+          <Route
+            path="/holiday-management"
+            element={
+              <AdminLayout>
+                <HolidayManagement />
               </AdminLayout>
             }
           />
