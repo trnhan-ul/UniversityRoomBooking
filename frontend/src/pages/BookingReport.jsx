@@ -6,25 +6,14 @@ const BookingReport = () => {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Filters
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [status, setStatus] = useState("");
-  const [groupBy, setGroupBy] = useState("date");
+  const groupBy = "date";
 
   // Fetch report data
   const fetchReport = async () => {
     setLoading(true);
     setError("");
     try {
-      const filters = {};
-      if (startDate) filters.startDate = startDate;
-      if (endDate) filters.endDate = endDate;
-      if (status) filters.status = status;
-      filters.groupBy = groupBy;
-
-      const response = await getBookingReport(filters);
+      const response = await getBookingReport({ groupBy });
       if (response.success) {
         setReportData(response.data.report);
         setSummary(response.data.summary);
@@ -37,45 +26,8 @@ const BookingReport = () => {
   };
 
   useEffect(() => {
-    // Set default date range (last 30 days)
-    const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    
-    setEndDate(today.toISOString().split("T")[0]);
-    setStartDate(thirtyDaysAgo.toISOString().split("T")[0]);
-  }, []);
-
-  useEffect(() => {
-    if (startDate && endDate) {
-      fetchReport();
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleFilterApply = () => {
     fetchReport();
-  };
-
-  const handleReset = () => {
-    const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    
-    setEndDate(today.toISOString().split("T")[0]);
-    setStartDate(thirtyDaysAgo.toISOString().split("T")[0]);
-    setStatus("");
-    setGroupBy("date");
-  };
-
-  const getStatusBadgeClass = (statusValue) => {
-    const classes = {
-      APPROVED: "bg-green-100 text-green-700",
-      REJECTED: "bg-red-100 text-red-700",
-      PENDING: "bg-yellow-100 text-yellow-700",
-      CANCELLED: "bg-gray-100 text-gray-700",
-    };
-    return classes[statusValue] || "bg-gray-100 text-gray-700";
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col h-screen bg-slate-50">
@@ -135,81 +87,6 @@ const BookingReport = () => {
               <p className="text-sm text-slate-500">No data available</p>
             )}
           </div>
-
-          {/* Filters */}
-          <div className="border-t border-slate-200 pt-6">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
-              Filters
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-2">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-2">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-2">
-                  Status
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                >
-                  <option value="">All Status</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="REJECTED">Rejected</option>
-                  <option value="CANCELLED">Cancelled</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-2">
-                  Group By
-                </label>
-                <select
-                  value={groupBy}
-                  onChange={(e) => setGroupBy(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                >
-                  <option value="date">By Date</option>
-                  <option value="room">By Room</option>
-                  <option value="status">By Status</option>
-                </select>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={handleFilterApply}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700"
-                >
-                  Apply
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-bold hover:bg-slate-50"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-          </div>
         </aside>
 
         {/* Main Content */}
@@ -228,8 +105,7 @@ const BookingReport = () => {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-6 border-b border-slate-200">
                 <h2 className="text-lg font-bold">
-                  Report Data{" "}
-                  {groupBy === "date" && "(By Date)"}
+                  Report Data {groupBy === "date" && "(By Date)"}
                   {groupBy === "room" && "(By Room)"}
                   {groupBy === "status" && "(By Status)"}
                 </h2>
@@ -238,21 +114,9 @@ const BookingReport = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50">
-                      {groupBy === "date" && (
-                        <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">
-                          Date
-                        </th>
-                      )}
-                      {groupBy === "room" && (
-                        <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">
-                          Room
-                        </th>
-                      )}
-                      {groupBy === "status" && (
-                        <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">
-                          Status
-                        </th>
-                      )}
+                      <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">
+                        Date
+                      </th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase">
                         Total
                       </th>
@@ -277,33 +141,15 @@ const BookingReport = () => {
                           colSpan="6"
                           className="px-6 py-12 text-center text-slate-500"
                         >
-                          No data available for the selected filters
+                          No data available
                         </td>
                       </tr>
                     ) : (
                       reportData.map((row, index) => (
                         <tr key={index} className="hover:bg-slate-50">
-                          {groupBy === "date" && (
-                            <td className="px-6 py-4 font-medium">
-                              {row._id?.date || "N/A"}
-                            </td>
-                          )}
-                          {groupBy === "room" && (
-                            <td className="px-6 py-4 font-medium">
-                              {row._id?.room_name || "N/A"}
-                            </td>
-                          )}
-                          {groupBy === "status" && (
-                            <td className="px-6 py-4">
-                              <span
-                                className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusBadgeClass(
-                                  row._id?.status,
-                                )}`}
-                              >
-                                {row._id?.status || "N/A"}
-                              </span>
-                            </td>
-                          )}
+                          <td className="px-6 py-4 font-medium">
+                            {row._id?.date || "N/A"}
+                          </td>
                           <td className="px-6 py-4 font-bold text-slate-900">
                             {row.total}
                           </td>
