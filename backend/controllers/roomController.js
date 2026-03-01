@@ -624,6 +624,172 @@ const unblockTimeSlot = async (req, res) => {
   }
 };
 
+// Get room usage report with statistics
+const getRoomUsageReport = async (req, res) => {
+  try {
+    const { startDate, endDate, roomId } = req.query;
+
+    // Validate date range
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Start date and end date are required",
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Validate date format
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid date format",
+      });
+    }
+
+    // Build match query for bookings
+    const matchQuery = {
+      status: "APPROVED",
+      date: {
+        $gte: start,
+        $lte: end,
+      },
+    };
+
+    // Filter by specific room if provided
+    if (roomId && roomId.trim() !== "") {
+      if (!mongoose.Types.ObjectId.isValid(roomId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid room ID",
+        });
+      }
+      matchQuery.room_id = new mongoose.Types.ObjectId(roomId);
+    }
+
+    // Aggregation pipeline to calculate statistics
+    const usageStats = await Booking.aggregate([
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: "rooms",
+          localField: "room_id",
+          foreignField: "_id",
+          as: "room_details",
+        },
+      },
+      { $unwind: "$room_details" },
+      {
+        $group: {
+          _id: "$room_id",
+          roomCode: { $first: "$room_details.room_code" },
+          roomName: { $first: "$room_details.room_name" },
+          location: { $first: "$room_details.location" },
+          capacity: { $first: "$room_details.capacity" },
+          totalBookings: { $sum: 1 },
+          bookings: {
+            $push: {
+              date: "$date",
+              start_time: "$start_time",
+              end_time: "$end_time",
+            },
+          },
+        },
+      },
+      { $sort: { totalBookings: -1 } },
+    ]);
+
+    // Helper function to parse time string to hours
+    const parseTimeToHours = (timeStr) => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours + minutes / 60;
+    };
+
+    // Helper function to format hours to "XhYY" format
+    const formatHoursToString = (hours) => {
+      const h = Math.floor(hours);
+      const m = Math.round((hours % 1) * 60);
+      return `${h}h${m.toString().padStart(2, '0')}`;
+    };
+
+    // Calculate additional statistics for each room
+    const roomsWithStats = usageStats.map((room) => {
+      const totalHours = room.bookings.reduce((sum, booking) => {
+        const startHours = parseTimeToHours(booking.start_time);
+        const endHours = parseTimeToHours(booking.end_time);
+        return sum + (endHours - startHours);
+      }, 0);
+
+      const uniqueDates = new Set(
+        room.bookings.map((b) => b.date.toISOString().split("T")[0])
+      );
+      const daysBooked = uniqueDates.size;
+
+      const workHoursPerDay = 9;
+      const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      const availableHours = workHoursPerDay * totalDays;
+      const utilizationRate = (totalHours / availableHours) * 100;
+      const averageBookingDuration = totalHours / room.totalBookings;
+
+      return {
+        roomId: room._id,
+        roomCode: room.roomCode,
+        roomName: room.roomName,
+        location: room.location,
+        capacity: room.capacity,
+        statistics: {
+          totalBookings: room.totalBookings,
+          totalHours: formatHoursToString(totalHours),
+          utilizationRate: Math.round(utilizationRate * 10) / 10,
+          daysBooked: daysBooked,
+          averageBookingDuration: formatHoursToString(averageBookingDuration),
+        },
+      };
+    });
+
+    // Calculate summary statistics
+    const summary = {
+      totalRooms: roomsWithStats.length,
+      totalBookings: roomsWithStats.reduce(
+        (sum, room) => sum + room.statistics.totalBookings,
+        0
+      ),
+      averageUtilization:
+        roomsWithStats.length > 0
+          ? Math.round(
+            (roomsWithStats.reduce(
+              (sum, room) => sum + room.statistics.utilizationRate,
+              0
+            ) /
+              roomsWithStats.length) *
+            10
+          ) / 10
+          : 0,
+      period: {
+        start: startDate,
+        end: endDate,
+        totalDays: Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1,
+      },
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        summary,
+        rooms: roomsWithStats,
+      },
+    });
+  } catch (error) {
+    console.error("getRoomUsageReport error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate room usage report",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getRooms,
   getRoomById,
@@ -633,4 +799,5 @@ module.exports = {
   deleteRoom,
   blockTimeSlot,
   unblockTimeSlot,
+  getRoomUsageReport,
 };
