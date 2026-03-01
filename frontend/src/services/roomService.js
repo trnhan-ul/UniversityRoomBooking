@@ -112,3 +112,20 @@ export const unblockTimeSlot = async (scheduleId) => {
     );
   }
 };
+
+// Get room usage report
+export const getRoomUsageReport = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.roomId && filters.roomId.trim() !== '') {
+      params.append('roomId', filters.roomId);
+    }
+
+    const response = await api.get(`/rooms/usage-report?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};

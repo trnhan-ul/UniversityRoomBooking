@@ -25,6 +25,7 @@ import UpdateClassroom from "./pages/UpdateClassroom";
 import DeleteClassroom from "./pages/DeleteClassroom";
 import ScheduleManagement from "./pages/ScheduleManagement";
 import BookingReport from "./pages/BookingReport";
+import RoomUsageReport from "./pages/RoomUsageReport";
 import WorkingHoursSettings from "./pages/WorkingHoursSettings";
 import EquipmentManagement from "./pages/EquipmentManagement";
 import HolidayManagement from "./pages/HolidayManagement";
@@ -208,6 +209,17 @@ function App() {
             element={
               <AdminLayout>
                 <BookingReport />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/room-usage-report"
+            element={
+              <AdminLayout>
+                <RoomUsageReport />
               </AdminLayout>
             }
           />

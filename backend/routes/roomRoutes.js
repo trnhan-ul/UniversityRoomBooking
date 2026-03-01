@@ -6,6 +6,14 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
 // GET /api/rooms - Get all rooms (authenticated users)
 router.get("/", authenticate, roomController.getRooms);
 
+// GET /api/rooms/usage-report - Room usage statistics (MUST be before /:id)
+router.get(
+  "/usage-report",
+  authenticate,
+  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
+  roomController.getRoomUsageReport
+);
+
 // GET /api/rooms/:id - Get room by ID
 router.get("/:id", authenticate, roomController.getRoomById);
 
