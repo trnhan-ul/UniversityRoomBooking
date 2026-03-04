@@ -63,17 +63,17 @@ const UserManagement = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
-  // Handle filter changes
+  
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
-  // Handle pagination
+  
   const handlePageChange = (newPage) => {
     setFilters((prev) => ({ ...prev, page: newPage }));
   };
 
-  // Handle create user
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setError("");
