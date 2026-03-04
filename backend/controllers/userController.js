@@ -153,12 +153,12 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// Get all users with filters - Admin views user list
+
 exports.getAllUsers = async (req, res) => {
   try {
     const { role, status, search, page = 1, limit = 10 } = req.query;
 
-    // Build query
+    
     const query = {};
 
     if (role) {
@@ -176,7 +176,7 @@ exports.getAllUsers = async (req, res) => {
       ];
     }
 
-    // Pagination
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const users = await User.find(query)
@@ -343,9 +343,7 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-// ============================================
-// USER PROFILE MANAGEMENT (Self-Service)
-// ============================================
+
 
 // UC-XX: Get My Profile
 exports.getMyProfile = async (req, res) => {
