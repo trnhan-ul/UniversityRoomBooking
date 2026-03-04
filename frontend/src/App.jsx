@@ -29,6 +29,7 @@ import RoomUsageReport from "./pages/RoomUsageReport";
 import WorkingHoursSettings from "./pages/WorkingHoursSettings";
 import EquipmentManagement from "./pages/EquipmentManagement";
 import HolidayManagement from "./pages/HolidayManagement";
+import AuditLogs from "./pages/AuditLogs";
 
 function App() {
   const isAdminRole = (role) =>
@@ -220,6 +221,17 @@ function App() {
             element={
               <AdminLayout>
                 <RoomUsageReport />
+              </AdminLayout>
+            }
+          />
+        )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/audit-logs"
+            element={
+              <AdminLayout>
+                <AuditLogs />
               </AdminLayout>
             }
           />

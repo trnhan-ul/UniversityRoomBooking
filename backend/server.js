@@ -49,6 +49,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const settingRoutes = require("./routes/settingRoutes");
 const equipmentRoutes = require("./routes/equipmentRoutes");
 const holidayRoutes = require("./routes/holidayRoutes");
+const auditLogRoutes = require("./routes/auditLogRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
@@ -59,6 +60,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/settings", settingRoutes);
 app.use("/api/equipment", equipmentRoutes);
 app.use("/api/holidays", holidayRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {

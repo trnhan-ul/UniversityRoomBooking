@@ -63,6 +63,12 @@ const AdminLayout = ({ children }) => {
       roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
     {
+      path: "/audit-logs",
+      icon: "📋",
+      label: "Audit Logs",
+      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
+    },
+    {
       path: "/settings",
       icon: "⚙️",
       label: "Settings",

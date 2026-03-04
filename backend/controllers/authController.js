@@ -7,95 +7,95 @@ const EmailVerification = require('../models/EmailVerification');
 const PasswordReset = require('../models/PasswordReset');
 const { PASSWORD_RESET_EXPIRY } = require('../config/constants');
 const { passwordResetTemplate, emailVerificationTemplate } = require('../templates/emailTemplates');
+const { logAuthAction } = require("../utils/auditLogger");
 
 const generateToken = (userId) => {
-    // Include SERVER_START_TIME to invalidate old tokens after server restart
-    const secret = `${process.env.JWT_SECRET}_${global.SERVER_START_TIME || ''}`;
-    return jwt.sign(
-        { id: userId },
-        secret,
-        { expiresIn: '7d' }
-    );
+  // Include SERVER_START_TIME to invalidate old tokens after server restart
+  const secret = `${process.env.JWT_SECRET}_${global.SERVER_START_TIME || ""}`;
+  return jwt.sign({ id: userId }, secret, { expiresIn: "7d" });
 };
 
-
 const login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide email and password'
-            });
-        }
-
-        if (!email.endsWith('@fpt.edu.vn')) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please use FPT University email (@fpt.edu.vn)'
-            });
-        }
-
-        const user = await User.findOne({ email }).select('+password');
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
-            });
-        }
-
-        const isPasswordMatch = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordMatch) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
-            });
-        }
-
-        if (user.status !== 'ACTIVE') {
-            return res.status(403).json({
-                success: false,
-                message: 'Your account has been deactivated. Please contact administrator.'
-            });
-        }
-
-        if (!user.is_email_verified) {
-            return res.status(403).json({
-                success: false,
-                message: 'Please verify your email before logging in. Check your inbox for verification link.'
-            });
-        }
-
-        const token = generateToken(user._id);
-
-        res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            data: {
-                token,
-                user: {
-                    id: user._id,
-                    email: user.email,
-                    full_name: user.full_name,
-                    role: user.role,
-                    phone_number: user.phone_number,
-                    avatar_url: user.avatar_url,
-                    is_email_verified: user.is_email_verified,
-                    status: user.status
-                }
-            }
-        });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error. Please try again later'
-        });
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and password",
+      });
     }
+
+    if (!email.endsWith("@fpt.edu.vn")) {
+      return res.status(400).json({
+        success: false,
+        message: "Please use FPT University email (@fpt.edu.vn)",
+      });
+    }
+
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    if (user.status !== "ACTIVE") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Your account has been deactivated. Please contact administrator.",
+      });
+    }
+
+    if (!user.is_email_verified) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Please verify your email before logging in. Check your inbox for verification link.",
+      });
+    }
+
+    const token = generateToken(user._id);
+
+    // Log the login action
+    await logAuthAction(user, "LOGIN", req);
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: {
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          full_name: user.full_name,
+          role: user.role,
+          phone_number: user.phone_number,
+          avatar_url: user.avatar_url,
+          is_email_verified: user.is_email_verified,
+          status: user.status,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later",
+    });
+  }
 };
 
 const createEmailTransporter = () => {

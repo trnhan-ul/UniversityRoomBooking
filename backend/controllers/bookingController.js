@@ -3,6 +3,7 @@ const Room = require("../models/Room");
 const Setting = require("../models/Setting");
 const { Notification, Holiday } = require("../models");
 const { sendApprovalEmail } = require("../services/emailService");
+const { logBookingAction } = require("../utils/auditLogger");
 const mongoose = require("mongoose");
 
 // UC14 - Create Booking
@@ -51,7 +52,7 @@ const createBooking = async (req, res) => {
     checkDate.setHours(0, 0, 0, 0);
     const endOfDay = new Date(bookingDate);
     endOfDay.setHours(23, 59, 59, 999);
-    
+
     const holiday = await Holiday.findOne({
       date: {
         $gte: checkDate,
@@ -66,8 +67,8 @@ const createBooking = async (req, res) => {
         holiday: {
           name: holiday.name,
           date: holiday.date,
-          description: holiday.description
-        }
+          description: holiday.description,
+        },
       });
     }
 
@@ -93,13 +94,15 @@ const createBooking = async (req, res) => {
     }
 
     // Validate working hours
-    const workingHoursStart = await Setting.findOne({ key: 'WORKING_HOURS_START' });
-    const workingHoursEnd = await Setting.findOne({ key: 'WORKING_HOURS_END' });
-    
+    const workingHoursStart = await Setting.findOne({
+      key: "WORKING_HOURS_START",
+    });
+    const workingHoursEnd = await Setting.findOne({ key: "WORKING_HOURS_END" });
+
     if (workingHoursStart && workingHoursEnd) {
       const whStart = workingHoursStart.value;
       const whEnd = workingHoursEnd.value;
-      
+
       if (start_time < whStart || end_time > whEnd) {
         return res.status(400).json({
           success: false,
@@ -152,7 +155,6 @@ const createBooking = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
 
 const getPendingBookings = async (req, res) => {
   try {
@@ -307,7 +309,7 @@ const approveBooking = async (req, res) => {
       type: "BOOKING",
       target_type: "Booking",
       target_id: booking._id,
-      is_read: false
+      is_read: false,
     });
 
     await sendApprovalEmail(
@@ -316,6 +318,15 @@ const approveBooking = async (req, res) => {
       booking.room_id,
       "APPROVED",
       null,
+    );
+
+    // Log the approval action
+    await logBookingAction(
+      req.user,
+      "APPROVE",
+      booking,
+      `Approved booking for ${booking.room_id.name} on ${booking.date.toDateString()} (${booking.start_time}-${booking.end_time}) by ${booking.user_id.full_name}`,
+      req,
     );
 
     res.status(200).json({
@@ -379,7 +390,7 @@ const rejectBooking = async (req, res) => {
       type: "BOOKING",
       target_type: "Booking",
       target_id: booking._id,
-      is_read: false
+      is_read: false,
     });
 
     await sendApprovalEmail(
@@ -388,6 +399,15 @@ const rejectBooking = async (req, res) => {
       booking.room_id,
       "REJECTED",
       booking.reject_reason,
+    );
+
+    // Log the rejection action
+    await logBookingAction(
+      req.user,
+      "REJECT",
+      booking,
+      `Rejected booking for ${booking.room_id.name} on ${booking.date.toDateString()} by ${booking.user_id.full_name}. Reason: ${booking.reject_reason}`,
+      req,
     );
 
     res.status(200).json({

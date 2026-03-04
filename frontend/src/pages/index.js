@@ -16,3 +16,4 @@ export { default as PendingRequests } from "./PendingRequests";
 export { default as EquipmentManagement } from "./EquipmentManagement";
 export { default as WorkingHoursSettings } from "./WorkingHoursSettings";
 export { default as HolidayManagement } from "./HolidayManagement";
+export { default as AuditLogs } from "./AuditLogs";
