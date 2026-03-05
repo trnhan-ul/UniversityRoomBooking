@@ -135,6 +135,26 @@ const RoomUsageReport = () => {
     setTimeout(() => fetchReport(), 100);
   };
 
+  // Get top 3 most popular rooms (by Utilization Rate)
+  const getTopThreeRooms = () => {
+    if (!reportData || reportData.length === 0) return [];
+    
+    // Sort by utilizationRate descending (highest utilization = most popular)
+    const sorted = [...reportData].sort((a, b) => 
+      (b.statistics.utilizationRate || 0) - (a.statistics.utilizationRate || 0)
+    );
+    
+    return sorted.slice(0, 3);
+  };
+
+  // Get medal emoji for ranking
+  const getMedalEmoji = (rank) => {
+    if (rank === 1) return "🥇";
+    if (rank === 2) return "🥈";
+    if (rank === 3) return "🥉";
+    return `${rank}.`;
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-50">
       {/* Header */}
@@ -152,6 +172,7 @@ const RoomUsageReport = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Summary */}
         <aside className="w-80 border-r border-slate-200 bg-white p-6 flex flex-col gap-6 overflow-y-auto">
+          {/* Summary Statistics */}
           <div>
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
               Summary Statistics
@@ -179,6 +200,48 @@ const RoomUsageReport = () => {
                     {summary.period?.start} to {summary.period?.end}
                   </p>
                 </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">No data available</p>
+            )}
+          </div>
+
+          {/* Top 3 Popular Rooms */}
+          <div>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+              🏆 Top 3 Popular Rooms
+            </h3>
+            {reportData && reportData.length > 0 ? (
+              <div className="space-y-3">
+                {getTopThreeRooms().map((room, index) => {
+                  const rank = index + 1;
+                  
+                  return (
+                    <div
+                      key={room.roomId}
+                      className="bg-white p-4 rounded-lg border border-slate-200 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">
+                          {getMedalEmoji(rank)}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-slate-900">
+                            {room.roomCode}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {room.roomName}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-slate-900">
+                            {room.statistics.utilizationRate?.toFixed(2) || '0.00'}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm text-slate-500">No data available</p>
