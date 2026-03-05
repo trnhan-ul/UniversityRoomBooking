@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const { bookingApprovalTemplate, accountCreatedTemplate } = require('../templates/emailTemplates');
+const { bookingApprovalTemplate, accountCreatedTemplate, adminPasswordResetTemplate } = require('../templates/emailTemplates');
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
@@ -60,7 +60,26 @@ const sendAccountCreatedEmail = async (userData) => {
   }
 };
 
+const sendAdminResetPasswordEmail = async (user, newPassword) => {
+  try {
+    const htmlContent = adminPasswordResetTemplate(user, newPassword);
+    const mailOptions = {
+      from: `"Room Booking System" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: '🔑 Your Password Has Been Reset by Administrator',
+      html: htmlContent,
+    };
+    await transporter.sendMail(mailOptions);
+    console.log(`Admin reset password email sent to ${user.email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending admin reset password email:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendApprovalEmail,
   sendAccountCreatedEmail,
+  sendAdminResetPasswordEmail,
 };
