@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { getAllUsers, createUser, updateUser, adminResetUserPassword } from "../services/userService";
+import { getAllUsers, createUser, updateUser, adminResetUserPassword, getUserById } from "../services/userService";
 import { Button, Badge } from "../components/common";
 import { useAuthContext } from "../context/AuthContext";
+
+const InfoRow = ({ icon, label, value }) => (
+  <div className="flex items-start gap-3">
+    <span className="text-base w-5 flex-shrink-0 mt-0.5">{icon}</span>
+    <div className="flex-1 min-w-0">
+      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{label}</p>
+      <div className="text-sm text-slate-800 mt-0.5 break-all">{value}</div>
+    </div>
+  </div>
+);
 
 const UserManagement = () => {
   const { user: currentUser } = useAuthContext();
@@ -30,6 +40,9 @@ const UserManagement = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [isViewDetailModalOpen, setIsViewDetailModalOpen] = useState(false);
+  const [viewDetailUser, setViewDetailUser] = useState(null);
+  const [viewDetailLoading, setViewDetailLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [showResetNewPass, setShowResetNewPass] = useState(false);
@@ -163,6 +176,23 @@ const UserManagement = () => {
       password: "",
     });
     setIsEditModalOpen(true);
+  };
+
+  // Open view detail modal
+  const openViewDetailModal = async (user) => {
+    setViewDetailUser(user);
+    setIsViewDetailModalOpen(true);
+    setViewDetailLoading(true);
+    try {
+      const response = await getUserById(user._id);
+      if (response.success) {
+        setViewDetailUser(response.data);
+      }
+    } catch (err) {
+      // fallback to existing user data
+    } finally {
+      setViewDetailLoading(false);
+    }
   };
 
   // Open reset password modal
@@ -364,12 +394,15 @@ const UserManagement = () => {
                       }`}
                     >
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
+                        <button
+                          onClick={() => openViewDetailModal(user)}
+                          className="flex items-center gap-3 hover:text-blue-600 transition-colors text-left group"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm group-hover:bg-blue-200 transition-colors">
                             {getInitials(user.full_name)}
                           </div>
-                          <div className="font-medium">{user.full_name}</div>
-                        </div>
+                          <div className="font-medium group-hover:underline">{user.full_name}</div>
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-500">
                         {user.email}
@@ -408,6 +441,13 @@ const UserManagement = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openViewDetailModal(user)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                            title="View detail"
+                          >
+                            View Detail
+                          </button>
                           <button
                             onClick={() => openEditModal(user)}
                             className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors"
@@ -502,6 +542,123 @@ const UserManagement = () => {
           )}
         </div>
       </div>
+
+      {/* View User Detail Modal */}
+      {isViewDetailModalOpen && viewDetailUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">User Detail</h2>
+              <button
+                onClick={() => { setIsViewDetailModalOpen(false); setViewDetailUser(null); }}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {viewDetailLoading ? (
+              <div className="p-10 text-center text-slate-500">Loading...</div>
+            ) : (
+              <div className="p-6 space-y-6">
+                {/* Avatar + Name */}
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl">
+                    {getInitials(viewDetailUser.full_name)}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800">{viewDetailUser.full_name}</h3>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                      viewDetailUser.status === "ACTIVE"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}>
+                      {viewDetailUser.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Info Grid */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                    <InfoRow icon="📧" label="Email" value={viewDetailUser.email} />
+                    <InfoRow
+                      icon="✅"
+                      label="Email Verified"
+                      value={
+                        <span className={viewDetailUser.is_email_verified ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
+                          {viewDetailUser.is_email_verified ? "Verified" : "Not Verified"}
+                        </span>
+                      }
+                    />
+                    <InfoRow icon="📞" label="Phone" value={viewDetailUser.phone_number || "—"} />
+                    <InfoRow
+                      icon="🎭"
+                      label="Role"
+                      value={
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                          {viewDetailUser.role === "FACILITY_MANAGER"
+                            ? "Facility Manager"
+                            : viewDetailUser.role.charAt(0) + viewDetailUser.role.slice(1).toLowerCase()}
+                        </span>
+                      }
+                    />
+                    <InfoRow
+                      icon="🕐"
+                      label="Member Since"
+                      value={
+                        viewDetailUser.created_at
+                          ? new Date(viewDetailUser.created_at).toLocaleDateString("en-GB", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
+                          : "—"
+                      }
+                    />
+                    <InfoRow
+                      icon="🔄"
+                      label="Last Updated"
+                      value={
+                        viewDetailUser.updated_at
+                          ? new Date(viewDetailUser.updated_at).toLocaleDateString("en-GB", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
+                          : "—"
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setIsViewDetailModalOpen(false);
+                      setViewDetailUser(null);
+                      openEditModal(viewDetailUser);
+                    }}
+                    className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm"
+                  >
+                    ✏️ Edit User
+                  </button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => { setIsViewDetailModalOpen(false); setViewDetailUser(null); }}
+                    className="flex-1"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Reset Password Modal */}
       {isResetPasswordModalOpen && selectedUser && (
