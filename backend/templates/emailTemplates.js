@@ -298,18 +298,178 @@ const bookingApprovalTemplate = (
 };
 
 /**
+<<<<<<< HEAD
+ * Template email chào mừng khi admin tạo tài khoản cho user
+ * @param {Object} userData - Thông tin user {email, password, full_name, role, phone_number}
+ * @returns {string} HTML string
+ */
+const accountCreatedTemplate = (userData) => {
+  const { email, password, full_name, role, phone_number } = userData;
+  
+  // Map role names to friendly display
+  const roleDisplayNames = {
+    'STUDENT': 'Student',
+    'LECTURER': 'Lecturer',
+    'FACILITY_MANAGER': 'Facility Manager',
+    'ADMINISTRATOR': 'Administrator'
+  };
+  
+  const roleDisplay = roleDisplayNames[role] || role;
+  
+=======
  * Template email khi Admin reset password cho user
  * @param {object} user - User object { full_name, email }
  * @param {string} newPassword - Mật khẩu mới (plain text)
  * @returns {string} HTML string
  */
 const adminPasswordResetTemplate = (user, newPassword) => {
+>>>>>>> 9fcf26fe3dfd1a44a219cc9b61d648eec0458d84
   return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< HEAD
+      <title>Welcome to UniBooking</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+      
+      <!-- Main Container -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px; background-color: #f5f5f5;">
+        <tr>
+          <td align="center">
+            <!-- Content Card -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+              
+              <!-- Header with Blue Gradient -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 48px 32px; text-align: center;">
+                  <!-- Icon Circle with Graduation Cap -->
+                  <div style="margin: 0 auto 24px; width: 100px; height: 100px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-block;">
+                    <table width="100" height="100" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" valign="middle">
+                          <span style="font-size: 48px; display: inline-block;">🎓</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                  
+                  <h1 style="color: white; font-size: 32px; font-weight: 700; margin: 0 0 12px 0; line-height: 1.2;">
+                    Welcome to UniBooking
+                  </h1>
+                  <p style="color: rgba(255,255,255,0.9); font-size: 16px; margin: 0; font-weight: 500;">
+                    Your Account Has Been Created
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Body Content -->
+              <tr>
+                <td style="padding: 48px 32px;">
+                  
+                  <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+                    Hello <strong style="color: #1e40af;">${full_name}</strong>,
+                  </p>
+
+                  <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
+                    An account has been created for you in the <strong>FPT University Room Booking System</strong> by System Administrator. You can now log in and start using the system.
+                  </p>
+
+                  <!-- Account Details Box -->
+                  <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; padding: 28px; margin-bottom: 32px; border: 2px solid #93c5fd;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-bottom: 4px;">
+                          <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                            <span style="font-size: 18px; margin-right: 8px;">📋</span>
+                            <span style="color: #1e40af; font-size: 16px; font-weight: 700; letter-spacing: 0.5px;">YOUR ACCOUNT DETAILS</span>
+                          </div>
+                        </td>
+                      </tr>
+                      
+                      <!-- Email -->
+                      <tr>
+                        <td style="padding: 14px 0; border-bottom: 1px solid rgba(59,130,246,0.2);">
+                          <div style="color: #6b7280; font-size: 13px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">EMAIL (USERNAME)</div>
+                          <div style="color: #1e40af; font-size: 16px; font-weight: 600; word-break: break-all;">${email}</div>
+                        </td>
+                      </tr>
+                      
+                      <!-- Password -->
+                      <tr>
+                        <td style="padding: 14px 0; border-bottom: 1px solid rgba(59,130,246,0.2);">
+                          <div style="color: #6b7280; font-size: 13px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">PASSWORD</div>
+                          <div style="background-color: white; border: 2px dashed #93c5fd; border-radius: 6px; padding: 12px 16px; display: inline-block; margin-top: 4px;">
+                            <span style="color: #2563eb; font-size: 20px; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 2px;">${password}</span>
+                          </div>
+                        </td>
+                      </tr>
+                      
+                      <!-- Full Name -->
+                      <tr>
+                        <td style="padding: 14px 0; border-bottom: 1px solid rgba(59,130,246,0.2);">
+                          <div style="color: #6b7280; font-size: 13px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">FULL NAME</div>
+                          <div style="color: #1f2937; font-size: 16px; font-weight: 600;">${full_name}</div>
+                        </td>
+                      </tr>
+                      
+                      <!-- Role -->
+                      <tr>
+                        <td style="padding: 14px 0; border-bottom: 1px solid rgba(59,130,246,0.2);">
+                          <div style="color: #6b7280; font-size: 13px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">ROLE</div>
+                          <div style="color: #1f2937; font-size: 16px; font-weight: 600;">${roleDisplay}</div>
+                        </td>
+                      </tr>
+                      
+                      <!-- Phone Number -->
+                      ${phone_number ? `
+                      <tr>
+                        <td style="padding: 14px 0;">
+                          <div style="color: #6b7280; font-size: 13px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">PHONE NUMBER</div>
+                          <div style="color: #1f2937; font-size: 16px; font-weight: 600;">${phone_number}</div>
+                        </td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </div>
+
+                  <!-- Security Warning -->
+                  <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 18px 20px; margin-bottom: 32px;">
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="vertical-align: top; padding-right: 12px;">
+                          <span style="font-size: 24px;">⚠️</span>
+                        </td>
+                        <td>
+                          <div style="color: #92400e; font-size: 14px; font-weight: 700; margin-bottom: 4px;">Security Reminder</div>
+                          <div style="color: #78350f; font-size: 13px; line-height: 1.5;">
+                            For security reasons, please <strong>change your password</strong> after your first login. You can do this from your profile settings.
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <!-- Login Button -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
+                    <tr>
+                      <td align="center">
+                        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
+                           style="display: inline-block; 
+                                  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); 
+                                  color: white; 
+                                  text-decoration: none; 
+                                  font-weight: 700; 
+                                  padding: 16px 48px; 
+                                  border-radius: 8px; 
+                                  font-size: 16px;
+                                  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+                                  transition: all 0.3s ease;">
+                          Login to UniBooking
+                        </a>
+=======
       <title>Your Password Has Been Reset | UniBooking</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f6f7f8;">
@@ -358,10 +518,20 @@ const adminPasswordResetTemplate = (user, newPassword) => {
                             </td>
                           </tr>
                         </table>
+>>>>>>> 9fcf26fe3dfd1a44a219cc9b61d648eec0458d84
                       </td>
                     </tr>
                   </table>
 
+<<<<<<< HEAD
+                  <!-- Additional Info -->
+                  <div style="border-top: 2px solid #e5e7eb; padding-top: 24px;">
+                    <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0;">
+                      If you have any questions or need assistance, please contact your system administrator.
+                    </p>
+                  </div>
+
+=======
                   <!-- Warning -->
                   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px; margin-bottom: 28px;">
                     <tr>
@@ -377,14 +547,27 @@ const adminPasswordResetTemplate = (user, newPassword) => {
                   <p style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">
                     If you did not expect this change, please contact the system administrator immediately.
                   </p>
+>>>>>>> 9fcf26fe3dfd1a44a219cc9b61d648eec0458d84
                 </td>
               </tr>
 
               <!-- Footer -->
               <tr>
+<<<<<<< HEAD
+                <td style="background-color: #f9fafb; padding: 32px; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="color: #9ca3af; font-size: 13px; margin: 0 0 8px 0; font-weight: 600;">
+                    🔒 Do not share your password with anyone!<br>
+                    Keep your account secure.
+                  </p>
+                  <p style="color: #d1d5db; font-size: 11px; margin: 16px 0 0 0;">
+                    © 2026 FPT University Room Booking System<br>
+                    This is an automated email, please do not reply.
+                  </p>
+=======
                 <td style="padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
                   <p style="color: #94a3b8; font-size: 12px; margin: 0;">© 2026 FPT University Room Booking System</p>
                   <p style="color: #cbd5e1; font-size: 11px; margin: 6px 0 0 0;">This is an automated email, please do not reply.</p>
+>>>>>>> 9fcf26fe3dfd1a44a219cc9b61d648eec0458d84
                 </td>
               </tr>
 
@@ -402,5 +585,6 @@ module.exports = {
   passwordResetTemplate,
   emailVerificationTemplate,
   bookingApprovalTemplate,
+  accountCreatedTemplate,
   adminPasswordResetTemplate,
 };

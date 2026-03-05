@@ -77,6 +77,14 @@ exports.createUser = async (req, res) => {
       });
     }
 
+    // Validate email must be @fpt.edu.vn
+    if (!email.toLowerCase().endsWith("@fpt.edu.vn")) {
+      return res.status(400).json({
+        success: false,
+        message: "Please use FPT University email (@fpt.edu.vn)",
+      });
+    }
+
     // Validate role
     const validRoles = [
       "STUDENT",
@@ -125,8 +133,24 @@ exports.createUser = async (req, res) => {
       role,
       status: status || "ACTIVE",
       created_by: req.user._id,
-      is_email_verified: false,
+      is_email_verified: true, // Admin-created accounts are pre-verified
     });
+
+    // Gửi email chào mừng với thông tin tài khoản
+    try {
+      const { sendAccountCreatedEmail } = require('../services/emailService');
+      await sendAccountCreatedEmail({
+        email: newUser.email,
+        password: password, // Send plain password to user
+        full_name: newUser.full_name,
+        role: newUser.role,
+        phone_number: newUser.phone_number,
+      });
+      console.log('Account creation email sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send account creation email:', emailError);
+      // Continue even if email fails - don't block user creation
+    }
 
     // Remove password from response
     const userResponse = newUser.toObject();
@@ -212,7 +236,7 @@ exports.getAllUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { full_name, phone_number, role, status, avatar_url } = req.body;
+    const { full_name, phone_number, role, status, avatar_url, is_email_verified } = req.body;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -262,6 +286,7 @@ exports.updateUser = async (req, res) => {
       updateData.status = status;
     }
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
+    if (is_email_verified !== undefined) updateData.is_email_verified = is_email_verified;
 
     const updatedUser = await User.findByIdAndUpdate(id, updateData, {
       new: true,
