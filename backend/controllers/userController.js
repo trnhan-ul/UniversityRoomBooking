@@ -236,13 +236,31 @@ exports.getAllUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { full_name, phone_number, role, status, avatar_url, is_email_verified } = req.body;
+    const {
+      full_name,
+      phone_number,
+      role,
+      status,
+      avatar_url,
+      is_email_verified,
+    } = req.body;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid user ID",
+      });
+    }
+
+    // Prevent admin from changing their own role/status via admin endpoint.
+    if (
+      id === req.user._id.toString() &&
+      (role !== undefined || status !== undefined)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot change your own role or status",
       });
     }
 
@@ -286,18 +304,43 @@ exports.updateUser = async (req, res) => {
       updateData.status = status;
     }
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
-    if (is_email_verified !== undefined) updateData.is_email_verified = is_email_verified;
+    if (is_email_verified !== undefined)
+      updateData.is_email_verified = is_email_verified;
+
+    const existingUser = await User.findById(id).select(
+      "full_name email role status",
+    );
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     const updatedUser = await User.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     }).select("-password");
 
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+    const changeLogs = [];
+    if (status !== undefined && existingUser.status !== updatedUser.status) {
+      changeLogs.push(
+        `status: ${existingUser.status} -> ${updatedUser.status}`,
+      );
+    }
+    if (role !== undefined && existingUser.role !== updatedUser.role) {
+      changeLogs.push(`role: ${existingUser.role} -> ${updatedUser.role}`);
+    }
+
+    if (changeLogs.length > 0) {
+      await logUserAction(
+        req.user,
+        "UPDATE",
+        updatedUser,
+        `Admin ${req.user.email} updated user ${updatedUser.email} (${changeLogs.join(", ")})`,
+        req,
+      );
     }
 
     res.status(200).json({
@@ -307,14 +350,14 @@ exports.updateUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Update user error:", error);
-    console.error('Error details:', {
+    console.error("Error details:", {
       message: error.message,
       name: error.name,
-      stack: error.stack
+      stack: error.stack,
     });
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to update profile'
+      message: error.message || "Failed to update profile",
     });
   }
 };
@@ -328,7 +371,7 @@ exports.deleteUser = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid user ID'
+        message: "Invalid user ID",
       });
     }
 
@@ -336,36 +379,50 @@ exports.deleteUser = async (req, res) => {
     if (id === req.user._id.toString()) {
       return res.status(400).json({
         success: false,
-        message: 'You cannot delete your own account'
+        message: "You cannot delete your own account",
+      });
+    }
+
+    const existingUser = await User.findById(id).select(
+      "full_name email role status",
+    );
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
       });
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      { 
-        status: 'INACTIVE',
-        updated_by: req.user._id
+      {
+        status: "INACTIVE",
+        updated_by: req.user._id,
       },
-      { new: true }
-    ).select('-password');
+      { new: true },
+    ).select("-password");
 
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+    if (existingUser.status !== "INACTIVE") {
+      await logUserAction(
+        req.user,
+        "UPDATE",
+        updatedUser,
+        `Admin ${req.user.email} disabled user ${updatedUser.email} (status: ${existingUser.status} -> INACTIVE)`,
+        req,
+      );
     }
 
     res.status(200).json({
       success: true,
-      message: 'User deleted successfully',
-      data: updatedUser
+      message: "User deleted successfully",
+      data: updatedUser,
     });
   } catch (error) {
-    console.error('Delete user error:', error);
+    console.error("Delete user error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete user'
+      message: "Failed to delete user",
     });
   }
 };
