@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { cancelBooking, updateBooking } from "../services/bookingService";
+import { cancelBooking, updateBooking, getExtendOptions, extendBooking } from "../services/bookingService";
 import { getRooms } from "../services/roomService";
 import { formatDate, getStatusVariant, getStatusLabel } from "../utils/helpers";
 import Badge from "../components/common/Badge";
@@ -27,6 +27,61 @@ const BookingDetail = () => {
     end_time: booking?.end_time || "",
     purpose: booking?.purpose || "",
   });
+
+  // Extend booking state
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [extendOptions, setExtendOptions] = useState([]);
+  const [extendLoading, setExtendLoading] = useState(false);
+  const [extendSubmitting, setExtendSubmitting] = useState(false);
+  const [selectedExtendTime, setSelectedExtendTime] = useState('');
+  const [extendError, setExtendError] = useState('');
+
+  // Check if booking is currently in progress
+  const isOngoing = () => {
+    if (!booking || booking.status !== 'APPROVED') return false;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const bookingDateStr = new Date(booking.date).toISOString().split('T')[0];
+    if (bookingDateStr !== todayStr) return false;
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const [sh, sm] = booking.start_time.split(':').map(Number);
+    const [eh, em] = booking.end_time.split(':').map(Number);
+    return nowMins >= sh * 60 + sm && nowMins < eh * 60 + em;
+  };
+
+  const handleOpenExtend = async () => {
+    setShowExtendModal(true);
+    setExtendOptions([]);
+    setSelectedExtendTime('');
+    setExtendError('');
+    setExtendLoading(true);
+    try {
+      const res = await getExtendOptions(booking._id);
+      if (res.success) {
+        setExtendOptions(res.data.options || []);
+        if (res.data.options?.length > 0) setSelectedExtendTime(res.data.options[0].new_end_time);
+      }
+    } catch (err) {
+      setExtendError(err.message || 'Failed to load options');
+    } finally {
+      setExtendLoading(false);
+    }
+  };
+
+  const handleConfirmExtend = async () => {
+    if (!selectedExtendTime) return;
+    setExtendSubmitting(true);
+    setExtendError('');
+    try {
+      await extendBooking(booking._id, selectedExtendTime);
+      setShowExtendModal(false);
+      navigate('/my-bookings');
+    } catch (err) {
+      setExtendError(err.message || 'Failed to extend booking');
+    } finally {
+      setExtendSubmitting(false);
+    }
+  };
 
   // Fetch available rooms when edit mode is enabled
   useEffect(() => {
@@ -393,6 +448,14 @@ const BookingDetail = () => {
                     Edit Booking
                   </button>
                 )}
+                {isOngoing() && (
+                  <button
+                    onClick={handleOpenExtend}
+                    className="px-6 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
+                  >
+                    ⏱ Extend Booking
+                  </button>
+                )}
                 {["PENDING", "APPROVED"].includes(booking.status) && (
                   <button
                     onClick={handleCancelBooking}
@@ -406,6 +469,74 @@ const BookingDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Extend Booking Modal */}
+      {showExtendModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="bg-green-600 rounded-t-2xl px-6 py-4">
+              <h2 className="text-white font-bold text-lg">⏱ Extend Booking</h2>
+              <p className="text-green-100 text-sm mt-1">
+                {booking.room_id?.room_name} · {booking.start_time} – {booking.end_time}
+              </p>
+            </div>
+            <div className="p-6">
+              {extendLoading ? (
+                <div className="text-center py-8 text-gray-500">Loading available slots...</div>
+              ) : extendOptions.length === 0 && !extendError ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No available time slots to extend.</p>
+                  <p className="text-xs text-gray-400 mt-1">Another booking may be right after yours, or you've reached the working hours limit.</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-600 mb-4">Select how long you want to extend:</p>
+                  <div className="space-y-2">
+                    {extendOptions.map((opt) => (
+                      <label
+                        key={opt.new_end_time}
+                        className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
+                          selectedExtendTime === opt.new_end_time
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-green-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="extend_time"
+                          value={opt.new_end_time}
+                          checked={selectedExtendTime === opt.new_end_time}
+                          onChange={() => setSelectedExtendTime(opt.new_end_time)}
+                          className="accent-green-600"
+                        />
+                        <span className="text-sm font-medium text-gray-800">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+              {extendError && (
+                <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{extendError}</p>
+              )}
+            </div>
+            <div className="flex gap-3 px-6 pb-6">
+              <button
+                onClick={() => setShowExtendModal(false)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmExtend}
+                disabled={!selectedExtendTime || extendSubmitting || extendOptions.length === 0}
+                className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {extendSubmitting ? 'Extending...' : `Extend to ${selectedExtendTime}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

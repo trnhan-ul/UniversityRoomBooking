@@ -73,6 +73,22 @@ router.get(
   bookingController.getBookingStatistics,
 );
 
+// PATCH /api/bookings/recurring/:recurrence_id/approve - MUST be before /:id/approve
+router.patch(
+  "/recurring/:recurrence_id/approve",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.approveRecurringGroup,
+);
+
+// PATCH /api/bookings/recurring/:recurrence_id/reject - MUST be before /:id/reject
+router.patch(
+  "/recurring/:recurrence_id/reject",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.rejectRecurringGroup,
+);
+
 router.patch(
   "/:id/approve",
   authenticate,
@@ -89,6 +105,12 @@ router.patch(
 
 // PATCH /api/bookings/:id/cancel - cancel booking (User)
 router.patch("/:id/cancel", authenticate, bookingController.cancelBooking);
+
+// GET /api/bookings/:id/extend-options - get available extension time slots (User, booking owner, ongoing)
+router.get("/:id/extend-options", authenticate, bookingController.getExtendOptions);
+
+// PATCH /api/bookings/:id/extend - extend booking end time (User, booking owner, ongoing)
+router.patch("/:id/extend", authenticate, bookingController.extendBooking);
 
 // PATCH /api/bookings/:id - update booking (User) - MUST be last
 router.patch("/:id", authenticate, bookingController.updateBooking);

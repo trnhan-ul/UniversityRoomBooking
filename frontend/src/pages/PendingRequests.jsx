@@ -4,6 +4,8 @@ import {
   approveBooking,
   rejectBooking,
   getBookingStatistics,
+  approveRecurringGroup,
+  rejectRecurringGroup,
 } from "../services/bookingService";
 import { Button, Badge } from "../components/common";
 import { formatDate } from "../utils/helpers";
@@ -97,6 +99,62 @@ const PendingRequests = () => {
       return bookings.filter((b) => b.priority === "HIGH").length;
     if (filterType === "conflict") return conflictCount;
     return pagination.total || bookings.length;
+  };
+
+  // ─── Group approve/reject state ──────────────────────────────────────────────
+  const [groupActionBooking, setGroupActionBooking] = useState(null);
+  const [isGroupActionOpen, setIsGroupActionOpen] = useState(false);
+  const [isGroupRejecting, setIsGroupRejecting] = useState(false);
+  const [groupRejectReason, setGroupRejectReason] = useState("");
+  const [groupActionLoading, setGroupActionLoading] = useState(false);
+
+  const openGroupAction = (booking) => {
+    setGroupActionBooking(booking);
+    setIsGroupActionOpen(true);
+    setIsGroupRejecting(false);
+    setGroupRejectReason("");
+  };
+
+  const handleApproveGroup = async () => {
+    if (!groupActionBooking?.recurrence_id) return;
+    setGroupActionLoading(true);
+    setError("");
+    try {
+      const res = await approveRecurringGroup(groupActionBooking.recurrence_id);
+      if (res.success) {
+        setSuccess(res.message || "Recurring group approved");
+        setIsGroupActionOpen(false);
+        fetchPendingBookings();
+        setTimeout(() => setSuccess(""), 4000);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to approve group");
+    } finally {
+      setGroupActionLoading(false);
+    }
+  };
+
+  const handleRejectGroup = async () => {
+    if (!groupActionBooking?.recurrence_id) return;
+    if (!groupRejectReason.trim() || groupRejectReason.length < 10) {
+      setError("Rejection reason must be at least 10 characters");
+      return;
+    }
+    setGroupActionLoading(true);
+    setError("");
+    try {
+      const res = await rejectRecurringGroup(groupActionBooking.recurrence_id, groupRejectReason);
+      if (res.success) {
+        setSuccess(res.message || "Recurring group rejected");
+        setIsGroupActionOpen(false);
+        fetchPendingBookings();
+        setTimeout(() => setSuccess(""), 4000);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to reject group");
+    } finally {
+      setGroupActionLoading(false);
+    }
   };
 
   // Handle approve
@@ -425,6 +483,11 @@ const PendingRequests = () => {
                           <p className="text-xs text-slate-500">
                             {booking.start_time} - {booking.end_time}
                           </p>
+                          {booking.recurrence_id && (
+                            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold uppercase">
+                              🔁 {booking.recurrence_type === "WEEKLY" ? "Weekly" : "Monthly"} Recurring
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-5 text-center">
                           <span
@@ -452,10 +515,19 @@ const PendingRequests = () => {
                             >
                               View Details
                             </button>
+                            {booking.recurrence_id && (
+                              <button
+                                onClick={() => openGroupAction(booking)}
+                                className="px-3 h-8 flex items-center gap-1 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700"
+                                title="Approve / Reject entire recurring group"
+                              >
+                                🔁 Group
+                              </button>
+                            )}
                             <button
                               onClick={() => openApproveModal(booking)}
                               className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-500 text-white hover:bg-green-600"
-                              title="Approve"
+                              title="Approve this booking only"
                             >
                               ✓
                             </button>
@@ -466,7 +538,7 @@ const PendingRequests = () => {
                                 setIsRejecting(true);
                               }}
                               className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500 text-white hover:bg-red-600"
-                              title="Reject"
+                              title="Reject this booking only"
                             >
                               ✕
                             </button>
@@ -609,6 +681,81 @@ const PendingRequests = () => {
                 </Button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Group Approve/Reject Modal */}
+      {isGroupActionOpen && groupActionBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="bg-purple-600 rounded-t-xl px-6 py-4">
+              <h2 className="text-white font-bold text-lg">🔁 Recurring Group Action</h2>
+              <p className="text-purple-200 text-sm mt-1">
+                {groupActionBooking.room?.name} &nbsp;·&nbsp; {groupActionBooking.start_time}–{groupActionBooking.end_time}
+                &nbsp;·&nbsp; {groupActionBooking.recurrence_type === "WEEKLY" ? "Weekly" : "Monthly"}
+              </p>
+            </div>
+
+            {!isGroupRejecting ? (
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-600">
+                  This action applies to <strong>all PENDING bookings</strong> in this recurring series.
+                  Individual bookings with time-slot conflicts will be skipped when approving.
+                </p>
+                <p className="text-xs text-slate-500">
+                  Requester: <strong>{groupActionBooking.user?.full_name}</strong>
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleApproveGroup}
+                    disabled={groupActionLoading}
+                    className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 disabled:opacity-60"
+                  >
+                    {groupActionLoading ? "Processing..." : "✓ Approve All"}
+                  </button>
+                  <button
+                    onClick={() => { setIsGroupRejecting(true); setGroupRejectReason(""); }}
+                    className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-lg font-bold text-sm hover:bg-red-600"
+                  >
+                    ✕ Reject All
+                  </button>
+                </div>
+                <button
+                  onClick={() => setIsGroupActionOpen(false)}
+                  className="w-full px-4 py-2 text-sm text-slate-600 hover:text-slate-900"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-600 font-medium">Reason for rejecting the entire group:</p>
+                <textarea
+                  value={groupRejectReason}
+                  onChange={(e) => setGroupRejectReason(e.target.value)}
+                  placeholder="Provide a reason (min 10 characters)..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-purple-500 focus:border-purple-500"
+                  rows={4}
+                />
+                <div className="text-xs text-slate-500">{groupRejectReason.length} characters</div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleRejectGroup}
+                    disabled={groupRejectReason.length < 10 || groupActionLoading}
+                    className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-lg font-bold text-sm hover:bg-red-600 disabled:opacity-50"
+                  >
+                    {groupActionLoading ? "Processing..." : "Submit Rejection"}
+                  </button>
+                  <button
+                    onClick={() => setIsGroupRejecting(false)}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 text-sm font-medium hover:bg-slate-50"
+                  >
+                    Back
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

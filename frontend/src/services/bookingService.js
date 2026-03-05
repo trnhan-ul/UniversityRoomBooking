@@ -104,6 +104,28 @@ export const cancelBooking = async (bookingId) => {
   }
 };
 
+// Approve all PENDING bookings in a recurring group (Manager/Admin)
+export const approveRecurringGroup = async (recurrenceId) => {
+  try {
+    const response = await api.patch(`/bookings/recurring/${recurrenceId}/approve`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Reject all PENDING bookings in a recurring group (Manager/Admin)
+export const rejectRecurringGroup = async (recurrenceId, rejectReason) => {
+  try {
+    const response = await api.patch(`/bookings/recurring/${recurrenceId}/reject`, {
+      reject_reason: rejectReason,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
 // Update booking (User)
 export const updateBooking = async (bookingId, bookingData) => {
   try {
@@ -147,6 +169,26 @@ export const getBookingReport = async (filters = {}) => {
     params.append("groupBy", groupBy);
     
     const response = await api.get(`/bookings/report?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Get available extension options for an ongoing booking
+export const getExtendOptions = async (bookingId) => {
+  try {
+    const response = await api.get(`/bookings/${bookingId}/extend-options`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Extend an ongoing booking's end time
+export const extendBooking = async (bookingId, newEndTime) => {
+  try {
+    const response = await api.patch(`/bookings/${bookingId}/extend`, { new_end_time: newEndTime });
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: "Network error" };

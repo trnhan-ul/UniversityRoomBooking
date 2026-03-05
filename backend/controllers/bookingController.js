@@ -1046,6 +1046,362 @@ const createRecurringBooking = async (req, res) => {
   }
 };
 
+const toMins = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+const toTime = (mins) =>
+  `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+
+// Get available extension options for an ongoing booking
+const getExtendOptions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid booking id" });
+    }
+
+    const booking = await Booking.findById(id).populate("room_id", "room_name location");
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (booking.user_id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Forbidden: not your booking" });
+    }
+    if (booking.status !== "APPROVED") {
+      return res.status(400).json({ success: false, message: "Only approved bookings can be extended" });
+    }
+
+    // Check booking date = today
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const bookingDateStr = new Date(booking.date).toISOString().split("T")[0];
+    if (bookingDateStr !== todayStr) {
+      return res.status(400).json({ success: false, message: "Can only extend bookings scheduled for today" });
+    }
+
+    // Check booking is currently ongoing
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const startMins = toMins(booking.start_time);
+    const endMins = toMins(booking.end_time);
+    if (nowMins < startMins || nowMins >= endMins) {
+      return res.status(400).json({ success: false, message: "Booking is not currently in progress" });
+    }
+
+    // Get working hours end
+    const whEndSetting = await Setting.findOne({ key: "WORKING_HOURS_END" });
+    const workEndMins = whEndSetting ? toMins(whEndSetting.value) : toMins("22:00");
+
+    // Generate candidate slots: +30, +60, +90, +120 minutes from current end_time
+    const STEP = 30;
+    const MAX_EXTEND = 120;
+    const candidates = [];
+    for (let add = STEP; add <= MAX_EXTEND; add += STEP) {
+      const candidateMins = endMins + add;
+      if (candidateMins > workEndMins) break;
+      candidates.push(candidateMins);
+    }
+
+    if (candidates.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: { options: [], message: "No available extension — already at working hours limit" },
+      });
+    }
+
+    // Check conflicts for range [current end_time, max candidate end_time]
+    const maxCandidateTime = toTime(candidates[candidates.length - 1]);
+    const conflicts = await Booking.find({
+      _id: { $ne: booking._id },
+      room_id: booking.room_id._id,
+      date: booking.date,
+      status: { $in: ["PENDING", "APPROVED"] },
+      start_time: { $lt: maxCandidateTime },
+      end_time: { $gt: booking.end_time },
+    });
+
+    // Find the earliest conflicting start
+    let blockedFromMins = workEndMins;
+    conflicts.forEach((c) => {
+      const cStartMins = toMins(c.start_time);
+      if (cStartMins < blockedFromMins) blockedFromMins = cStartMins;
+    });
+
+    // Only include candidates that don't exceed the blocked slot
+    const availableOptions = candidates
+      .filter((m) => m <= blockedFromMins)
+      .map((m) => ({
+        new_end_time: toTime(m),
+        label: `+${m - endMins} min (until ${toTime(m)})`,
+        extend_minutes: m - endMins,
+      }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        booking_id: booking._id,
+        current_end_time: booking.end_time,
+        work_end: toTime(workEndMins),
+        options: availableOptions,
+      },
+    });
+  } catch (error) {
+    console.error("getExtendOptions error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Extend an approved ongoing booking's end time
+const extendBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { new_end_time } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid booking id" });
+    }
+    if (!new_end_time) {
+      return res.status(400).json({ success: false, message: "new_end_time is required" });
+    }
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (!timeRegex.test(new_end_time)) {
+      return res.status(400).json({ success: false, message: "Invalid time format. Use HH:mm" });
+    }
+
+    const booking = await Booking.findById(id).populate("room_id", "room_name");
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (booking.user_id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Forbidden: not your booking" });
+    }
+    if (booking.status !== "APPROVED") {
+      return res.status(400).json({ success: false, message: "Only approved bookings can be extended" });
+    }
+
+    // Check today
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const bookingDateStr = new Date(booking.date).toISOString().split("T")[0];
+    if (bookingDateStr !== todayStr) {
+      return res.status(400).json({ success: false, message: "Can only extend bookings scheduled for today" });
+    }
+
+    // Check ongoing
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const startMins = toMins(booking.start_time);
+    const endMins = toMins(booking.end_time);
+    if (nowMins < startMins || nowMins >= endMins) {
+      return res.status(400).json({ success: false, message: "Booking is not currently in progress" });
+    }
+
+    // new_end_time must be after current end_time
+    const newEndMins = toMins(new_end_time);
+    if (newEndMins <= endMins) {
+      return res.status(400).json({ success: false, message: "New end time must be after current end time" });
+    }
+
+    // Check working hours
+    const whEndSetting = await Setting.findOne({ key: "WORKING_HOURS_END" });
+    if (whEndSetting && new_end_time > whEndSetting.value) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot extend past working hours (${whEndSetting.value})`,
+      });
+    }
+
+    // Check conflict: any booking on same room/date that overlaps [current_end, new_end]
+    const conflict = await Booking.findOne({
+      _id: { $ne: booking._id },
+      room_id: booking.room_id._id,
+      date: booking.date,
+      status: { $in: ["PENDING", "APPROVED"] },
+      start_time: { $lt: new_end_time },
+      end_time: { $gt: booking.end_time },
+    });
+
+    if (conflict) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot extend: another booking starts at ${conflict.start_time}`,
+      });
+    }
+
+    const oldEndTime = booking.end_time;
+    booking.end_time = new_end_time;
+    await booking.save();
+
+    await logBookingAction(
+      req.user,
+      "UPDATE",
+      booking,
+      `Extended booking end time from ${oldEndTime} to ${new_end_time} for room ${booking.room_id.room_name}`,
+      req
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Booking extended to ${new_end_time}`,
+      data: booking,
+    });
+  } catch (error) {
+    console.error("extendBooking error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ─── Approve all PENDING bookings in a recurring group ────────────────────────
+const approveRecurringGroup = async (req, res) => {
+  try {
+    const { recurrence_id } = req.params;
+    if (!recurrence_id) {
+      return res.status(400).json({ success: false, message: "recurrence_id is required" });
+    }
+
+    // Load all PENDING bookings in the group (with populated fields)
+    const pendingBookings = await Booking.find({ recurrence_id, status: "PENDING" })
+      .populate("user_id", "full_name email")
+      .populate("room_id", "name location");
+
+    if (pendingBookings.length === 0) {
+      return res.status(404).json({ success: false, message: "No pending bookings found for this recurring group" });
+    }
+
+    const approved = [];
+    const skipped = []; // conflict
+
+    for (const booking of pendingBookings) {
+      // Check time-slot conflict for each date individually
+      const conflict = await Booking.findOne({
+        _id: { $ne: booking._id },
+        room_id: booking.room_id._id,
+        date: booking.date,
+        status: "APPROVED",
+        $or: [{ start_time: { $lt: booking.end_time }, end_time: { $gt: booking.start_time } }],
+      });
+
+      if (conflict) {
+        skipped.push({ booking_id: booking._id, date: booking.date.toISOString().split("T")[0], reason: "Time slot conflict" });
+        continue;
+      }
+
+      booking.status = "APPROVED";
+      booking.approved_at = new Date();
+      booking.approved_by = req.user._id;
+      await booking.save();
+      approved.push(booking);
+    }
+
+    if (approved.length === 0) {
+      return res.status(409).json({
+        success: false,
+        message: "All bookings in this group have time slot conflicts — none were approved.",
+        data: { approved_count: 0, skipped_count: skipped.length, skipped },
+      });
+    }
+
+    // One notification + one email summarising the group (use first booking's user)
+    const sample = approved[0];
+    const user = sample.user_id;
+    const room = sample.room_id;
+    const dateList = approved.map((b) => b.date.toISOString().split("T")[0]).join(", ");
+
+    await Notification.create({
+      user_id: user._id,
+      title: "Recurring Bookings Approved",
+      message: `${approved.length} recurring booking(s) for ${room.name} (${sample.start_time}–${sample.end_time}) have been approved. Dates: ${dateList}.`,
+      type: "BOOKING",
+      target_type: "Booking",
+      target_id: sample._id,
+      is_read: false,
+    });
+
+    // Send one summary email to the user
+    await sendApprovalEmail(user, sample, room, "APPROVED", null);
+
+    // Audit log per approved booking
+    for (const booking of approved) {
+      await logBookingAction(
+        req.user,
+        "APPROVE",
+        booking,
+        `[Group approve] Approved recurring booking for ${room.name} on ${booking.date.toISOString().split("T")[0]}`,
+        req
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Approved ${approved.length} booking(s)${skipped.length ? `, skipped ${skipped.length} due to conflicts` : ""}.`,
+      data: { approved_count: approved.length, skipped_count: skipped.length, skipped },
+    });
+  } catch (error) {
+    console.error("approveRecurringGroup error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ─── Reject all PENDING bookings in a recurring group ─────────────────────────
+const rejectRecurringGroup = async (req, res) => {
+  try {
+    const { recurrence_id } = req.params;
+    const { reject_reason } = req.body;
+
+    if (!recurrence_id) {
+      return res.status(400).json({ success: false, message: "recurrence_id is required" });
+    }
+    if (!reject_reason || reject_reason.trim().length < 10) {
+      return res.status(400).json({ success: false, message: "Rejection reason required (min 10 characters)" });
+    }
+
+    const pendingBookings = await Booking.find({ recurrence_id, status: "PENDING" })
+      .populate("user_id", "full_name email")
+      .populate("room_id", "name location");
+
+    if (pendingBookings.length === 0) {
+      return res.status(404).json({ success: false, message: "No pending bookings found for this recurring group" });
+    }
+
+    const now = new Date();
+    await Booking.updateMany(
+      { recurrence_id, status: "PENDING" },
+      { $set: { status: "REJECTED", reject_reason: reject_reason.trim(), approved_at: now, approved_by: req.user._id } }
+    );
+
+    // One notification summarising the rejection
+    const sample = pendingBookings[0];
+    const user = sample.user_id;
+    const room = sample.room_id;
+
+    await Notification.create({
+      user_id: user._id,
+      title: "Recurring Bookings Rejected",
+      message: `${pendingBookings.length} recurring booking(s) for ${room.name} (${sample.start_time}–${sample.end_time}) have been rejected. Reason: ${reject_reason.trim()}.`,
+      type: "BOOKING",
+      target_type: "Booking",
+      target_id: sample._id,
+      is_read: false,
+    });
+
+    // Send one summary email to the user
+    await sendApprovalEmail(user, sample, room, "REJECTED", reject_reason.trim());
+
+    // Audit log (one entry for the group)
+    await logBookingAction(
+      req.user,
+      "REJECT",
+      sample,
+      `[Group reject] Rejected ${pendingBookings.length} recurring bookings for ${room.name}. Reason: ${reject_reason.trim()}`,
+      req
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Rejected ${pendingBookings.length} booking(s) in the recurring group.`,
+      data: { rejected_count: pendingBookings.length },
+    });
+  } catch (error) {
+    console.error("rejectRecurringGroup error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 module.exports = {
   createBooking,
   createRecurringBooking,
@@ -1053,9 +1409,13 @@ module.exports = {
   getBookingById,
   approveBooking,
   rejectBooking,
+  approveRecurringGroup,
+  rejectRecurringGroup,
   getMyBookings,
   cancelBooking,
   updateBooking,
   getBookingStatistics,
   getBookingReport,
+  getExtendOptions,
+  extendBooking,
 };
