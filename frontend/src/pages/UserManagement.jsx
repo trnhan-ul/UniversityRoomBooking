@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getAllUsers, createUser, updateUser } from "../services/userService";
+import { getAllUsers, createUser, updateUser, adminResetUserPassword } from "../services/userService";
 import { Button, Badge } from "../components/common";
 import { useAuthContext } from "../context/AuthContext";
 
@@ -29,7 +29,12 @@ const UserManagement = () => {
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
+  const [showResetNewPass, setShowResetNewPass] = useState(false);
+  const [showResetConfirmPass, setShowResetConfirmPass] = useState(false);
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -147,6 +152,35 @@ const UserManagement = () => {
       password: "",
     });
     setIsEditModalOpen(true);
+  };
+
+  // Open reset password modal
+  const openResetPasswordModal = (user) => {
+    setSelectedUser(user);
+    setResetPasswordData({ newPassword: '', confirmPassword: '' });
+    setShowResetNewPass(false);
+    setShowResetConfirmPass(false);
+    setIsResetPasswordModalOpen(true);
+  };
+
+  // Handle admin reset password
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setResetPasswordLoading(true);
+    try {
+      const response = await adminResetUserPassword(selectedUser._id, resetPasswordData);
+      if (response.success) {
+        setSuccess(response.message);
+        setIsResetPasswordModalOpen(false);
+        setSelectedUser(null);
+        setTimeout(() => setSuccess(''), 5000);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to reset password');
+    } finally {
+      setResetPasswordLoading(false);
+    }
   };
 
   // Reset form
@@ -370,6 +404,13 @@ const UserManagement = () => {
                             ✏️
                           </button>
                           <button
+                            onClick={() => openResetPasswordModal(user)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 hover:border-orange-300 transition-colors"
+                            title="Reset password & send email"
+                          >
+                            🔑 Reset Password
+                          </button>
+                          <button
                             onClick={() =>
                               handleToggleStatus(user._id, user.status)
                             }
@@ -449,6 +490,152 @@ const UserManagement = () => {
           )}
         </div>
       </div>
+
+      {/* Reset Password Modal */}
+      {isResetPasswordModalOpen && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">🔑 Reset Password</h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {selectedUser.full_name}{" "}
+                    <span className="text-slate-400">({selectedUser.email})</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsResetPasswordModalOpen(false);
+                    setSelectedUser(null);
+                  }}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="p-6 space-y-4">
+              {/* Info banner */}
+              <div className="p-3 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-sm">
+                ⚠️ The new password will be sent to the user's email address after reset.
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  New Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showResetNewPass ? "text" : "password"}
+                    value={resetPasswordData.newPassword}
+                    onChange={(e) =>
+                      setResetPasswordData({ ...resetPasswordData, newPassword: e.target.value })
+                    }
+                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Min. 6 characters, include letters & numbers"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetNewPass(!showResetNewPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showResetNewPass ? "🙈" : "👁"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showResetConfirmPass ? "text" : "password"}
+                    value={resetPasswordData.confirmPassword}
+                    onChange={(e) =>
+                      setResetPasswordData({ ...resetPasswordData, confirmPassword: e.target.value })
+                    }
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-orange-500 focus:border-orange-500 ${
+                      resetPasswordData.confirmPassword &&
+                      resetPasswordData.newPassword !== resetPasswordData.confirmPassword
+                        ? "border-red-400 bg-red-50"
+                        : "border-slate-300"
+                    }`}
+                    placeholder="Re-enter new password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirmPass(!showResetConfirmPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showResetConfirmPass ? "🙈" : "👁"}
+                  </button>
+                </div>
+                {resetPasswordData.confirmPassword &&
+                  resetPasswordData.newPassword !== resetPasswordData.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                  )}
+              </div>
+
+              {/* Password rules */}
+              <ul className="text-xs text-slate-500 space-y-1 pl-1">
+                <li className={resetPasswordData.newPassword.length >= 6 ? "text-green-600" : ""}>
+                  {resetPasswordData.newPassword.length >= 6 ? "✅" : "○"} At least 6 characters
+                </li>
+                <li className={/(?=.*[A-Za-z])(?=.*\d)/.test(resetPasswordData.newPassword) ? "text-green-600" : ""}>
+                  {/(?=.*[A-Za-z])(?=.*\d)/.test(resetPasswordData.newPassword) ? "✅" : "○"} Contains letters and numbers
+                </li>
+                <li
+                  className={
+                    resetPasswordData.confirmPassword &&
+                    resetPasswordData.newPassword === resetPasswordData.confirmPassword
+                      ? "text-green-600"
+                      : ""
+                  }
+                >
+                  {resetPasswordData.confirmPassword &&
+                  resetPasswordData.newPassword === resetPasswordData.confirmPassword
+                    ? "✅"
+                    : "○"}{" "}
+                  Passwords match
+                </li>
+              </ul>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={
+                    resetPasswordLoading ||
+                    !resetPasswordData.newPassword ||
+                    resetPasswordData.newPassword !== resetPasswordData.confirmPassword
+                  }
+                  className="flex-1 py-2 px-4 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                >
+                  {resetPasswordLoading ? "Resetting..." : "Reset & Send Email"}
+                </button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setIsResetPasswordModalOpen(false);
+                    setSelectedUser(null);
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Create User Modal */}
       {isCreateModalOpen && (

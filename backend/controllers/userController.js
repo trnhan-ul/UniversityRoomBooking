@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { sendAdminResetPasswordEmail } = require('../services/emailService');
+const { logUserAction } = require('../utils/auditLogger');
 
 // Danh sách role hợp lệ lấy từ enum của User
 const AVAILABLE_ROLES = [
@@ -484,6 +486,90 @@ exports.updateMyProfile = async (req, res) => {
       success: false,
       message: 'Server error. Please try again later.'
     });
+  }
+};
+
+// UC-AdminReset: Admin resets password for a specific user
+exports.adminResetPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword, confirmPassword } = req.body;
+
+    // 1. Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    // 2. Validate required fields
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password and confirm password are required',
+      });
+    }
+
+    // 3. Validate password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long',
+      });
+    }
+
+    // 4. Validate password complexity: at least 1 letter and 1 number
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must contain at least one letter and one number',
+      });
+    }
+
+    // 5. Validate passwords match
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Passwords do not match',
+      });
+    }
+
+    // 6. Prevent admin from using this endpoint on their own account
+    if (id === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Use the Change Password option to update your own password',
+      });
+    }
+
+    // 7. Find target user
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // 8. Send email BEFORE saving (we still have plain text password here)
+    await sendAdminResetPasswordEmail(targetUser, newPassword);
+
+    // 9. Update password — pre('save') hook will hash it automatically
+    targetUser.password = newPassword;
+    targetUser.updated_by = req.user._id;
+    await targetUser.save();
+
+    // 10. Audit log
+    await logUserAction(
+      req.user,
+      'UPDATE',
+      targetUser,
+      `Admin ${req.user.email} reset password for user ${targetUser.email}`,
+      req
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Password reset successfully. New password has been sent to ${targetUser.email}`,
+    });
+  } catch (error) {
+    console.error('Admin reset password error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to reset password' });
   }
 };
 
