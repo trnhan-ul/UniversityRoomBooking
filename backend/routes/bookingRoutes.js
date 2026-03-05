@@ -4,8 +4,11 @@ const Booking = require("../models/Booking");
 const bookingController = require("../controllers/bookingController");
 const { authenticate, authorizeRoles } = require("../middleware/auth");
 
+// POST /api/bookings/recurring -> create recurring bookings
+router.post("/recurring", authenticate, authorizeRoles(["STUDENT", "LECTURER"]), bookingController.createRecurringBooking);
+
 // POST /api/bookings -> create new booking
-router.post("/", authenticate, async (req, res) => {
+router.post("/", authenticate, authorizeRoles(["STUDENT", "LECTURER"]), async (req, res) => {
   try {
     const { room_id, date, start_time, end_time, purpose } = req.body;
 

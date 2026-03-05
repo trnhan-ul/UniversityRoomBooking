@@ -124,6 +124,16 @@ export const getBookingStatistics = async () => {
   }
 };
 
+// Create recurring booking (WEEKLY or MONTHLY)
+export const createRecurringBooking = async (recurringData) => {
+  try {
+    const response = await api.post("/bookings/recurring", recurringData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
 // Booking report with filters (Manager/Admin)
 export const getBookingReport = async (filters = {}) => {
   try {
