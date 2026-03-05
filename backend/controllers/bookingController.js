@@ -866,8 +866,189 @@ const getBookingReport = async (req, res) => {
   }
 };
 
+// Recurring Booking — thêm vào trước module.exports
+const createRecurringBooking = async (req, res) => {
+  try {
+    const { room_id, start_date, end_date, start_time, end_time, purpose, recurrence_type } = req.body;
+
+    // 1. Validate required fields
+    if (!room_id || !start_date || !end_date || !start_time || !end_time || !purpose || !recurrence_type) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    // 2. Validate recurrence_type
+    if (!["WEEKLY", "MONTHLY"].includes(recurrence_type)) {
+      return res.status(400).json({ success: false, message: "recurrence_type must be WEEKLY or MONTHLY" });
+    }
+
+    // 3. Validate dates
+    const startD = new Date(start_date);
+    const endD = new Date(end_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (startD < today) {
+      return res.status(400).json({ success: false, message: "Start date cannot be in the past" });
+    }
+    if (endD <= startD) {
+      return res.status(400).json({ success: false, message: "End date must be after start date" });
+    }
+    if (endD - startD > 365 * 24 * 60 * 60 * 1000) {
+      return res.status(400).json({ success: false, message: "Date range cannot exceed 1 year" });
+    }
+
+    // 4. Validate time format
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (!timeRegex.test(start_time) || !timeRegex.test(end_time)) {
+      return res.status(400).json({ success: false, message: "Invalid time format. Use HH:mm" });
+    }
+    const [sh, sm] = start_time.split(":").map(Number);
+    const [eh, em] = end_time.split(":").map(Number);
+    if (eh * 60 + em <= sh * 60 + sm) {
+      return res.status(400).json({ success: false, message: "End time must be after start time" });
+    }
+
+    // 5. Validate room
+    const room = await Room.findById(room_id);
+    if (!room) return res.status(404).json({ success: false, message: "Room not found" });
+    if (room.status !== "AVAILABLE") {
+      return res.status(400).json({ success: false, message: "Room is not available" });
+    }
+
+    // 6. Load working hours (1 query each)
+    const [whStartSetting, whEndSetting] = await Promise.all([
+      Setting.findOne({ key: "WORKING_HOURS_START" }),
+      Setting.findOne({ key: "WORKING_HOURS_END" }),
+    ]);
+    const whStart = whStartSetting?.value;
+    const whEnd = whEndSetting?.value;
+    if (whStart && whEnd && (start_time < whStart || end_time > whEnd)) {
+      return res.status(400).json({
+        success: false,
+        message: `Bookings must be within working hours (${whStart} - ${whEnd})`,
+      });
+    }
+
+    // 7. Generate all dates in range
+    const MAX_OCCURRENCES = recurrence_type === "WEEKLY" ? 52 : 12;
+    const dates = [];
+    let current = new Date(startD);
+    while (current <= endD && dates.length < MAX_OCCURRENCES) {
+      dates.push(new Date(current));
+      if (recurrence_type === "WEEKLY") {
+        current.setDate(current.getDate() + 7);
+      } else {
+        const dayOfMonth = startD.getDate();
+        current.setMonth(current.getMonth() + 1);
+        // Clamp cuoi thang (vd: Jan 31 -> Feb 28)
+        const lastDay = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+        current.setDate(Math.min(dayOfMonth, lastDay));
+      }
+    }
+
+    // 8. Load all holidays in range (1 query)
+    const holidays = await Holiday.find({ date: { $gte: startD, $lte: endD } });
+    const holidayMap = {};
+    holidays.forEach((h) => {
+      const d = new Date(h.date);
+      d.setHours(0, 0, 0, 0);
+      holidayMap[d.toISOString().split("T")[0]] = h.name;
+    });
+
+    // 9. Load all conflicts in range (1 query, filter in-memory)
+    const existingBookings = await Booking.find({
+      room_id,
+      date: { $gte: startD, $lte: endD },
+      status: { $in: ["PENDING", "APPROVED"] },
+      $or: [{ start_time: { $lt: end_time }, end_time: { $gt: start_time } }],
+    });
+    const conflictSet = new Set();
+    existingBookings.forEach((b) => {
+      const d = new Date(b.date);
+      d.setHours(0, 0, 0, 0);
+      conflictSet.add(d.toISOString().split("T")[0]);
+    });
+
+    // 10. Generate recurrence_id
+    const recurrence_id = require("crypto").randomUUID();
+
+    // 11. Process each date
+    const created_docs = [];
+    const failed = [];
+
+    for (const d of dates) {
+      const dateStr = d.toISOString().split("T")[0];
+
+      if (d < today) {
+        failed.push({ date: dateStr, reason: "Date is in the past" });
+        continue;
+      }
+      if (holidayMap[dateStr]) {
+        failed.push({ date: dateStr, reason: `Holiday: ${holidayMap[dateStr]}` });
+        continue;
+      }
+      if (conflictSet.has(dateStr)) {
+        failed.push({ date: dateStr, reason: "Time slot already booked" });
+        continue;
+      }
+
+      created_docs.push({
+        user_id: req.user._id,
+        room_id,
+        date: d,
+        start_time,
+        end_time,
+        purpose,
+        status: "PENDING",
+        recurrence_id,
+        recurrence_type,
+      });
+    }
+
+    // 12. Bulk insert
+    if (created_docs.length === 0) {
+      return res.status(409).json({
+        success: false,
+        message: "No bookings could be created. All dates have conflicts or are invalid.",
+        data: { total_attempted: dates.length, created_count: 0, failed_count: failed.length, failed },
+      });
+    }
+
+    const createdBookings = await Booking.insertMany(created_docs);
+
+    // 13. Audit log (batch)
+    for (const booking of createdBookings) {
+      await logBookingAction(
+        req.user,
+        "CREATE",
+        booking,
+        `Recurring booking (${recurrence_type}) created for room ${room.room_name} on ${new Date(booking.date).toISOString().split("T")[0]}`,
+        req
+      );
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `Created ${createdBookings.length} out of ${dates.length} bookings`,
+      data: {
+        recurrence_id,
+        recurrence_type,
+        total_attempted: dates.length,
+        created_count: createdBookings.length,
+        failed_count: failed.length,
+        created: createdBookings,
+        failed,
+      },
+    });
+  } catch (error) {
+    console.error("createRecurringBooking error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 module.exports = {
   createBooking,
+  createRecurringBooking,
   getPendingBookings,
   getBookingById,
   approveBooking,

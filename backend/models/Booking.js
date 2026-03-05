@@ -57,6 +57,15 @@ const bookingSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    recurrence_id: {
+      type: String,
+      default: null,
+    },
+    recurrence_type: {
+      type: String,
+      enum: ["NONE", "WEEKLY", "MONTHLY"],
+      default: "NONE",
+    },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
