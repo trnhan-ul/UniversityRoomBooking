@@ -30,6 +30,15 @@ const authenticate = async (req, res, next) => {
         .json({ success: false, message: "Invalid token: user not found" });
     }
 
+    // Block access immediately for disabled accounts, even with a valid token.
+    if (user.status !== "ACTIVE") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Your account has been deactivated. Please contact administrator.",
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {
