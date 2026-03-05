@@ -77,17 +77,28 @@ const UserManagement = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validate email @fpt.edu.vn
+    if (!formData.email.toLowerCase().endsWith("@fpt.edu.vn")) {
+      const errorMsg = "Please use FPT University email (@fpt.edu.vn)";
+      setError(errorMsg);
+      alert(errorMsg); // Show alert popup
+      return;
+    }
+
     try {
       const response = await createUser(formData);
       if (response.success) {
-        setSuccess(`User ${formData.full_name} created successfully`);
+        setSuccess(`User ${formData.full_name} created successfully! Welcome email sent.`);
         setIsCreateModalOpen(false);
         resetForm();
         fetchUsers();
         setTimeout(() => setSuccess(""), 3000);
       }
     } catch (err) {
-      setError(err.message || "Failed to create user");
+      const errorMsg = err.message || "Failed to create user";
+      setError(errorMsg);
+      alert(errorMsg); // Show alert popup
     }
   };
 
@@ -160,6 +171,7 @@ const UserManagement = () => {
       status: "ACTIVE",
     });
     setSelectedUser(null);
+    setError(""); // Clear error message
   };
 
   // Get user initials
@@ -458,6 +470,12 @@ const UserManagement = () => {
               <h2 className="text-xl font-semibold">Add New User</h2>
             </div>
             <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+              {/* Error Message in Modal */}
+              {error && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Full Name *
@@ -482,9 +500,19 @@ const UserManagement = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
+                    formData.email && !formData.email.toLowerCase().endsWith("@fpt.edu.vn")
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                      : "border-slate-300"
+                  }`}
+                  placeholder="example@fpt.edu.vn"
                   required
                 />
+                {formData.email && !formData.email.toLowerCase().endsWith("@fpt.edu.vn") && (
+                  <p className="mt-1 text-sm text-red-600">
+                    ⚠️ Must use FPT University email (@fpt.edu.vn)
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">

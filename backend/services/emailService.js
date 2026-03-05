@@ -1,8 +1,10 @@
 const nodemailer = require('nodemailer');
-const { bookingApprovalTemplate } = require('../templates/emailTemplates');
+const { bookingApprovalTemplate, accountCreatedTemplate } = require('../templates/emailTemplates');
 
 const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || 'gmail',
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: process.env.EMAIL_PORT || 587,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
@@ -34,6 +36,31 @@ const sendApprovalEmail = async (user, booking, room, status, rejectReason = nul
   }
 };
 
+/**
+ * Gửi email chào mừng khi tạo tài khoản mới
+ * @param {Object} userData - {email, password, full_name, role, phone_number}
+ */
+const sendAccountCreatedEmail = async (userData) => {
+  try {
+    const htmlContent = accountCreatedTemplate(userData);
+
+    const mailOptions = {
+      from: `"UniBooking - FPT University" <${process.env.EMAIL_USER}>`,
+      to: userData.email,
+      subject: '🎓 Welcome to UniBooking - Your Account Has Been Created',
+      html: htmlContent,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Account creation email sent to ${userData.email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending account created email:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendApprovalEmail,
+  sendAccountCreatedEmail,
 };
