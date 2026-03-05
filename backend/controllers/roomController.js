@@ -741,7 +741,7 @@ const getRoomUsageReport = async (req, res) => {
         statistics: {
           totalBookings: room.totalBookings,
           totalHours: formatHoursToString(totalHours),
-          utilizationRate: Math.round(utilizationRate * 10) / 10,
+          utilizationRate: Math.round(utilizationRate * 100) / 100,
           daysBooked: daysBooked,
           averageBookingDuration: formatHoursToString(averageBookingDuration),
         },
