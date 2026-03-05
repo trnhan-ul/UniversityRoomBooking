@@ -115,3 +115,16 @@ export const deleteUser = async (userId) => {
     throw error.response?.data || error;
   }
 };
+
+// Admin reset password for a user + send email
+export const adminResetUserPassword = async (userId, passwordData) => {
+  try {
+    const response = await axios.patch(`${API_URL}/${userId}/reset-password`, passwordData, {
+      headers: getAuthHeader()
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Admin reset password error:', error);
+    throw error.response?.data || error;
+  }
+};

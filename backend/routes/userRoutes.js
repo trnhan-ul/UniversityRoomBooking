@@ -11,6 +11,7 @@ const {
   getMyProfile,
   updateMyProfile,
   changePassword,
+  adminResetPassword,
 } = require("../controllers/userController");
 
 
@@ -39,6 +40,9 @@ router.post('/', createUser);
 
 
 router.patch('/:id', updateUser);
+
+// Admin reset password for a user
+router.patch('/:id/reset-password', adminResetPassword);
 
 
 router.delete('/:id', deleteUser);
