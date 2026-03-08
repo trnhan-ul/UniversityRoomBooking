@@ -30,6 +30,7 @@ import WorkingHoursSettings from "./pages/WorkingHoursSettings";
 import EquipmentManagement from "./pages/EquipmentManagement";
 import HolidayManagement from "./pages/HolidayManagement";
 import AuditLogs from "./pages/AuditLogs";
+import QRScanner from "./pages/QRScanner";
 
 function App() {
   const isAdminRole = (role) =>
@@ -203,6 +204,13 @@ function App() {
               }
             />
           )}
+
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/qr-scanner"
+            element={<QRScanner />}
+          />
+        )}
 
         {user && isAdminRole(user.role) && (
           <Route

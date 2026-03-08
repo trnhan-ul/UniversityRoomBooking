@@ -28,7 +28,8 @@ export const getStatusVariant = (status) => {
     APPROVED: 'approved',
     CONFIRMED: 'confirmed',
     REJECTED: 'rejected',
-    CANCELLED: 'cancelled'
+    CANCELLED: 'cancelled',
+    'CHECKED-IN': 'checked-in'
   };
   return statusMap[status] || 'default';
 };
@@ -38,7 +39,8 @@ export const getStatusLabel = (status) => {
     APPROVED: 'Confirmed',
     PENDING: 'Pending',
     REJECTED: 'Rejected',
-    CANCELLED: 'Cancelled'
+    CANCELLED: 'Cancelled',
+    'CHECKED-IN': 'Checked In'
   };
   return labels[status] || status;
 };
