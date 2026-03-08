@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyBookings, cancelBooking } from "../services/bookingService";
+import { getMyBookings, cancelBooking, getBookingQRData } from "../services/bookingService";
 import {
   formatDate,
   getStatusVariant,
@@ -10,6 +10,7 @@ import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
 import Header from "../components/layout/Header";
 import { useAuthContext } from "../context/AuthContext";
+import { QRCodeSVG } from "qrcode.react";
 
 const MyBookings = () => {
   const { user } = useAuthContext();
@@ -22,6 +23,9 @@ const MyBookings = () => {
   const [total, setTotal] = useState(0);
   const [activeTab, setActiveTab] = useState("upcoming");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrData, setQRData] = useState(null);
+  const [qrLoading, setQRLoading] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -79,6 +83,21 @@ const MyBookings = () => {
       fetchBookings();
     } catch (err) {
       alert(err.message || "Failed to cancel booking");
+    }
+  };
+
+  const handleViewQR = async (bookingId) => {
+    try {
+      setQRLoading(true);
+      const response = await getBookingQRData(bookingId);
+      if (response.success) {
+        setQRData(response.data);
+        setShowQRModal(true);
+      }
+    } catch (err) {
+      alert(err.message || "Failed to load QR code");
+    } finally {
+      setQRLoading(false);
     }
   };
 
@@ -244,6 +263,15 @@ const MyBookings = () => {
                           >
                             View Details
                           </button>
+                          {booking.status === "APPROVED" && (
+                            <button
+                              onClick={() => handleViewQR(booking._id)}
+                              className="text-green-600 text-sm font-semibold hover:underline"
+                              disabled={qrLoading}
+                            >
+                              📱 View QR
+                            </button>
+                          )}
                           {["PENDING", "APPROVED"].includes(booking.status) && (
                             <button
                               onClick={() => handleCancelBooking(booking._id)}
@@ -285,6 +313,103 @@ const MyBookings = () => {
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      {showQRModal && qrData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Check-in QR Code
+              </h3>
+
+              {/* QR Code */}
+              <div className="bg-white p-6 rounded-lg border-2 border-gray-200 mb-4 inline-block">
+                <QRCodeSVG
+                  id="qr-code-svg"
+                  value={JSON.stringify({
+                    b: qrData.b,
+                    t: qrData.t,
+                    type: qrData.type
+                  })}
+                  size={280}
+                  level="M"
+                  includeMargin={true}
+                  bgColor="#FFFFFF"
+                  fgColor="#000000"
+                />
+              </div>
+
+              {/* Booking Info */}
+              <div className="bg-gray-50 rounded-lg p-4 text-left mb-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Room:</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {qrData.room_name}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Date:</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatDate(qrData.date)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Time:</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {qrData.start_time} - {qrData.end_time}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    const svg = document.querySelector('#qr-code-svg');
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const data = new XMLSerializer().serializeToString(svg);
+                    const img = new Image();
+                    const svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+                    const url = URL.createObjectURL(svgBlob);
+                    
+                    img.onload = () => {
+                      canvas.width = img.width;
+                      canvas.height = img.height;
+                      ctx.fillStyle = '#FFFFFF';
+                      ctx.fillRect(0, 0, canvas.width, canvas.height);
+                      ctx.drawImage(img, 0, 0);
+                      
+                      canvas.toBlob((blob) => {
+                        const pngUrl = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = pngUrl;
+                        link.download = `qr-code-${qrData.room_name || 'booking'}.png`;
+                        link.click();
+                        URL.revokeObjectURL(pngUrl);
+                        URL.revokeObjectURL(url);
+                      });
+                    };
+                    img.src = url;
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                   Download
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
