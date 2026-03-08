@@ -30,6 +30,7 @@ import WorkingHoursSettings from "./pages/WorkingHoursSettings";
 import EquipmentManagement from "./pages/EquipmentManagement";
 import HolidayManagement from "./pages/HolidayManagement";
 import AuditLogs from "./pages/AuditLogs";
+import ViewRemainingTime from "./pages/ViewRemainingTime";
 
 function App() {
   const isAdminRole = (role) =>
@@ -253,6 +254,7 @@ function App() {
             <Route path="/search-classrooms" element={<SearchClassrooms />} />
             <Route path="/classroom-details" element={<ClassroomDetails />} />
             <Route path="/notifications" element={<NotificationPage />} />
+            <Route path="/remaining-time" element={<ViewRemainingTime />} />
             <Route
               path="/dashboard"
               element={<Navigate to={getDefaultPath(user.role)} replace />}

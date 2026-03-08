@@ -379,19 +379,19 @@ const BookingDetail = () => {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Full Name</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {booking.user_id?.full_name || "N/A"}
+                  {booking.user_id?.full_name || user?.full_name || "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Email</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {booking.user_id?.email || "N/A"}
+                  {booking.user_id?.email || user?.email || "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Phone Number</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {booking.user_id?.phone_number || "N/A"}
+                  {booking.user_id?.phone_number || user?.phone_number || "N/A"}
                 </p>
               </div>
               <div>

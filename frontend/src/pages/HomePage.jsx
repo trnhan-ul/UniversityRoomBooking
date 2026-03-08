@@ -102,10 +102,11 @@ const StudentDashboard = () => {
             color="red"
           />
           <FeatureCard
-            icon="history"
-            title="Booking History"
-            description="View your past bookings"
-            color="gray"
+            icon="timer"
+            title="View Remaining Time"
+            description="Check remaining time for your active bookings"
+            color="teal"
+            onClick={() => navigate('/remaining-time')}
           />
         </div>
       </main>
@@ -121,6 +122,7 @@ const FeatureCard = ({ icon, title, description, color, onClick }) => {
     orange: 'bg-orange-50 text-orange-600 hover:bg-orange-100',
     red: 'bg-red-50 text-red-600 hover:bg-red-100',
     gray: 'bg-gray-50 text-gray-600 hover:bg-gray-100',
+    teal: 'bg-teal-50 text-teal-600 hover:bg-teal-100',
   };
 
   return (
