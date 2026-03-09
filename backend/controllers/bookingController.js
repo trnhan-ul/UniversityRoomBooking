@@ -449,7 +449,8 @@ const getMyBookings = async (req, res) => {
 
     const [bookings, total] = await Promise.all([
       Booking.find(query)
-        .populate("room_id", "name location capacity")
+        .populate("user_id", "full_name email phone_number")
+        .populate("room_id", "room_name room_code location capacity")
         .sort({ date: -1, start_time: -1 })
         .skip(skip)
         .limit(limit),
@@ -535,12 +536,10 @@ const updateBooking = async (req, res) => {
 
     // Only PENDING bookings can be updated
     if (booking.status !== "PENDING") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Only pending bookings can be updated",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Only pending bookings can be updated",
+      });
     }
 
     const { room_id, date, start_time, end_time, purpose } = req.body;
@@ -872,16 +871,39 @@ const getBookingReport = async (req, res) => {
 // Recurring Booking — thêm vào trước module.exports
 const createRecurringBooking = async (req, res) => {
   try {
-    const { room_id, start_date, end_date, start_time, end_time, purpose, recurrence_type } = req.body;
+    const {
+      room_id,
+      start_date,
+      end_date,
+      start_time,
+      end_time,
+      purpose,
+      recurrence_type,
+    } = req.body;
 
     // 1. Validate required fields
-    if (!room_id || !start_date || !end_date || !start_time || !end_time || !purpose || !recurrence_type) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+    if (
+      !room_id ||
+      !start_date ||
+      !end_date ||
+      !start_time ||
+      !end_time ||
+      !purpose ||
+      !recurrence_type
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
     }
 
     // 2. Validate recurrence_type
     if (!["WEEKLY", "MONTHLY"].includes(recurrence_type)) {
-      return res.status(400).json({ success: false, message: "recurrence_type must be WEEKLY or MONTHLY" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "recurrence_type must be WEEKLY or MONTHLY",
+        });
     }
 
     // 3. Validate dates
@@ -891,31 +913,46 @@ const createRecurringBooking = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     if (startD < today) {
-      return res.status(400).json({ success: false, message: "Start date cannot be in the past" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Start date cannot be in the past" });
     }
     if (endD <= startD) {
-      return res.status(400).json({ success: false, message: "End date must be after start date" });
+      return res
+        .status(400)
+        .json({ success: false, message: "End date must be after start date" });
     }
     if (endD - startD > 365 * 24 * 60 * 60 * 1000) {
-      return res.status(400).json({ success: false, message: "Date range cannot exceed 1 year" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Date range cannot exceed 1 year" });
     }
 
     // 4. Validate time format
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     if (!timeRegex.test(start_time) || !timeRegex.test(end_time)) {
-      return res.status(400).json({ success: false, message: "Invalid time format. Use HH:mm" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid time format. Use HH:mm" });
     }
     const [sh, sm] = start_time.split(":").map(Number);
     const [eh, em] = end_time.split(":").map(Number);
     if (eh * 60 + em <= sh * 60 + sm) {
-      return res.status(400).json({ success: false, message: "End time must be after start time" });
+      return res
+        .status(400)
+        .json({ success: false, message: "End time must be after start time" });
     }
 
     // 5. Validate room
     const room = await Room.findById(room_id);
-    if (!room) return res.status(404).json({ success: false, message: "Room not found" });
+    if (!room)
+      return res
+        .status(404)
+        .json({ success: false, message: "Room not found" });
     if (room.status !== "AVAILABLE") {
-      return res.status(400).json({ success: false, message: "Room is not available" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Room is not available" });
     }
 
     // 6. Load working hours (1 query each)
@@ -944,7 +981,11 @@ const createRecurringBooking = async (req, res) => {
         const dayOfMonth = startD.getDate();
         current.setMonth(current.getMonth() + 1);
         // Clamp cuoi thang (vd: Jan 31 -> Feb 28)
-        const lastDay = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+        const lastDay = new Date(
+          current.getFullYear(),
+          current.getMonth() + 1,
+          0,
+        ).getDate();
         current.setDate(Math.min(dayOfMonth, lastDay));
       }
     }
@@ -987,7 +1028,10 @@ const createRecurringBooking = async (req, res) => {
         continue;
       }
       if (holidayMap[dateStr]) {
-        failed.push({ date: dateStr, reason: `Holiday: ${holidayMap[dateStr]}` });
+        failed.push({
+          date: dateStr,
+          reason: `Holiday: ${holidayMap[dateStr]}`,
+        });
         continue;
       }
       if (conflictSet.has(dateStr)) {
@@ -1012,8 +1056,14 @@ const createRecurringBooking = async (req, res) => {
     if (created_docs.length === 0) {
       return res.status(409).json({
         success: false,
-        message: "No bookings could be created. All dates have conflicts or are invalid.",
-        data: { total_attempted: dates.length, created_count: 0, failed_count: failed.length, failed },
+        message:
+          "No bookings could be created. All dates have conflicts or are invalid.",
+        data: {
+          total_attempted: dates.length,
+          created_count: 0,
+          failed_count: failed.length,
+          failed,
+        },
       });
     }
 
@@ -1026,7 +1076,7 @@ const createRecurringBooking = async (req, res) => {
         "CREATE",
         booking,
         `Recurring booking (${recurrence_type}) created for room ${room.room_name} on ${new Date(booking.date).toISOString().split("T")[0]}`,
-        req
+        req,
       );
     }
 
@@ -1061,16 +1111,31 @@ const getExtendOptions = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: "Invalid booking id" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid booking id" });
     }
 
-    const booking = await Booking.findById(id).populate("room_id", "room_name location");
-    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    const booking = await Booking.findById(id).populate(
+      "room_id",
+      "room_name location",
+    );
+    if (!booking)
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     if (booking.user_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: "Forbidden: not your booking" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden: not your booking" });
     }
     if (booking.status !== "APPROVED") {
-      return res.status(400).json({ success: false, message: "Only approved bookings can be extended" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Only approved bookings can be extended",
+        });
     }
 
     // Check booking date = today
@@ -1078,7 +1143,12 @@ const getExtendOptions = async (req, res) => {
     const todayStr = now.toISOString().split("T")[0];
     const bookingDateStr = new Date(booking.date).toISOString().split("T")[0];
     if (bookingDateStr !== todayStr) {
-      return res.status(400).json({ success: false, message: "Can only extend bookings scheduled for today" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Can only extend bookings scheduled for today",
+        });
     }
 
     // Check booking is currently ongoing
@@ -1086,12 +1156,19 @@ const getExtendOptions = async (req, res) => {
     const startMins = toMins(booking.start_time);
     const endMins = toMins(booking.end_time);
     if (nowMins < startMins || nowMins >= endMins) {
-      return res.status(400).json({ success: false, message: "Booking is not currently in progress" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Booking is not currently in progress",
+        });
     }
 
     // Get working hours end
     const whEndSetting = await Setting.findOne({ key: "WORKING_HOURS_END" });
-    const workEndMins = whEndSetting ? toMins(whEndSetting.value) : toMins("22:00");
+    const workEndMins = whEndSetting
+      ? toMins(whEndSetting.value)
+      : toMins("22:00");
 
     // Generate candidate slots: +30, +60, +90, +120 minutes from current end_time
     const STEP = 30;
@@ -1106,7 +1183,10 @@ const getExtendOptions = async (req, res) => {
     if (candidates.length === 0) {
       return res.status(200).json({
         success: true,
-        data: { options: [], message: "No available extension — already at working hours limit" },
+        data: {
+          options: [],
+          message: "No available extension — already at working hours limit",
+        },
       });
     }
 
@@ -1159,23 +1239,39 @@ const extendBooking = async (req, res) => {
     const { new_end_time } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: "Invalid booking id" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid booking id" });
     }
     if (!new_end_time) {
-      return res.status(400).json({ success: false, message: "new_end_time is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "new_end_time is required" });
     }
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     if (!timeRegex.test(new_end_time)) {
-      return res.status(400).json({ success: false, message: "Invalid time format. Use HH:mm" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid time format. Use HH:mm" });
     }
 
     const booking = await Booking.findById(id).populate("room_id", "room_name");
-    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (!booking)
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     if (booking.user_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: "Forbidden: not your booking" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden: not your booking" });
     }
     if (booking.status !== "APPROVED") {
-      return res.status(400).json({ success: false, message: "Only approved bookings can be extended" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Only approved bookings can be extended",
+        });
     }
 
     // Check today
@@ -1183,7 +1279,12 @@ const extendBooking = async (req, res) => {
     const todayStr = now.toISOString().split("T")[0];
     const bookingDateStr = new Date(booking.date).toISOString().split("T")[0];
     if (bookingDateStr !== todayStr) {
-      return res.status(400).json({ success: false, message: "Can only extend bookings scheduled for today" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Can only extend bookings scheduled for today",
+        });
     }
 
     // Check ongoing
@@ -1191,13 +1292,23 @@ const extendBooking = async (req, res) => {
     const startMins = toMins(booking.start_time);
     const endMins = toMins(booking.end_time);
     if (nowMins < startMins || nowMins >= endMins) {
-      return res.status(400).json({ success: false, message: "Booking is not currently in progress" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Booking is not currently in progress",
+        });
     }
 
     // new_end_time must be after current end_time
     const newEndMins = toMins(new_end_time);
     if (newEndMins <= endMins) {
-      return res.status(400).json({ success: false, message: "New end time must be after current end time" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "New end time must be after current end time",
+        });
     }
 
     // Check working hours
@@ -1235,7 +1346,7 @@ const extendBooking = async (req, res) => {
       "UPDATE",
       booking,
       `Extended booking end time from ${oldEndTime} to ${new_end_time} for room ${booking.room_id.room_name}`,
-      req
+      req,
     );
 
     return res.status(200).json({
@@ -1254,16 +1365,26 @@ const approveRecurringGroup = async (req, res) => {
   try {
     const { recurrence_id } = req.params;
     if (!recurrence_id) {
-      return res.status(400).json({ success: false, message: "recurrence_id is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "recurrence_id is required" });
     }
 
     // Load all PENDING bookings in the group (with populated fields)
-    const pendingBookings = await Booking.find({ recurrence_id, status: "PENDING" })
+    const pendingBookings = await Booking.find({
+      recurrence_id,
+      status: "PENDING",
+    })
       .populate("user_id", "full_name email")
       .populate("room_id", "name location");
 
     if (pendingBookings.length === 0) {
-      return res.status(404).json({ success: false, message: "No pending bookings found for this recurring group" });
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "No pending bookings found for this recurring group",
+        });
     }
 
     const approved = [];
@@ -1276,11 +1397,20 @@ const approveRecurringGroup = async (req, res) => {
         room_id: booking.room_id._id,
         date: booking.date,
         status: "APPROVED",
-        $or: [{ start_time: { $lt: booking.end_time }, end_time: { $gt: booking.start_time } }],
+        $or: [
+          {
+            start_time: { $lt: booking.end_time },
+            end_time: { $gt: booking.start_time },
+          },
+        ],
       });
 
       if (conflict) {
-        skipped.push({ booking_id: booking._id, date: booking.date.toISOString().split("T")[0], reason: "Time slot conflict" });
+        skipped.push({
+          booking_id: booking._id,
+          date: booking.date.toISOString().split("T")[0],
+          reason: "Time slot conflict",
+        });
         continue;
       }
 
@@ -1294,7 +1424,8 @@ const approveRecurringGroup = async (req, res) => {
     if (approved.length === 0) {
       return res.status(409).json({
         success: false,
-        message: "All bookings in this group have time slot conflicts — none were approved.",
+        message:
+          "All bookings in this group have time slot conflicts — none were approved.",
         data: { approved_count: 0, skipped_count: skipped.length, skipped },
       });
     }
@@ -1303,7 +1434,9 @@ const approveRecurringGroup = async (req, res) => {
     const sample = approved[0];
     const user = sample.user_id;
     const room = sample.room_id;
-    const dateList = approved.map((b) => b.date.toISOString().split("T")[0]).join(", ");
+    const dateList = approved
+      .map((b) => b.date.toISOString().split("T")[0])
+      .join(", ");
 
     await Notification.create({
       user_id: user._id,
@@ -1325,14 +1458,18 @@ const approveRecurringGroup = async (req, res) => {
         "APPROVE",
         booking,
         `[Group approve] Approved recurring booking for ${room.name} on ${booking.date.toISOString().split("T")[0]}`,
-        req
+        req,
       );
     }
 
     return res.status(200).json({
       success: true,
       message: `Approved ${approved.length} booking(s)${skipped.length ? `, skipped ${skipped.length} due to conflicts` : ""}.`,
-      data: { approved_count: approved.length, skipped_count: skipped.length, skipped },
+      data: {
+        approved_count: approved.length,
+        skipped_count: skipped.length,
+        skipped,
+      },
     });
   } catch (error) {
     console.error("approveRecurringGroup error:", error);
@@ -1347,24 +1484,46 @@ const rejectRecurringGroup = async (req, res) => {
     const { reject_reason } = req.body;
 
     if (!recurrence_id) {
-      return res.status(400).json({ success: false, message: "recurrence_id is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "recurrence_id is required" });
     }
     if (!reject_reason || reject_reason.trim().length < 10) {
-      return res.status(400).json({ success: false, message: "Rejection reason required (min 10 characters)" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Rejection reason required (min 10 characters)",
+        });
     }
 
-    const pendingBookings = await Booking.find({ recurrence_id, status: "PENDING" })
+    const pendingBookings = await Booking.find({
+      recurrence_id,
+      status: "PENDING",
+    })
       .populate("user_id", "full_name email")
       .populate("room_id", "name location");
 
     if (pendingBookings.length === 0) {
-      return res.status(404).json({ success: false, message: "No pending bookings found for this recurring group" });
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "No pending bookings found for this recurring group",
+        });
     }
 
     const now = new Date();
     await Booking.updateMany(
       { recurrence_id, status: "PENDING" },
-      { $set: { status: "REJECTED", reject_reason: reject_reason.trim(), approved_at: now, approved_by: req.user._id } }
+      {
+        $set: {
+          status: "REJECTED",
+          reject_reason: reject_reason.trim(),
+          approved_at: now,
+          approved_by: req.user._id,
+        },
+      },
     );
 
     // One notification summarising the rejection
@@ -1383,7 +1542,13 @@ const rejectRecurringGroup = async (req, res) => {
     });
 
     // Send one summary email to the user
-    await sendApprovalEmail(user, sample, room, "REJECTED", reject_reason.trim());
+    await sendApprovalEmail(
+      user,
+      sample,
+      room,
+      "REJECTED",
+      reject_reason.trim(),
+    );
 
     // Audit log (one entry for the group)
     await logBookingAction(
@@ -1391,7 +1556,7 @@ const rejectRecurringGroup = async (req, res) => {
       "REJECT",
       sample,
       `[Group reject] Rejected ${pendingBookings.length} recurring bookings for ${room.name}. Reason: ${reject_reason.trim()}`,
-      req
+      req,
     );
 
     return res.status(200).json({
