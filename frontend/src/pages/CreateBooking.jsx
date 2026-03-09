@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createBooking, createRecurringBooking } from '../services/bookingService';
 import { getRooms } from '../services/roomService';
+import { generateTimeOptions, formatTime12Hour } from '../utils/timeFormat';
 
 const CreateBooking = () => {
   const navigate = useNavigate();
@@ -42,6 +43,10 @@ const CreateBooking = () => {
     end_time: urlEndTime || preSelectedTime?.end || '10:00',
     purpose: urlPurpose || '',
   });
+
+  // Generate time options for dropdowns
+  const timeOptions = generateTimeOptions();
+  
   useEffect(() => {
     const fetchRooms = async () => {
       try {
@@ -308,25 +313,35 @@ const CreateBooking = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Start Time <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="time"
+                        <select
                           value={formData.start_time}
                           onChange={(e) => handleInputChange('start_time', e.target.value)}
                           required
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                        >
+                          {timeOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           End Time <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="time"
+                        <select
                           value={formData.end_time}
                           onChange={(e) => handleInputChange('end_time', e.target.value)}
                           required
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                        >
+                          {timeOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -420,7 +435,7 @@ const CreateBooking = () => {
                                     <span className="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 text-xs font-bold rounded-full">{idx + 1}</span>
                                     <span className="text-xs font-semibold text-blue-500 w-8">{dayName}</span>
                                     <span className="text-sm text-gray-800">{formatted}</span>
-                                    <span className="ml-auto text-xs text-gray-400">{formData.start_time} – {formData.end_time}</span>
+                                    <span className="ml-auto text-xs text-gray-400">{formatTime12Hour(formData.start_time)} – {formatTime12Hour(formData.end_time)}</span>
                                   </div>
                                 );
                               })}
@@ -547,7 +562,7 @@ const CreateBooking = () => {
                     )}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Time:</span>
-                      <span className="font-medium text-gray-900">{formData.start_time} - {formData.end_time}</span>
+                      <span className="font-medium text-gray-900">{formatTime12Hour(formData.start_time)} - {formatTime12Hour(formData.end_time)}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t">
                       <span className="text-gray-600">Purpose:</span>

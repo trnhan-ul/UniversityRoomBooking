@@ -32,6 +32,9 @@ import HolidayManagement from "./pages/HolidayManagement";
 import AuditLogs from "./pages/AuditLogs";
 import ViewRemainingTime from "./pages/ViewRemainingTime";
 import QRScanner from "./pages/QRScanner";
+import ReportIssue from "./pages/ReportIssue";
+import MyReportedIssues from "./pages/MyReportedIssues";
+import FacilityIssuesManagement from "./pages/FacilityIssuesManagement";
 
 function App() {
   const isAdminRole = (role) =>
@@ -246,6 +249,17 @@ function App() {
           />
         )}
 
+        {user && isAdminRole(user.role) && (
+          <Route
+            path="/facility-issues-management"
+            element={
+              <AdminLayout>
+                <FacilityIssuesManagement />
+              </AdminLayout>
+            }
+          />
+        )}
+
         {user && (
           <>
             <Route
@@ -263,6 +277,8 @@ function App() {
             <Route path="/classroom-details" element={<ClassroomDetails />} />
             <Route path="/notifications" element={<NotificationPage />} />
             <Route path="/remaining-time" element={<ViewRemainingTime />} />
+            <Route path="/report-issue" element={<ReportIssue />} />
+            <Route path="/my-reported-issues" element={<MyReportedIssues />} />
             <Route
               path="/dashboard"
               element={<Navigate to={getDefaultPath(user.role)} replace />}

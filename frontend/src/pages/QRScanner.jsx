@@ -4,6 +4,7 @@ import { checkInBooking } from "../services/bookingService";
 import { formatDate } from "../utils/helpers";
 import AdminLayout from "../components/layout/AdminLayout";
 import { useAuthContext } from "../context/AuthContext";
+import { formatTime12Hour } from "../utils/timeFormat";
 
 const QRScanner = () => {
   const { user } = useAuthContext();
@@ -203,7 +204,7 @@ const QRScanner = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Time:</span>
                     <span className="font-semibold text-gray-900">
-                      {result.booking.start_time} - {result.booking.end_time}
+                      {formatTime12Hour(result.booking.start_time)} - {formatTime12Hour(result.booking.end_time)}
                     </span>
                   </div>
                   <div className="flex justify-between">

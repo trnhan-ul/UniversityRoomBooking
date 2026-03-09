@@ -9,6 +9,7 @@ import {
 } from "../services/bookingService";
 import { Button, Badge } from "../components/common";
 import { formatDate } from "../utils/helpers";
+import { formatTime12Hour } from "../utils/timeFormat";
 
 const PendingRequests = () => {
   const [bookings, setBookings] = useState([]);
@@ -298,7 +299,7 @@ const PendingRequests = () => {
                       key={`${item._id}-${idx}`}
                     >
                       <span className="text-[10px] w-12 font-medium text-slate-500">
-                        {item.start_time || "--:--"}
+                        {item.start_time ? formatTime12Hour(item.start_time) : "--:--"}
                       </span>
                       <div
                         className={`h-2 flex-1 rounded-full ${
@@ -481,7 +482,7 @@ const PendingRequests = () => {
                             {formatDate(booking.date)}
                           </p>
                           <p className="text-xs text-slate-500">
-                            {booking.start_time} - {booking.end_time}
+                            {formatTime12Hour(booking.start_time)} - {formatTime12Hour(booking.end_time)}
                           </p>
                           {booking.recurrence_id && (
                             <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold uppercase">
@@ -638,7 +639,7 @@ const PendingRequests = () => {
                   {formatDate(selectedBooking.date)}
                 </p>
                 <p className="text-xs text-slate-600">
-                  {selectedBooking.start_time} - {selectedBooking.end_time}
+                  {formatTime12Hour(selectedBooking.start_time)} - {formatTime12Hour(selectedBooking.end_time)}
                 </p>
               </div>
               <div>
@@ -692,7 +693,7 @@ const PendingRequests = () => {
             <div className="bg-purple-600 rounded-t-xl px-6 py-4">
               <h2 className="text-white font-bold text-lg">🔁 Recurring Group Action</h2>
               <p className="text-purple-200 text-sm mt-1">
-                {groupActionBooking.room?.name} &nbsp;·&nbsp; {groupActionBooking.start_time}–{groupActionBooking.end_time}
+                {groupActionBooking.room?.name} &nbsp;·&nbsp; {formatTime12Hour(groupActionBooking.start_time)}–{formatTime12Hour(groupActionBooking.end_time)}
                 &nbsp;·&nbsp; {groupActionBooking.recurrence_type === "WEEKLY" ? "Weekly" : "Monthly"}
               </p>
             </div>

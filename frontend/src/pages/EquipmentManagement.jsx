@@ -301,7 +301,10 @@ const EquipmentManagement = () => {
                           {equip.room_id?.room_name || 'N/A'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {equip.room_id?.room_code || ''}
+                          {equip.room_id?.room_code || ''} | {equip.room_id?.location || ''}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          ID: {equip.room_id?._id?.substring(0, 8)}...
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -415,7 +418,7 @@ const EquipmentManagement = () => {
                       <option value="">Select room ({rooms.length} rooms)</option>
                       {rooms.map(room => (
                         <option key={room._id} value={room._id}>
-                          {room.room_name} - {room.room_code}
+                          [{room.room_code}] {room.room_name} - {room.location}
                         </option>
                       ))}
                     </select>

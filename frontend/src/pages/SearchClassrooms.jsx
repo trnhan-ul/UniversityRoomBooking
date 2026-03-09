@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { getRooms } from '../services/roomService';
+import { formatTime12Hour } from '../utils/timeFormat';
 
 const SearchClassrooms = () => {
   const navigate = useNavigate();
@@ -281,15 +282,11 @@ const SearchClassrooms = () => {
                       onChange={(e) => handleFilterChange('date', e.target.value)}
                     />
                   </div>
-                  <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-200 dark:border-slate-700 pointer-events-none">
+                  <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
                     <span className="material-symbols-outlined text-primary mr-2">schedule</span>
-                    <input 
-                      className="bg-transparent border-none focus:ring-0 text-sm w-full pointer-events-none"
-                      type="time"
-                      value={filters.time}
-                      readOnly
-                      disabled
-                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                      {formatTime12Hour(filters.time)}
+                    </span>
                   </div>
                 </div>
               </div>

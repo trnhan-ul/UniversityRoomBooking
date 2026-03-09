@@ -70,8 +70,8 @@ const StudentDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FeatureCard
             icon="search"
-            title="Search Rooms"
-            description="Find available classrooms for your schedule"
+            title="Rooms"
+            description="View all available classrooms"
             color="blue"
             onClick={() => navigate('/search-classrooms')}
           />
@@ -90,10 +90,11 @@ const StudentDashboard = () => {
             onClick={() => navigate('/my-bookings')}
           />
           <FeatureCard
-            icon="schedule"
-            title="My Schedule"
-            description="Check your personal booking schedule"
+            icon="report_problem"
+            title="Report Facility"
+            description="Report facility issues or equipment damage"
             color="orange"
+            onClick={() => navigate('/report-issue')}
           />
           <FeatureCard
             icon="notifications"

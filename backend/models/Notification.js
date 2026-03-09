@@ -20,7 +20,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['BOOKING', 'SYSTEM', 'REMINDER'],
+    enum: ['BOOKING', 'SYSTEM', 'REMINDER', 'FACILITY_ISSUE', 'FACILITY_ISSUE_UPDATE'],
     required: true
   },
   // Đối tượng nhận thông báo
@@ -42,7 +42,7 @@ const notificationSchema = new mongoose.Schema({
   },
   target_type: {
     type: String,
-    enum: ['Booking', 'Room', 'User', 'RoomSchedule'],
+    enum: ['Booking', 'Room', 'User', 'RoomSchedule', 'FacilityIssue'],
     default: null
   },
   target_id: {

@@ -100,6 +100,17 @@ const logSettingsAction = async (user, description, req) => {
   });
 };
 
+const logAuditAction = async (user, action, facilityIssue, description, req) => {
+  return logAudit({
+    user,
+    action,
+    target_type: "FacilityIssue",
+    target_id: facilityIssue._id,
+    description,
+    req,
+  });
+};
+
 module.exports = {
   logAudit,
   logAuthAction,
@@ -108,4 +119,5 @@ module.exports = {
   logUserAction,
   logEquipmentAction,
   logSettingsAction,
+  logAuditAction,
 };
