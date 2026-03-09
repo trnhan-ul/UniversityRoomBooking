@@ -112,6 +112,17 @@ router.get("/:id/extend-options", authenticate, bookingController.getExtendOptio
 // PATCH /api/bookings/:id/extend - extend booking end time (User, booking owner, ongoing)
 router.patch("/:id/extend", authenticate, bookingController.extendBooking);
 
+// GET /api/bookings/:id/qr-data - get QR code data for check-in (User, booking owner)
+router.get("/:id/qr-data", authenticate, bookingController.getBookingQRData);
+
+// POST /api/bookings/check-in - check-in booking via QR code (Staff/Admin)
+router.post(
+  "/check-in",
+  authenticate,
+  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  bookingController.checkInBooking
+);
+
 // PATCH /api/bookings/:id - update booking (User) - MUST be last
 router.patch("/:id", authenticate, bookingController.updateBooking);
 

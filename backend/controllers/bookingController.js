@@ -5,6 +5,7 @@ const { Notification, Holiday } = require("../models");
 const { sendApprovalEmail } = require("../services/emailService");
 const { logBookingAction } = require("../utils/auditLogger");
 const mongoose = require("mongoose");
+const { v4: uuidv4 } = require("uuid");
 
 // UC14 - Create Booking
 const createBooking = async (req, res) => {
@@ -294,6 +295,8 @@ const approveBooking = async (req, res) => {
       });
     }
 
+    // Generate QR code token for check-in
+    booking.qr_code_token = uuidv4();
     booking.status = "APPROVED";
     booking.approved_at = new Date();
     booking.approved_by = req.user._id;
@@ -1567,6 +1570,236 @@ const rejectRecurringGroup = async (req, res) => {
   }
 };
 
+// Get Booking QR Data for check-in
+const getBookingQRData = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking ID"
+      });
+    }
+
+    const booking = await Booking.findById(bookingId)
+      .populate("room_id", "room_name room_code location")
+      .populate("user_id", "full_name email");
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
+      });
+    }
+
+    // Check if user is the owner of the booking
+    if (booking.user_id._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to view this booking's QR code"
+      });
+    }
+
+    // Only APPROVED bookings can have QR codes
+    if (booking.status !== "APPROVED") {
+      return res.status(400).json({
+        success: false,
+        message: "Only approved bookings have QR codes"
+      });
+    }
+
+    if (!booking.qr_code_token) {
+      return res.status(400).json({
+        success: false,
+        message: "QR code not generated for this booking"
+      });
+    }
+
+    // Return simplified QR data (b,t,type) + booking info for display
+    // Frontend will only stringify {b,t,type} for QR code generation
+    const qrData = {
+      b: booking._id.toString(),
+      t: booking.qr_code_token,
+      type: "BOOKING_CHECK_IN",
+      room_name: booking.room_id.room_name,
+      date: booking.date,
+      start_time: booking.start_time,
+      end_time: booking.end_time
+    };
+
+    res.status(200).json({
+      success: true,
+      data: qrData
+    });
+  } catch (error) {
+    console.error("getBookingQRData error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Check-in Booking via QR Code
+const checkInBooking = async (req, res) => {
+  try {
+    const { booking_id, qr_token } = req.body;
+
+    if (!booking_id || !qr_token) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking ID and QR token are required"
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(booking_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking ID"
+      });
+    }
+
+    // Find booking
+    const booking = await Booking.findById(booking_id)
+      .populate("room_id", "room_name room_code location")
+      .populate("user_id", "full_name email");
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
+      });
+    }
+
+    // Validate QR token
+    if (booking.qr_code_token !== qr_token) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid QR code"
+      });
+    }
+
+    // Check status = APPROVED
+    if (booking.status !== "APPROVED") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot check-in. Booking status is ${booking.status}`
+      });
+    }
+
+    // Check if already checked-in
+    if (booking.checked_in_at) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking already checked-in",
+        checked_in_at: booking.checked_in_at
+      });
+    }
+
+    // Validate date = today
+    const bookingDate = new Date(booking.date);
+    bookingDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (bookingDate.getTime() !== today.getTime()) {
+      return res.status(400).json({
+        success: false,
+        message: "Can only check-in on booking date",
+        booking_date: booking.date
+      });
+    }
+
+    // Validate time window
+    const now = new Date();
+    const [startHour, startMin] = booking.start_time.split(":").map(Number);
+    const [endHour, endMin] = booking.end_time.split(":").map(Number);
+
+    const bookingStartTime = new Date();
+    bookingStartTime.setHours(startHour, startMin, 0, 0);
+
+    const bookingEndTime = new Date();
+    bookingEndTime.setHours(endHour, endMin, 0, 0);
+
+    // Check if too early
+    if (now < bookingStartTime) {
+      const minutesUntilStart = Math.floor((bookingStartTime - now) / (1000 * 60));
+      return res.status(400).json({
+        success: false,
+        message: `Too early. Check-in opens at start time (in ${minutesUntilStart} minutes)`,
+        start_time: booking.start_time,
+        available_from: bookingStartTime
+      });
+    }
+
+    // Check if expired
+    if (now > bookingEndTime) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking expired. Check-in must be before end time",
+        end_time: booking.end_time,
+        expired_at: bookingEndTime
+      });
+    }
+
+    // Determine check-in type (ON_TIME or LATE)
+    const onTimeWindow = new Date(bookingStartTime);
+    onTimeWindow.setMinutes(onTimeWindow.getMinutes() + 15);
+
+    const checkInType = now <= onTimeWindow ? "ON_TIME" : "LATE";
+
+    // Calculate late duration
+    let lateMinutes = 0;
+    if (checkInType === "LATE") {
+      lateMinutes = Math.floor((now - bookingStartTime) / (1000 * 60));
+    }
+
+    // Update booking
+    booking.status = "CHECKED-IN";
+    booking.checked_in_at = now;
+    booking.check_in_type = checkInType;
+    await booking.save();
+
+    // Create notification
+    await Notification.create({
+      user_id: booking.user_id._id,
+      title: "Check-in Successful",
+      message: checkInType === "LATE"
+        ? `Late check-in for ${booking.room_id.room_name} (${lateMinutes} minutes late)`
+        : `On-time check-in for ${booking.room_id.room_name}`,
+      type: "BOOKING",
+      target_type: "Booking",
+      target_id: booking._id,
+      is_read: false
+    });
+
+    // Log audit
+    await logBookingAction(
+      req.user,
+      "CHECK_IN",
+      booking,
+      checkInType === "LATE"
+        ? `Late check-in (${lateMinutes} minutes late) for ${booking.room_id.room_name} by ${booking.user_id.full_name}`
+        : `On-time check-in for ${booking.room_id.room_name} by ${booking.user_id.full_name}`,
+      req
+    );
+
+    res.status(200).json({
+      success: true,
+      message: checkInType === "LATE"
+        ? `Checked-in successfully (late by ${lateMinutes} minutes)`
+        : "Checked-in successfully",
+      data: {
+        booking,
+        check_in_type: checkInType,
+        late_minutes: lateMinutes,
+        checked_in_at: now
+      }
+    });
+  } catch (error) {
+    console.error("checkInBooking error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 module.exports = {
   createBooking,
   createRecurringBooking,
@@ -1583,4 +1816,6 @@ module.exports = {
   getBookingReport,
   getExtendOptions,
   extendBooking,
+  getBookingQRData,
+  checkInBooking,
 };

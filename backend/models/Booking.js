@@ -39,7 +39,7 @@ const bookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
+      enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED", "CHECKED-IN"],
       default: "PENDING",
       required: true,
     },
@@ -55,6 +55,21 @@ const bookingSchema = new mongoose.Schema(
     },
     approved_at: {
       type: Date,
+      default: null,
+    },
+    qr_code_token: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: null,
+    },
+    checked_in_at: {
+      type: Date,
+      default: null,
+    },
+    check_in_type: {
+      type: String,
+      enum: ["ON_TIME", "LATE"],
       default: null,
     },
     recurrence_id: {

@@ -161,13 +161,13 @@ export const getBookingReport = async (filters = {}) => {
   try {
     const { startDate, endDate, status, room_id, groupBy = "date" } = filters;
     const params = new URLSearchParams();
-    
+
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
     if (status) params.append("status", status);
     if (room_id) params.append("room_id", room_id);
     params.append("groupBy", groupBy);
-    
+
     const response = await api.get(`/bookings/report?${params.toString()}`);
     return response.data;
   } catch (error) {
@@ -195,3 +195,25 @@ export const extendBooking = async (bookingId, newEndTime) => {
   }
 };
 
+// Get QR code data for check-in
+export const getBookingQRData = async (bookingId) => {
+  try {
+    const response = await api.get(`/bookings/${bookingId}/qr-data`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
+
+// Check-in booking via QR code (Staff/Admin)
+export const checkInBooking = async (bookingId, qrToken) => {
+  try {
+    const response = await api.post('/bookings/check-in', {
+      booking_id: bookingId,
+      qr_token: qrToken
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: "Network error" };
+  }
+};
