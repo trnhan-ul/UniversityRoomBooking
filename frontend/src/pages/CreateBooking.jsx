@@ -313,35 +313,25 @@ const CreateBooking = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Start Time <span className="text-red-500">*</span>
                         </label>
-                        <select
+                        <input
+                          type="time"
                           value={formData.start_time}
                           onChange={(e) => handleInputChange('start_time', e.target.value)}
                           required
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          {timeOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           End Time <span className="text-red-500">*</span>
                         </label>
-                        <select
+                        <input
+                          type="time"
                           value={formData.end_time}
                           onChange={(e) => handleInputChange('end_time', e.target.value)}
                           required
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          {timeOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
                     </div>
                   </div>

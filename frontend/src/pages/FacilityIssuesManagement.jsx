@@ -11,8 +11,9 @@ const FacilityIssuesManagement = () => {
   const [issues, setIssues] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  
+  // Notification popup state
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   
   // Filters
   const [filters, setFilters] = useState({
@@ -35,6 +36,11 @@ const FacilityIssuesManagement = () => {
     resolution_notes: ''
   });
 
+  // Show notification popup
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+  };
+
   const fetchStats = async () => {
     try {
       const response = await getFacilityIssueStats();
@@ -49,7 +55,6 @@ const FacilityIssuesManagement = () => {
   const fetchIssues = async () => {
     try {
       setLoading(true);
-      setError('');
       const response = await getAllFacilityIssues(filters);
       
       if (response.success) {
@@ -57,7 +62,7 @@ const FacilityIssuesManagement = () => {
         setPagination(response.pagination);
       }
     } catch (err) {
-      setError(err.message || 'Failed to fetch issues');
+      showNotification(err.message || 'Failed to fetch issues', 'error');
     } finally {
       setLoading(false);
     }
@@ -85,7 +90,7 @@ const FacilityIssuesManagement = () => {
         setShowModal(true);
       }
     } catch (err) {
-      setError('Failed to load issue details');
+      showNotification('Failed to load issue details', 'error');
     }
   };
 
@@ -94,18 +99,16 @@ const FacilityIssuesManagement = () => {
     if (!selectedIssue) return;
 
     try {
-      setError('');
-      setSuccess('');
       const response = await updateFacilityIssueStatus(selectedIssue._id, statusUpdateForm);
       
       if (response.success) {
-        setSuccess('Status updated successfully');
+        showNotification('Status updated successfully', 'success');
         setShowModal(false);
         fetchIssues();
         fetchStats();
       }
     } catch (err) {
-      setError(err.message || 'Failed to update status');
+      showNotification(err.message || 'Failed to update status', 'error');
     }
   };
 
@@ -113,18 +116,16 @@ const FacilityIssuesManagement = () => {
     if (!window.confirm('Are you sure you want to delete this issue?')) return;
 
     try {
-      setError('');
-      setSuccess('');
       const response = await deleteFacilityIssue(issueId);
       
       if (response.success) {
-        setSuccess('Issue deleted successfully');
+        showNotification('Issue deleted successfully', 'success');
         setShowModal(false);
         fetchIssues();
         fetchStats();
       }
     } catch (err) {
-      setError(err.message || 'Failed to delete issue');
+      showNotification(err.message || 'Failed to delete issue', 'error');
     }
   };
 
@@ -195,18 +196,6 @@ const FacilityIssuesManagement = () => {
               <div className="text-sm font-medium text-red-800 mb-1">Critical</div>
               <div className="text-3xl font-bold text-red-900">{stats.bySeverity?.CRITICAL || 0}</div>
             </div>
-          </div>
-        )}
-
-        {/* Messages */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-            {success}
           </div>
         )}
 
@@ -483,6 +472,45 @@ const FacilityIssuesManagement = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Popup */}
+      {notification.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-24">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-fadeIn">
+            <div className="p-6">
+              <div className="flex items-start mb-4">
+                {notification.type === 'success' ? (
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    {notification.type === 'success' ? 'Success' : 'Error'}
+                  </h3>
+                  <p className="text-gray-600">{notification.message}</p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setNotification({ show: false, message: '', type: 'success' })}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  OK
+                </button>
               </div>
             </div>
           </div>

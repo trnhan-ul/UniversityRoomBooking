@@ -193,9 +193,7 @@ const ReportIssue = () => {
       if (response.success) {
         setSuccess('Facility issue reported successfully!');
         console.log('✓ Issue reported successfully');
-        setTimeout(() => {
-          navigate('/my-reported-issues');
-        }, 2000);
+        // Don't auto-redirect, let user click the button
       } else {
         console.error('API returned success=false:', response);
         setError(response.message || 'Failed to report issue');
@@ -253,12 +251,50 @@ const ReportIssue = () => {
           </div>
         )}
         {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-            {success}
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 text-green-600 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="text-green-700 font-medium">{success}</p>
+                  <p className="text-green-600 text-sm mt-1">Your issue has been submitted and is being reviewed.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => navigate('/my-reported-issues')}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+              >
+                View My Issues
+              </button>
+              <button
+                onClick={() => {
+                  setSuccess('');
+                  setFormData({
+                    booking_id: '',
+                    room_id: '',
+                    issue_type: 'EQUIPMENT_DAMAGE',
+                    equipment_id: '',
+                    title: '',
+                    description: '',
+                    severity: 'MEDIUM',
+                    location: '',
+                    images: []
+                  });
+                }}
+                className="flex-1 px-4 py-2 bg-white text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium text-sm"
+              >
+                Report Another Issue
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Form */}
+        {/* Form - Hide when success */}
+        {!success && (
         <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6 space-y-6">
           {/* Booking Selection */}
           <div>
@@ -471,6 +507,7 @@ const ReportIssue = () => {
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

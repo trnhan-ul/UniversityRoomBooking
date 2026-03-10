@@ -17,8 +17,6 @@ const UserManagement = () => {
   const { user: currentUser } = useAuthContext();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   // Filters
   const [filters, setFilters] = useState({
@@ -48,6 +46,15 @@ const UserManagement = () => {
   const [showResetNewPass, setShowResetNewPass] = useState(false);
   const [showResetConfirmPass, setShowResetConfirmPass] = useState(false);
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  
+  // Notification Popup State
+  const [notification, setNotification] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    title: '',
+    message: ''
+  });
 
   // Form data
   const [formData, setFormData] = useState({
@@ -62,7 +69,6 @@ const UserManagement = () => {
   // Fetch users
   const fetchUsers = async () => {
     setLoading(true);
-    setError("");
     try {
       const response = await getAllUsers(filters);
       if (response.success) {
@@ -70,7 +76,11 @@ const UserManagement = () => {
         setPagination(response.pagination);
       }
     } catch (err) {
-      setError(err.message || "Failed to fetch users");
+      showNotification(
+        'error',
+        'Failed to Load Users',
+        err.message || 'An error occurred while loading users'
+      );
     } finally {
       setLoading(false);
     }
@@ -80,6 +90,26 @@ const UserManagement = () => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
+
+  // Show notification popup
+  const showNotification = (type, title, message) => {
+    setNotification({
+      show: true,
+      type,
+      title,
+      message
+    });
+    
+    // Auto close after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
+
+  // Close notification
+  const closeNotification = () => {
+    setNotification(prev => ({ ...prev, show: false }));
+  };
 
   
   const handleFilterChange = (key, value) => {
@@ -94,49 +124,101 @@ const UserManagement = () => {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    setError("");
 
     // Validate email @fpt.edu.vn
     if (!formData.email.toLowerCase().endsWith("@fpt.edu.vn")) {
-      const errorMsg = "Please use FPT University email (@fpt.edu.vn)";
-      setError(errorMsg);
-      alert(errorMsg); // Show alert popup
+      showNotification(
+        'error',
+        'Invalid Email',
+        'Please use FPT University email (@fpt.edu.vn)'
+      );
       return;
     }
 
     try {
       const response = await createUser(formData);
       if (response.success) {
-        setSuccess(`User ${formData.full_name} created successfully! Welcome email sent.`);
+        showNotification(
+          'success',
+          'User Created Successfully!',
+          `User ${formData.full_name} has been created. Welcome email has been sent.`
+        );
         setIsCreateModalOpen(false);
         resetForm();
         fetchUsers();
-        setTimeout(() => setSuccess(""), 3000);
       }
     } catch (err) {
-      const errorMsg = err.message || "Failed to create user";
-      setError(errorMsg);
-      alert(errorMsg); // Show alert popup
+      showNotification(
+        'error',
+        'Failed to Create User',
+        err.message || 'An error occurred while creating the user. Please try again.'
+      );
     }
   };
 
   // Handle edit user
   const handleEditUser = async (e) => {
     e.preventDefault();
-    setError("");
     try {
       const { password, email, ...updateData } = formData;
       const response = await updateUser(selectedUser._id, updateData);
       if (response.success) {
-        setSuccess(`User ${formData.full_name} updated successfully`);
+        showNotification(
+          'success',
+          'User Updated Successfully!',
+          `User ${formData.full_name} has been updated successfully.`
+        );
         setIsEditModalOpen(false);
         resetForm();
         fetchUsers();
-        setTimeout(() => setSuccess(""), 3000);
       }
     } catch (err) {
-      setError(err.message || "Failed to update user");
+      showNotification(
+        'error',
+        'Failed to Update User',
+        err.message || 'An error occurred while updating the user. Please try again.'
+      );
     }
+  };
+
+  // Handle avatar upload
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showNotification(
+        'error',
+        'Invalid File Type',
+        'Please select a valid image file (JPG, PNG, GIF)'
+      );
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification(
+        'error',
+        'File Too Large',
+        'Image size must be less than 5MB'
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setAvatarPreview(base64String);
+      setFormData({ ...formData, avatar_url: base64String });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Remove avatar
+  const handleRemoveAvatar = () => {
+    setAvatarPreview(null);
+    setFormData({ ...formData, avatar_url: null });
   };
 
   // Handle toggle status
@@ -144,11 +226,18 @@ const UserManagement = () => {
     try {
       const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
       await updateUser(userId, { status: newStatus });
-      setSuccess(`User status updated to ${newStatus}`);
+      showNotification(
+        'success',
+        'Status Updated',
+        `User status has been updated to ${newStatus}`
+      );
       fetchUsers();
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      setError(err.message || "Failed to update status");
+      showNotification(
+        'error',
+        'Failed to Update Status',
+        err.message || 'An error occurred while updating status'
+      );
     }
   };
 
@@ -156,11 +245,18 @@ const UserManagement = () => {
   const handleRoleChange = async (userId, newRole) => {
     try {
       await updateUser(userId, { role: newRole });
-      setSuccess("Role updated successfully");
+      showNotification(
+        'success',
+        'Role Updated',
+        'User role has been updated successfully'
+      );
       fetchUsers();
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      setError(err.message || "Failed to update role");
+      showNotification(
+        'error',
+        'Failed to Update Role',
+        err.message || 'An error occurred while updating role'
+      );
     }
   };
 
@@ -174,7 +270,9 @@ const UserManagement = () => {
       role: user.role,
       status: user.status,
       password: "",
+      avatar_url: user.avatar_url || null,
     });
+    setAvatarPreview(user.avatar_url || null);
     setIsEditModalOpen(true);
   };
 
@@ -207,18 +305,24 @@ const UserManagement = () => {
   // Handle admin reset password
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setError('');
     setResetPasswordLoading(true);
     try {
       const response = await adminResetUserPassword(selectedUser._id, resetPasswordData);
       if (response.success) {
-        setSuccess(response.message);
+        showNotification(
+          'success',
+          'Password Reset Successfully',
+          response.message || 'New password has been sent to user\'s email'
+        );
         setIsResetPasswordModalOpen(false);
         setSelectedUser(null);
-        setTimeout(() => setSuccess(''), 5000);
       }
     } catch (err) {
-      setError(err.message || 'Failed to reset password');
+      showNotification(
+        'error',
+        'Failed to Reset Password',
+        err.message || 'An error occurred while resetting password'
+      );
     } finally {
       setResetPasswordLoading(false);
     }
@@ -235,7 +339,7 @@ const UserManagement = () => {
       status: "ACTIVE",
     });
     setSelectedUser(null);
-    setError(""); // Clear error message
+    setAvatarPreview(null);
   };
 
   // Get user initials
@@ -271,18 +375,6 @@ const UserManagement = () => {
 
       {/* Main Content */}
       <div>
-        {/* Messages */}
-        {error && (
-          <div className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-700">
-            {success}
-          </div>
-        )}
-
         {/* Filters Section */}
         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
           <div className="flex flex-wrap items-center gap-4">
@@ -814,12 +906,6 @@ const UserManagement = () => {
               <h2 className="text-xl font-semibold">Add New User</h2>
             </div>
             <form onSubmit={handleCreateUser} className="p-6 space-y-4">
-              {/* Error Message in Modal */}
-              {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                  {error}
-                </div>
-              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Full Name *
@@ -950,6 +1036,57 @@ const UserManagement = () => {
               <h2 className="text-xl font-semibold">Edit User</h2>
             </div>
             <form onSubmit={handleEditUser} className="p-6 space-y-4">
+              
+              {/* Avatar Upload Section */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Avatar
+                </label>
+                <div className="flex items-center gap-4">
+                  {/* Avatar Preview */}
+                  <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-slate-300">
+                    {avatarPreview ? (
+                      <img
+                        src={avatarPreview}
+                        alt="Avatar preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-2xl text-slate-400">
+                        {formData.full_name ? getInitials(formData.full_name) : "?"}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Upload/Remove Buttons */}
+                  <div className="flex-1 space-y-2">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                      />
+                      <span className="inline-block px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium rounded-lg transition-colors text-sm">
+                        📷 {avatarPreview ? 'Change Photo' : 'Upload Photo'}
+                      </span>
+                    </label>
+                    {avatarPreview && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveAvatar}
+                        className="block px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-lg transition-colors text-sm"
+                      >
+                        🗑️ Remove Photo
+                      </button>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      Max 5MB • JPG, PNG, GIF
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Full Name *
@@ -1040,6 +1177,37 @@ const UserManagement = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Popup */}
+      {notification.show && (
+        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-[100] pt-24 px-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full animate-slideIn">
+            {/* Title */}
+            <div className="px-6 pt-6 pb-4">
+              <h3 className="text-lg font-semibold text-slate-800">
+                {notification.title}
+              </h3>
+            </div>
+
+            {/* Message */}
+            <div className="px-6 pb-6">
+              <p className="text-slate-600 text-sm leading-relaxed">
+                {notification.message}
+              </p>
+            </div>
+
+            {/* OK Button */}
+            <div className="px-6 pb-6 flex justify-end">
+              <button
+                onClick={closeNotification}
+                className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors min-w-[80px]"
+              >
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}
