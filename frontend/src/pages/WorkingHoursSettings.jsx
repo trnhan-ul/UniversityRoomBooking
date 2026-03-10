@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getWorkingHours, updateWorkingHours } from '../services/settingService';
 import { Button } from '../components/common';
+import { generateTimeOptions } from '../utils/timeFormat';
 
 const WorkingHoursSettings = () => {
   const [loading, setLoading] = useState(true);
@@ -17,6 +18,9 @@ const WorkingHoursSettings = () => {
     start: '07:00',
     end: '21:00'
   });
+
+  // Generate time options for dropdowns
+  const timeOptions = generateTimeOptions();
 
   // Fetch current working hours
   useEffect(() => {
@@ -168,12 +172,17 @@ const WorkingHoursSettings = () => {
                 <label className="block text-xs font-medium text-gray-600 mb-2 uppercase">
                   Start Time
                 </label>
-                <input
-                  type="time"
+                <select
                   value={workingHours.start}
                   onChange={(e) => handleChange('start', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                >
+                  {timeOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* End Time */}
@@ -181,12 +190,17 @@ const WorkingHoursSettings = () => {
                 <label className="block text-xs font-medium text-gray-600 mb-2 uppercase">
                   End Time
                 </label>
-                <input
-                  type="time"
+                <select
                   value={workingHours.end}
                   onChange={(e) => handleChange('end', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                >
+                  {timeOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

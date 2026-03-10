@@ -17,3 +17,6 @@ export { default as EquipmentManagement } from "./EquipmentManagement";
 export { default as WorkingHoursSettings } from "./WorkingHoursSettings";
 export { default as HolidayManagement } from "./HolidayManagement";
 export { default as AuditLogs } from "./AuditLogs";
+export { default as ReportIssue } from "./ReportIssue";
+export { default as MyReportedIssues } from "./MyReportedIssues";
+export { default as FacilityIssuesManagement } from "./FacilityIssuesManagement";

@@ -3,6 +3,7 @@ import moment from 'moment';
 import { getCalendarData } from '../services/scheduleService';
 import { getRooms, blockTimeSlot, unblockTimeSlot } from '../services/roomService';
 import { useAuth } from '../hooks/useAuth';
+import { generateTimeOptions } from '../utils/timeFormat';
 
 const ScheduleManagement = () => {
   const { user } = useAuth();
@@ -30,6 +31,9 @@ const ScheduleManagement = () => {
   const [blockLoading, setBlockLoading] = useState(false);
   const [conflicts, setConflicts] = useState(null);
   const [errorCode, setErrorCode] = useState(null);
+
+  // Generate time options for dropdowns
+  const timeOptions = generateTimeOptions();
 
   // Generate time slots (7:00 AM - 9:00 PM)
   const timeSlots = [];
@@ -933,27 +937,39 @@ const ScheduleManagement = () => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Start Time <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="time"
+                  <select
                     name="start_time"
                     value={blockFormData.start_time}
                     onChange={handleBlockChange}
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
                     required
-                  />
+                  >
+                    <option value="">Select time</option>
+                    {timeOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     End Time <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="time"
+                  <select
                     name="end_time"
                     value={blockFormData.end_time}
                     onChange={handleBlockChange}
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
                     required
-                  />
+                  >
+                    <option value="">Select time</option>
+                    {timeOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

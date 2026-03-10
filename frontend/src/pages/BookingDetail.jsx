@@ -6,6 +6,7 @@ import { formatDate, getStatusVariant, getStatusLabel } from "../utils/helpers";
 import Badge from "../components/common/Badge";
 import Header from "../components/layout/Header";
 import { useAuthContext } from "../context/AuthContext";
+import { generateTimeOptions, formatTime12Hour } from "../utils/timeFormat";
 
 const BookingDetail = () => {
   const { id } = useParams();
@@ -35,6 +36,9 @@ const BookingDetail = () => {
   const [extendSubmitting, setExtendSubmitting] = useState(false);
   const [selectedExtendTime, setSelectedExtendTime] = useState('');
   const [extendError, setExtendError] = useState('');
+
+  // Generate time options for dropdowns
+  const timeOptions = generateTimeOptions();
 
   // Check if booking is currently in progress
   const isOngoing = () => {
@@ -309,25 +313,35 @@ const BookingDetail = () => {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-2">Start Time</label>
-                  <input
-                    type="time"
+                  <select
                     name="start_time"
                     value={formData.start_time}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
-                  />
+                  >
+                    {timeOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-2">End Time</label>
-                  <input
-                    type="time"
+                  <select
                     name="end_time"
                     value={formData.end_time}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
-                  />
+                  >
+                    {timeOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             ) : (
@@ -341,13 +355,13 @@ const BookingDetail = () => {
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Start Time</p>
                   <p className="text-base font-semibold text-gray-900">
-                    {booking.start_time}
+                    {formatTime12Hour(booking.start_time)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-1">End Time</p>
                   <p className="text-base font-semibold text-gray-900">
-                    {booking.end_time}
+                    {formatTime12Hour(booking.end_time)}
                   </p>
                 </div>
               </div>
@@ -477,7 +491,7 @@ const BookingDetail = () => {
             <div className="bg-green-600 rounded-t-2xl px-6 py-4">
               <h2 className="text-white font-bold text-lg">⏱ Extend Booking</h2>
               <p className="text-green-100 text-sm mt-1">
-                {booking.room_id?.room_name} · {booking.start_time} – {booking.end_time}
+                {booking.room_id?.room_name} · {formatTime12Hour(booking.start_time)} – {formatTime12Hour(booking.end_time)}
               </p>
             </div>
             <div className="p-6">

@@ -11,5 +11,6 @@ module.exports = {
   Notification: require('./Notification'),
   AuditLog: require('./AuditLog'),
   EmailVerification: require('./EmailVerification'),
-  Holiday: require('./Holiday')
+  Holiday: require('./Holiday'),
+  FacilityIssue: require('./FacilityIssue')
 };

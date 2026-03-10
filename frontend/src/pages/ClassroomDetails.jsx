@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { getRoomById } from '../services/roomService';
+import { getEquipmentByRoom } from '../services/equipmentService';
+import { generateTimeOptions } from '../utils/timeFormat';
 
 const ClassroomDetails = () => {
   const navigate = useNavigate();
@@ -9,7 +11,9 @@ const ClassroomDetails = () => {
   const [searchParams] = useSearchParams();
   const roomId = searchParams.get('roomId');
   const [room, setRoom] = useState({});
+  const [equipment, setEquipment] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingEquipment, setLoadingEquipment] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [menuTimeout, setMenuTimeout] = useState(null);
@@ -19,6 +23,8 @@ const ClassroomDetails = () => {
     endTime: '11:00',
     purpose: 'Academic Lecture'
   });
+
+  const timeOptions = generateTimeOptions();
 
   // Fetch room data from API
   useEffect(() => {
@@ -50,13 +56,62 @@ const ClassroomDetails = () => {
     fetchRoomData();
   }, [roomId]);
 
-  // Equipment icon mapping
-  const equipmentIcons = {
-    projector: { icon: 'videocam', title: 'Projector' },
-    ac: { icon: 'ac_unit', title: 'Air Conditioning' },
-    whiteboard: { icon: 'draw', title: 'Whiteboard' },
-    computer: { icon: 'desktop_windows', title: 'Workstations' },
-    natural_light: { icon: 'wb_sunny', title: 'Natural Light' }
+  // Fetch equipment for the room
+  useEffect(() => {
+    const fetchEquipment = async () => {
+      if (!roomId) return;
+      
+      try {
+        setLoadingEquipment(true);
+        console.log('Fetching equipment for room:', roomId);
+        const response = await getEquipmentByRoom(roomId);
+        console.log('Equipment response:', response);
+        if (response.success) {
+          console.log('Equipment data:', response.data);
+          setEquipment(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching equipment:', error);
+        setEquipment([]);
+      } finally {
+        setLoadingEquipment(false);
+      }
+    };
+
+    fetchEquipment();
+  }, [roomId]);
+
+  // Equipment icon mapping for fallback
+  const getEquipmentIcon = (equipmentName) => {
+    const name = equipmentName.toLowerCase();
+    if (name.includes('máy chiếu') || name.includes('projector')) return 'videocam';
+    if (name.includes('wi-fi') || name.includes('wifi')) return 'wifi';
+    if (name.includes('air') || name.includes('điều hòa') || name.includes('ac')) return 'ac_unit';
+    if (name.includes('whiteboard') || name.includes('bảng')) return 'draw';
+    if (name.includes('computer') || name.includes('máy tính')) return 'computer';
+    if (name.includes('speaker') || name.includes('loa')) return 'volume_up';
+    if (name.includes('microphone') || name.includes('mic')) return 'mic';
+    if (name.includes('screen') || name.includes('màn hình')) return 'tv';
+    return 'devices'; // default icon
+  };
+
+  // Get status color
+  const getStatusColor = (status) => {
+    const colors = {
+      WORKING: 'text-green-600',
+      BROKEN: 'text-red-600',
+      MAINTENANCE: 'text-yellow-600'
+    };
+    return colors[status] || 'text-gray-600';
+  };
+
+  const getStatusText = (status) => {
+    const texts = {
+      WORKING: 'Available',
+      BROKEN: 'Broken',
+      MAINTENANCE: 'Maintenance'
+    };
+    return texts[status] || status;
   };
 
   // Get room images - use images from room data if available
@@ -273,28 +328,66 @@ const ClassroomDetails = () => {
 
             {/* Equipment Section */}
             <section>
-              <h3 className="text-xl font-bold mb-4">Technical Equipment</h3>
+              <h3 className="text-xl font-bold mb-4">
+                Technical Equipment 
+                {!loadingEquipment && equipment.length > 0 && (
+                  <span className="ml-2 text-sm text-slate-500 font-normal">
+                    ({equipment.length} items)
+                  </span>
+                )}
+              </h3>
               <div className="bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {(room.equipment || []).map((eq, idx) => {
-                    const equipIcon = equipmentIcons[eq];
-                    if (!equipIcon) return null;
-                    return (
-                      <li key={idx} className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg"><span className="material-symbols-outlined">{equipIcon.icon}</span></div>
-                          <span className="font-medium">{equipIcon.title}</span>
+                {loadingEquipment ? (
+                  <div className="p-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-sm text-slate-500">Loading equipment...</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {equipment.length > 0 ? (
+                      equipment.map((eq, index) => (
+                        <li key={eq._id || index} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                              <span className="material-symbols-outlined">{getEquipmentIcon(eq.name)}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">{eq.name}</span>
+                              {eq.quantity > 1 && (
+                                <span className="ml-2 text-xs text-slate-500">x{eq.quantity}</span>
+                              )}
+                              {eq.description && (
+                                <p className="text-xs text-slate-500 mt-1">{eq.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`text-sm font-medium ${getStatusColor(eq.status)}`}>
+                            {getStatusText(eq.status)}
+                          </span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="p-8 text-center">
+                        <div className="flex flex-col items-center text-slate-500">
+                          <span className="material-symbols-outlined text-5xl mb-3 opacity-50">devices_other</span>
+                          <p className="font-medium mb-1">No equipment available for this room</p>
+                          <div className="text-xs mt-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-3">
+                            <p className="font-mono">{room.room_code} - {room.room_name}</p>
+                          </div>
+                          {(user?.role === 'ADMINISTRATOR' || user?.role === 'FACILITY_MANAGER') && (
+                            <button
+                              onClick={() => navigate('/equipment-management')}
+                              className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-base">add</span>
+                              Add Equipment to This Room
+                            </button>
+                          )}
                         </div>
-                        <span className="text-sm text-slate-500">Available</span>
                       </li>
-                    );
-                  })}
-                  {(!room.equipment || room.equipment.length === 0) && (
-                    <li className="p-4 text-center text-slate-500">
-                      No equipment information available
-                    </li>
-                  )}
-                </ul>
+                    )}
+                  </ul>
+                )}
               </div>
             </section>
           </div>
@@ -333,23 +426,29 @@ const ClassroomDetails = () => {
                       <label className="block">
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Start Time</span>
                         <div className="mt-1 relative">
-                          <input 
+                          <select 
                             className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
-                            type="time" 
                             value={bookingData.startTime}
                             onChange={(e) => setBookingData(prev => ({ ...prev, startTime: e.target.value }))}
-                          />
+                          >
+                            {timeOptions.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
                         </div>
                       </label>
                       <label className="block">
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">End Time</span>
                         <div className="mt-1 relative">
-                          <input 
+                          <select 
                             className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
-                            type="time" 
                             value={bookingData.endTime}
                             onChange={(e) => setBookingData(prev => ({ ...prev, endTime: e.target.value }))}
-                          />
+                          >
+                            {timeOptions.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
                         </div>
                       </label>
                     </div>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getMyBookings } from "../services/bookingService";
 import Header from "../components/layout/Header";
 import { useAuthContext } from "../context/AuthContext";
+import { formatTime12Hour } from "../utils/timeFormat";
 
 // Parse "HH:mm" into total minutes from midnight
 const parseTime = (timeStr) => {
@@ -124,8 +125,8 @@ const BookingCard = ({ booking, now }) => {
             />
           </div>
           <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>{booking.start_time}</span>
-            <span>{booking.end_time}</span>
+            <span>{formatTime12Hour(booking.start_time)}</span>
+            <span>{formatTime12Hour(booking.end_time)}</span>
           </div>
         </div>
 
@@ -178,7 +179,7 @@ const BookingCard = ({ booking, now }) => {
           <div className="bg-blue-50 rounded-lg p-3">
             <p className="text-gray-500 text-xs mb-1">Time Slot</p>
             <p className="font-medium text-gray-800">
-              {booking.start_time} – {booking.end_time}
+              {formatTime12Hour(booking.start_time)} – {formatTime12Hour(booking.end_time)}
             </p>
           </div>
           <div className="bg-blue-50 rounded-lg p-3">

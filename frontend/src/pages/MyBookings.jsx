@@ -11,6 +11,7 @@ import Button from "../components/common/Button";
 import Header from "../components/layout/Header";
 import { useAuthContext } from "../context/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
+import { formatTime12Hour } from "../utils/timeFormat";
 
 const MyBookings = () => {
   const { user } = useAuthContext();
@@ -248,7 +249,7 @@ const MyBookings = () => {
                         {formatDate(booking.date)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-800 font-medium">
-                        {booking.start_time} - {booking.end_time}
+                        {formatTime12Hour(booking.start_time)} - {formatTime12Hour(booking.end_time)}
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={getStatusBadge(booking.status)}>
@@ -358,7 +359,7 @@ const MyBookings = () => {
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Time:</span>
                     <span className="text-sm font-semibold text-gray-900">
-                      {qrData.start_time} - {qrData.end_time}
+                      {formatTime12Hour(qrData.start_time)} - {formatTime12Hour(qrData.end_time)}
                     </span>
                   </div>
                 </div>
