@@ -18,15 +18,15 @@ console.log(
 );
 
 const connectDB = require("./config/db");
-const initDatabase = require("./config/init");
-const { startBookingReminderJob } = require("./jobs/bookingReminder");
+const {
+  startBookingReminderScheduler,
+} = require("./services/bookingReminderService");
 
 const app = express();
 
 // Connect to database and initialize
 connectDB()
   .then(async () => {
-    await initDatabase();
     console.log("Database initialized");
   })
   .catch((err) => {
@@ -35,11 +35,13 @@ connectDB()
   });
 
 // Middleware
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 app.use(express.json({ limit: "50mb" })); // Increase limit for base64 images
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
@@ -55,6 +57,7 @@ const equipmentRoutes = require("./routes/equipmentRoutes");
 const holidayRoutes = require("./routes/holidayRoutes");
 const auditLogRoutes = require("./routes/auditLogRoutes");
 const facilityIssueRoutes = require("./routes/facilityIssueRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
@@ -67,6 +70,7 @@ app.use("/api/equipment", equipmentRoutes);
 app.use("/api/holidays", holidayRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/facility-issues", facilityIssueRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {
@@ -93,6 +97,6 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
 
-  // Start cron job for booking reminders
-  startBookingReminderJob();
+  // Start scheduled booking reminder task
+  startBookingReminderScheduler();
 });

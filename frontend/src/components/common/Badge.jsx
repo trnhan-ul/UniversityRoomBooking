@@ -3,12 +3,12 @@ import React from 'react';
 const Badge = ({ children, variant = 'default', className = '' }) => {
   const variants = {
     default: 'bg-gray-100 text-gray-700',
-    pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    confirmed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    cancelled: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-    'checked-in': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+    pending: 'bg-yellow-100 text-yellow-700',
+    approved: 'bg-green-100 text-green-700',
+    confirmed: 'bg-green-100 text-green-700',
+    rejected: 'bg-red-100 text-red-700',
+    cancelled: 'bg-gray-100 text-gray-700',
+    'checked-in': 'bg-blue-100 text-blue-700'
   };
 
   return (

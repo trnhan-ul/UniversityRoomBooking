@@ -5,6 +5,8 @@ import { AuthProvider } from './context/AuthContext';
 import App from './App';
 import './index.css';
 
+document.documentElement.classList.remove('dark');
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

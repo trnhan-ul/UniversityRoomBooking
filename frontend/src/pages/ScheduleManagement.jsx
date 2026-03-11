@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import moment from 'moment';
 import { getCalendarData } from '../services/scheduleService';
 import { getRooms, blockTimeSlot, unblockTimeSlot } from '../services/roomService';
@@ -306,7 +306,7 @@ const ScheduleManagement = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading schedule...</p>
+          <p className="text-slate-600">Loading schedule...</p>
         </div>
       </div>
     );
@@ -316,11 +316,11 @@ const ScheduleManagement = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="material-symbols-outlined text-red-500 text-3xl">error</span>
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Unable to Load Schedule</h3>
-          <p className="text-slate-600 dark:text-slate-400 mb-4">{error}</p>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Unable to Load Schedule</h3>
+          <p className="text-slate-600 mb-4">{error}</p>
           <button
             onClick={fetchCalendarData}
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
@@ -333,14 +333,14 @@ const ScheduleManagement = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
+    <div className="flex-1 flex flex-col overflow-hidden bg-background-light">
       {/* Page Header */}
-      <header className="flex flex-wrap items-center justify-between gap-4 p-6 lg:p-8 border-b border-[#cfdbe7] dark:border-slate-800 bg-white dark:bg-background-dark">
+      <header className="flex flex-wrap items-center justify-between gap-4 p-6 lg:p-8 border-b border-[#cfdbe7] bg-white">
         <div className="flex flex-col gap-1">
-          <h2 className="text-[#0d141b] dark:text-white text-3xl font-black leading-tight tracking-tight">
+          <h2 className="text-[#0d141b] text-3xl font-black leading-tight tracking-tight">
             Schedule Management
           </h2>
-          <p className="text-[#4c6c9a] dark:text-slate-400 text-sm">View and manage room bookings and blocked time slots</p>
+          <p className="text-[#4c6c9a] text-sm">View and manage room bookings and blocked time slots</p>
         </div>
 
         {/* Controls */}
@@ -356,7 +356,7 @@ const ScheduleManagement = () => {
           <select
             value={selectedRoom}
             onChange={(e) => setSelectedRoom(e.target.value)}
-            className="px-4 py-2 bg-background-light dark:bg-slate-800 border border-[#cfdbe7] dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm transition-all dark:text-white"
+            className="px-4 py-2 bg-background-light border border-[#cfdbe7] rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm transition-all"
           >
             <option value="">All Rooms</option>
             {rooms.map((room) => (
@@ -369,7 +369,7 @@ const ScheduleManagement = () => {
           <select
             value={bookingStatus}
             onChange={(e) => setBookingStatus(e.target.value)}
-            className="px-4 py-2 bg-background-light dark:bg-slate-800 border border-[#cfdbe7] dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm transition-all dark:text-white"
+            className="px-4 py-2 bg-background-light border border-[#cfdbe7] rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm transition-all"
           >
             <option value="ALL">All Bookings</option>
             <option value="APPROVED">Approved</option>
@@ -383,22 +383,22 @@ const ScheduleManagement = () => {
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Mini Calendar Sidebar */}
-        <aside className="w-80 border-r border-[#cfdbe7] dark:border-slate-800 bg-white dark:bg-slate-900 p-6 overflow-y-auto">
+        <aside className="w-80 border-r border-[#cfdbe7] bg-white p-6 overflow-y-auto">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-[#0d141b] dark:text-white">
+              <h3 className="text-sm font-bold text-[#0d141b]">
                 {selectedDate.format('MMMM YYYY')}
               </h3>
               <div className="flex gap-1">
                 <button
                   onClick={() => setSelectedDate(moment(selectedDate).subtract(1, 'month'))}
-                  className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-1 rounded hover:bg-slate-100 transition-colors"
                 >
                   <span className="material-symbols-outlined text-sm text-[#4c6c9a]">chevron_left</span>
                 </button>
                 <button
                   onClick={() => setSelectedDate(moment(selectedDate).add(1, 'month'))}
-                  className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-1 rounded hover:bg-slate-100 transition-colors"
                 >
                   <span className="material-symbols-outlined text-sm text-[#4c6c9a]">chevron_right</span>
                 </button>
@@ -425,10 +425,10 @@ const ScheduleManagement = () => {
                     onClick={() => handleDateSelect(day)}
                     className={`h-8 flex items-center justify-center text-xs rounded-lg transition-all ${
                       !isCurrentMonth
-                        ? 'text-slate-300 dark:text-slate-700'
+                        ? 'text-slate-300'
                         : isSelected
                         ? 'bg-primary text-white font-bold'
-                        : 'text-[#0d141b] dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                        : 'text-[#0d141b] hover:bg-slate-100'
                     }`}
                   >
                     {day.format('D')}
@@ -439,39 +439,39 @@ const ScheduleManagement = () => {
           </div>
 
           {/* Legend */}
-          <div className="pt-6 border-t border-[#cfdbe7] dark:border-slate-800">
+          <div className="pt-6 border-t border-[#cfdbe7]">
             <h4 className="text-xs font-bold text-[#4c6c9a] mb-3">Booking Status</h4>
             <div className="space-y-2 mb-4">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-green-500"></span>
-                <span className="text-xs text-[#0d141b] dark:text-white">Approved</span>
+                <span className="text-xs text-[#0d141b]">Approved</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-yellow-500"></span>
-                <span className="text-xs text-[#0d141b] dark:text-white">Pending</span>
+                <span className="text-xs text-[#0d141b]">Pending</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-red-500"></span>
-                <span className="text-xs text-[#0d141b] dark:text-white">Rejected</span>
+                <span className="text-xs text-[#0d141b]">Rejected</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-gray-500"></span>
-                <span className="text-xs text-[#0d141b] dark:text-white">Cancelled</span>
+                <span className="text-xs text-[#0d141b]">Cancelled</span>
               </div>
             </div>
-            <h4 className="text-xs font-bold text-[#4c6c9a] mb-3 pt-2 border-t border-[#cfdbe7] dark:border-slate-800">Schedule Types</h4>
+            <h4 className="text-xs font-bold text-[#4c6c9a] mb-3 pt-2 border-t border-[#cfdbe7]">Schedule Types</h4>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-red-500"></span>
-                <span className="text-xs text-[#0d141b] dark:text-white">Blocked</span>
+                <span className="text-xs text-[#0d141b]">Blocked</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-orange-500"></span>
-                <span className="text-xs text-[#0d141b] dark:text-white">Maintenance</span>
+                <span className="text-xs text-[#0d141b]">Maintenance</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-purple-500"></span>
-                <span className="text-xs text-[#0d141b] dark:text-white">Event</span>
+                <span className="text-xs text-[#0d141b]">Event</span>
               </div>
             </div>
           </div>
@@ -480,30 +480,30 @@ const ScheduleManagement = () => {
         {/* Calendar Section */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Week Navigation */}
-          <section className="px-6 lg:px-8 py-4 bg-white dark:bg-background-dark border-b border-[#cfdbe7] dark:border-slate-800">
+          <section className="px-6 lg:px-8 py-4 bg-white border-b border-[#cfdbe7]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button
                   onClick={goToToday}
-                  className="px-4 py-2 rounded-lg border border-[#cfdbe7] dark:border-slate-700 text-[#0d141b] dark:text-white text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 rounded-lg border border-[#cfdbe7] text-[#0d141b] text-sm font-bold hover:bg-slate-50 transition-colors"
                 >
                   Today
                 </button>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={goToPreviousWeek}
-                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
                   >
                     <span className="material-symbols-outlined text-[#4c6c9a]">chevron_left</span>
                   </button>
                   <button
                     onClick={goToNextWeek}
-                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
                   >
                     <span className="material-symbols-outlined text-[#4c6c9a]">chevron_right</span>
                   </button>
                 </div>
-                <h3 className="text-xl font-bold text-[#0d141b] dark:text-white">
+                <h3 className="text-xl font-bold text-[#0d141b]">
                   {startOfWeek.format('MMMM YYYY')}
                 </h3>
               </div>
@@ -515,11 +515,11 @@ const ScheduleManagement = () => {
             {events.length === 0 && !loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center p-8">
-                  <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="material-symbols-outlined text-slate-400 text-3xl">event_busy</span>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No Events Found</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm">
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">No Events Found</h3>
+                  <p className="text-slate-600 text-sm">
                     There are no bookings or schedules for this week.
                     {bookingStatus !== 'ALL' && ' Try changing the filter.'}
                   </p>
@@ -529,12 +529,12 @@ const ScheduleManagement = () => {
               <div className="h-full">
                 <div className="inline-block min-w-full h-full">
                   {/* Calendar Header - Days of Week */}
-                  <div className="grid grid-cols-8 border-b border-[#cfdbe7] dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
-                    <div className="w-20 p-4 border-r border-[#cfdbe7] dark:border-slate-800"></div>
+                  <div className="grid grid-cols-8 border-b border-[#cfdbe7] sticky top-0 bg-white z-10">
+                    <div className="w-20 p-4 border-r border-[#cfdbe7]"></div>
                     {weekDays.map((day, index) => (
                       <div
                         key={index}
-                        className={`flex-1 p-3 text-center border-r border-[#cfdbe7] dark:border-slate-800 ${
+                        className={`flex-1 p-3 text-center border-r border-[#cfdbe7] ${
                           day.isSame(selectedDate, 'day') ? 'bg-primary/5' : ''
                         }`}
                       >
@@ -544,7 +544,7 @@ const ScheduleManagement = () => {
                         <div className={`text-lg font-bold mx-auto ${
                           day.isSame(selectedDate, 'day')
                             ? 'bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center'
-                            : 'text-[#0d141b] dark:text-white'
+                            : 'text-[#0d141b]'
                         }`}>
                           {day.format('D')}
                         </div>
@@ -557,11 +557,11 @@ const ScheduleManagement = () => {
                   {timeSlots.map((timeSlot, timeIndex) => (
                     <div
                       key={timeSlot}
-                      className="grid grid-cols-8 border-b border-[#cfdbe7] dark:border-slate-800"
+                      className="grid grid-cols-8 border-b border-[#cfdbe7]"
                       style={{ height: '60px' }}
                     >
                       {/* Time Label */}
-                      <div className="w-20 p-2 border-r border-[#cfdbe7] dark:border-slate-800 flex items-start justify-end pr-3">
+                      <div className="w-20 p-2 border-r border-[#cfdbe7] flex items-start justify-end pr-3">
                         <span className="text-xs font-semibold text-[#4c6c9a]">{timeSlot}</span>
                       </div>
 
@@ -569,10 +569,10 @@ const ScheduleManagement = () => {
                       {weekDays.map((day, dayIndex) => (
                         <div
                           key={dayIndex}
-                          className={`flex-1 relative border-r border-[#cfdbe7] dark:border-slate-800 transition-colors ${
+                          className={`flex-1 relative border-r border-[#cfdbe7] transition-colors ${
                             day.isSame(selectedDate, 'day') 
                               ? 'bg-primary/5' 
-                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                              : 'hover:bg-slate-50'
                           }`}
                         >
                           {timeIndex === 0 && getEventsForDay(day).map((event) => {
@@ -624,13 +624,13 @@ const ScheduleManagement = () => {
       {/* Event Detail Modal */}
       {showDetailModal && selectedEvent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDetailModal(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#cfdbe7] dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#cfdbe7]" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-[#cfdbe7] dark:border-slate-800 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-[#0d141b] dark:text-white">Event Details</h3>
+            <div className="sticky top-0 bg-white border-b border-[#cfdbe7] px-6 py-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-[#0d141b]">Event Details</h3>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="text-[#4c6c9a] hover:text-[#0d141b] dark:hover:text-white transition-colors"
+                className="text-[#4c6c9a] hover:text-[#0d141b] transition-colors"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -645,7 +645,7 @@ const ScheduleManagement = () => {
                   </span>
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-lg font-bold text-[#0d141b] dark:text-white">
+                  <h4 className="text-lg font-bold text-[#0d141b]">
                     {selectedEvent.title}
                   </h4>
                   <p className="text-sm text-[#4c6c9a] mt-1">
@@ -655,21 +655,21 @@ const ScheduleManagement = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-4">
-                <div className="bg-background-light dark:bg-slate-800 p-4 rounded-lg">
+                <div className="bg-background-light p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="material-symbols-outlined text-sm text-primary">schedule</span>
                     <span className="text-xs font-semibold text-[#4c6c9a]">Start Time</span>
                   </div>
-                  <p className="text-sm font-bold text-[#0d141b] dark:text-white">
+                  <p className="text-sm font-bold text-[#0d141b]">
                     {moment(selectedEvent.start).format('h:mm A')}
                   </p>
                 </div>
-                <div className="bg-background-light dark:bg-slate-800 p-4 rounded-lg">
+                <div className="bg-background-light p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="material-symbols-outlined text-sm text-primary">schedule</span>
                     <span className="text-xs font-semibold text-[#4c6c9a]">End Time</span>
                   </div>
-                  <p className="text-sm font-bold text-[#0d141b] dark:text-white">
+                  <p className="text-sm font-bold text-[#0d141b]">
                     {moment(selectedEvent.end).format('h:mm A')}
                   </p>
                 </div>
@@ -677,8 +677,8 @@ const ScheduleManagement = () => {
 
               <div className="pt-2">
                 <label className="block text-xs font-semibold text-[#4c6c9a] mb-2">Room</label>
-                <div className="bg-background-light dark:bg-slate-800 p-4 rounded-lg">
-                  <p className="text-sm font-bold text-[#0d141b] dark:text-white">
+                <div className="bg-background-light p-4 rounded-lg">
+                  <p className="text-sm font-bold text-[#0d141b]">
                     {selectedEvent.room?.room_code} - {selectedEvent.room?.room_name}
                   </p>
                   <p className="text-xs text-[#4c6c9a] mt-1">
@@ -694,12 +694,12 @@ const ScheduleManagement = () => {
                     <label className="block text-xs font-semibold text-[#4c6c9a] mb-2">Booking Status</label>
                     <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold ${
                       selectedEvent.status === 'APPROVED'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        ? 'bg-green-100 text-green-700'
                         : selectedEvent.status === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        ? 'bg-yellow-100 text-yellow-700'
                         : selectedEvent.status === 'REJECTED'
-                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-gray-100 text-gray-700'
                     }`}>
                       {selectedEvent.status}
                     </span>
@@ -707,12 +707,12 @@ const ScheduleManagement = () => {
 
                   <div>
                     <label className="block text-xs font-semibold text-[#4c6c9a] mb-2">Booked By</label>
-                    <div className="bg-background-light dark:bg-slate-800 p-4 rounded-lg flex items-center gap-3">
+                    <div className="bg-background-light p-4 rounded-lg flex items-center gap-3">
                       <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold">
                         {selectedEvent.user?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-[#0d141b] dark:text-white">
+                        <p className="text-sm font-bold text-[#0d141b]">
                           {selectedEvent.user?.full_name}
                         </p>
                         <p className="text-xs text-[#4c6c9a]">{selectedEvent.user?.email}</p>
@@ -723,8 +723,8 @@ const ScheduleManagement = () => {
                   {selectedEvent.purpose && (
                     <div>
                       <label className="block text-xs font-semibold text-[#4c6c9a] mb-2">Purpose</label>
-                      <div className="bg-background-light dark:bg-slate-800 p-4 rounded-lg">
-                        <p className="text-sm text-[#0d141b] dark:text-white">{selectedEvent.purpose}</p>
+                      <div className="bg-background-light p-4 rounded-lg">
+                        <p className="text-sm text-[#0d141b]">{selectedEvent.purpose}</p>
                       </div>
                     </div>
                   )}
@@ -732,9 +732,9 @@ const ScheduleManagement = () => {
                   {selectedEvent.attendees && selectedEvent.attendees > 0 && (
                     <div>
                       <label className="block text-xs font-semibold text-[#4c6c9a] mb-2">Expected Attendees</label>
-                      <div className="bg-background-light dark:bg-slate-800 p-4 rounded-lg flex items-center gap-2">
+                      <div className="bg-background-light p-4 rounded-lg flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary">group</span>
-                        <p className="text-sm font-bold text-[#0d141b] dark:text-white">
+                        <p className="text-sm font-bold text-[#0d141b]">
                           {selectedEvent.attendees} people
                         </p>
                       </div>
@@ -749,10 +749,10 @@ const ScheduleManagement = () => {
                     <label className="block text-xs font-semibold text-[#4c6c9a] mb-2">Status</label>
                     <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold ${
                       selectedEvent.status === 'BLOCKED'
-                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        ? 'bg-red-100 text-red-700'
                         : selectedEvent.status === 'MAINTENANCE'
-                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                        : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'bg-purple-100 text-purple-700'
                     }`}>
                       {selectedEvent.status}
                     </span>
@@ -761,8 +761,8 @@ const ScheduleManagement = () => {
                   {selectedEvent.reason && (
                     <div>
                       <label className="block text-xs font-semibold text-[#4c6c9a] mb-2">Reason</label>
-                      <div className="bg-background-light dark:bg-slate-800 p-4 rounded-lg">
-                        <p className="text-sm text-[#0d141b] dark:text-white">{selectedEvent.reason}</p>
+                      <div className="bg-background-light p-4 rounded-lg">
+                        <p className="text-sm text-[#0d141b]">{selectedEvent.reason}</p>
                       </div>
                     </div>
                   )}
@@ -771,12 +771,12 @@ const ScheduleManagement = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-[#cfdbe7] dark:border-slate-800 px-6 py-4">
+            <div className="border-t border-[#cfdbe7] px-6 py-4">
               {selectedEvent?.type === 'blocked' && canUnblock() ? (
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDetailModal(false)}
-                    className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-600 rounded-lg font-semibold hover:bg-slate-50 transition-colors"
                   >
                     Close
                   </button>
@@ -786,7 +786,7 @@ const ScheduleManagement = () => {
                     className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${
                       canUnblockEvent(selectedEvent)
                         ? 'bg-red-600 hover:bg-red-700 text-white'
-                        : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                     title={!canUnblockEvent(selectedEvent) ? 'Cannot unblock time slots in the past' : 'Unblock this time slot'}
                   >
@@ -799,7 +799,7 @@ const ScheduleManagement = () => {
               ) : (
                 <button
                   onClick={() => setShowDetailModal(false)}
-                  className="w-full px-4 py-2.5 bg-background-light dark:bg-slate-800 text-[#0d141b] dark:text-white rounded-lg font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="w-full px-4 py-2.5 bg-background-light text-[#0d141b] rounded-lg font-semibold hover:bg-slate-200 transition-colors"
                 >
                   Close
                 </button>
@@ -812,10 +812,10 @@ const ScheduleManagement = () => {
       {/* Block Time Modal */}
       {showBlockModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Block Time Slot</h2>
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Block Time Slot</h2>
               <button
                 onClick={() => {
                   setShowBlockModal(false);
@@ -830,7 +830,7 @@ const ScheduleManagement = () => {
                   setConflicts(null);
                   setErrorCode(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -838,22 +838,22 @@ const ScheduleManagement = () => {
 
             {/* Conflict Alerts */}
             {errorCode === 'APPROVED_BOOKINGS_EXIST' && (
-              <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 mt-0.5">error</span>
+                  <span className="material-symbols-outlined text-red-600 mt-0.5">error</span>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-red-900 dark:text-red-300 mb-2">Cannot Block Time Slot</h3>
-                    <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+                    <h3 className="font-semibold text-red-900 mb-2">Cannot Block Time Slot</h3>
+                    <p className="text-sm text-red-700 mb-3">
                       The following approved bookings exist. You must contact users to reschedule before blocking this time.
                     </p>
                     <div className="space-y-2">
                       {conflicts?.approved?.map((booking, idx) => (
-                        <div key={idx} className="bg-white dark:bg-slate-900 p-3 rounded border border-red-200 dark:border-red-800">
-                          <div className="text-sm text-gray-900 dark:text-white">
+                        <div key={idx} className="bg-white p-3 rounded border border-red-200">
+                          <div className="text-sm text-gray-900">
                             <span className="font-semibold">{booking.user}</span> ({booking.email})
                           </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            {booking.time} • {booking.purpose}
+                          <div className="text-xs text-gray-600 mt-1">
+                            {booking.time} â€¢ {booking.purpose}
                           </div>
                         </div>
                       ))}
@@ -864,22 +864,22 @@ const ScheduleManagement = () => {
             )}
 
             {errorCode === 'PENDING_BOOKINGS_EXIST' && (
-              <div className="mx-6 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <div className="mx-6 mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 mt-0.5">warning</span>
+                  <span className="material-symbols-outlined text-yellow-600 mt-0.5">warning</span>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">Pending Bookings Found</h3>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-3">
+                    <h3 className="font-semibold text-yellow-900 mb-2">Pending Bookings Found</h3>
+                    <p className="text-sm text-yellow-700 mb-3">
                       The following pending bookings will be automatically rejected if you proceed:
                     </p>
                     <div className="space-y-2">
                       {conflicts?.pending?.map((booking, idx) => (
-                        <div key={idx} className="bg-white dark:bg-slate-900 p-3 rounded border border-yellow-200 dark:border-yellow-800">
-                          <div className="text-sm text-gray-900 dark:text-white">
+                        <div key={idx} className="bg-white p-3 rounded border border-yellow-200">
+                          <div className="text-sm text-gray-900">
                             <span className="font-semibold">{booking.user}</span> ({booking.email})
                           </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            {booking.time} • {booking.purpose}
+                          <div className="text-xs text-gray-600 mt-1">
+                            {booking.time} â€¢ {booking.purpose}
                           </div>
                         </div>
                       ))}
@@ -900,14 +900,14 @@ const ScheduleManagement = () => {
             <form onSubmit={handleBlockSubmit} className="p-6 space-y-4">
               {/* Room Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Room <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="room_id"
                   value={blockFormData.room_id}
                   onChange={handleBlockChange}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   required
                 >
                   <option value="">Select a room</option>
@@ -921,7 +921,7 @@ const ScheduleManagement = () => {
 
               {/* Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -930,7 +930,7 @@ const ScheduleManagement = () => {
                   value={blockFormData.date}
                   onChange={handleBlockChange}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   required
                 />
               </div>
@@ -938,7 +938,7 @@ const ScheduleManagement = () => {
               {/* Time Range */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Start Time <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -946,12 +946,12 @@ const ScheduleManagement = () => {
                     name="start_time"
                     value={blockFormData.start_time}
                     onChange={handleBlockChange}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     End Time <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -959,7 +959,7 @@ const ScheduleManagement = () => {
                     name="end_time"
                     value={blockFormData.end_time}
                     onChange={handleBlockChange}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     required
                   />
                 </div>
@@ -967,14 +967,14 @@ const ScheduleManagement = () => {
 
               {/* Block Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Block Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="status"
                   value={blockFormData.status}
                   onChange={handleBlockChange}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   required
                 >
                   <option value="BLOCKED">Blocked</option>
@@ -985,7 +985,7 @@ const ScheduleManagement = () => {
 
               {/* Reason */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Reason <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -994,7 +994,7 @@ const ScheduleManagement = () => {
                   onChange={handleBlockChange}
                   rows="3"
                   placeholder="Explain why this time slot needs to be blocked..."
-                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none dark:text-white"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                   required
                 />
               </div>
@@ -1017,7 +1017,7 @@ const ScheduleManagement = () => {
                       setConflicts(null);
                       setErrorCode(null);
                     }}
-                    className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                    className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1041,3 +1041,4 @@ const ScheduleManagement = () => {
 };
 
 export default ScheduleManagement;
+

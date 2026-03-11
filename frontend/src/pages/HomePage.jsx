@@ -19,10 +19,14 @@ const StudentDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-blue-600 p-2 rounded-lg text-white">
-                <span className="material-symbols-outlined text-2xl">school</span>
+                <span className="material-symbols-outlined text-2xl">
+                  school
+                </span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Student Dashboard</h1>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Student Dashboard
+                </h1>
                 <p className="text-sm text-gray-500">Room Booking System</p>
               </div>
             </div>
@@ -41,15 +45,21 @@ const StudentDashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* User Info Card */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Welcome Back!</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Welcome Back!
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Full Name</p>
-              <p className="text-base font-medium text-gray-900">{user?.full_name}</p>
+              <p className="text-base font-medium text-gray-900">
+                {user?.full_name}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Email</p>
-              <p className="text-base font-medium text-gray-900">{user?.email}</p>
+              <p className="text-base font-medium text-gray-900">
+                {user?.email}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Role</p>
@@ -73,41 +83,42 @@ const StudentDashboard = () => {
             title="Rooms"
             description="View all available classrooms"
             color="blue"
-            onClick={() => navigate('/search-classrooms')}
+            onClick={() => navigate("/search-classrooms")}
           />
           <FeatureCard
             icon="book_online"
             title="Book Room"
             description="Create a new room booking request"
             color="green"
-            onClick={() => navigate('/create-booking')}
+            onClick={() => navigate("/create-booking")}
           />
           <FeatureCard
             icon="calendar_month"
             title="My Bookings"
             description="View and manage your booking requests"
             color="purple"
-            onClick={() => navigate('/my-bookings')}
+            onClick={() => navigate("/my-bookings")}
           />
           <FeatureCard
             icon="report_problem"
             title="Report Facility"
             description="Report facility issues or equipment damage"
             color="orange"
-            onClick={() => navigate('/report-issue')}
+            onClick={() => navigate("/report-issue")}
           />
           <FeatureCard
             icon="notifications"
             title="Notifications"
             description="View booking status notifications"
             color="red"
+            onClick={() => navigate("/notifications")}
           />
           <FeatureCard
             icon="timer"
             title="View Remaining Time"
             description="Check remaining time for your active bookings"
             color="teal"
-            onClick={() => navigate('/remaining-time')}
+            onClick={() => navigate("/remaining-time")}
           />
         </div>
       </main>

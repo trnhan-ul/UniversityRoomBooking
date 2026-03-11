@@ -1,14 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import NotificationBell from '../common/NotificationBell';
-import { useAuthContext } from '../../context/AuthContext';
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import NotificationBell from "../common/NotificationBell";
+import { useAuthContext } from "../../context/AuthContext";
 
 const Header = ({ user: userProp }) => {
   const { user: ctxUser, logout } = useAuthContext();
   const user = userProp || ctxUser;
+  const location = useLocation();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const navLinkClassName = ({ isActive }) => {
+    const isNotificationPage = location.pathname === "/notifications";
+    const shouldHighlightBookings = isActive && !isNotificationPage;
+
+    return shouldHighlightBookings
+      ? "text-blue-600 text-sm font-bold"
+      : "text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors";
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -17,19 +27,19 @@ const Header = ({ user: userProp }) => {
         setDropdownOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleProfile = () => {
     setDropdownOpen(false);
-    navigate('/my-profile');
+    navigate("/my-profile");
   };
 
   const handleLogout = () => {
     setDropdownOpen(false);
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
@@ -42,15 +52,15 @@ const Header = ({ user: userProp }) => {
           <h2 className="text-gray-900 text-lg font-bold">UniBooking SaaS</h2>
         </div>
         <nav className="flex items-center gap-9">
-          <a className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors" href="/dashboard">
+          <NavLink className={navLinkClassName} to="/dashboard">
             Dashboard
-          </a>
-          <a className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors" href="/create-booking">
+          </NavLink>
+          <NavLink className={navLinkClassName} to="/create-booking">
             Book a Room
-          </a>
-          <a className="text-blue-600 text-sm font-bold" href="/my-bookings">
+          </NavLink>
+          <NavLink className={navLinkClassName} to="/my-bookings">
             My Bookings
-          </a>
+          </NavLink>
         </nav>
       </div>
       <div className="flex items-center gap-4">
@@ -60,7 +70,9 @@ const Header = ({ user: userProp }) => {
             placeholder="Global search..."
             className="w-64 pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm"
           />
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            🔍
+          </span>
         </div>
         <NotificationBell />
 
@@ -70,29 +82,43 @@ const Header = ({ user: userProp }) => {
             onClick={() => setDropdownOpen((o) => !o)}
             className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
-            {user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
+            {user?.full_name?.charAt(0)?.toUpperCase() || "U"}
           </button>
 
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
               {/* User info */}
               <div className="px-4 py-3 border-b border-gray-100">
-                <p className="text-sm font-semibold text-gray-900 truncate">{user?.full_name || 'User'}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.email || ''}</p>
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {user?.full_name || "User"}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.email || ""}
+                </p>
               </div>
               {/* Actions */}
               <button
                 onClick={handleProfile}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                <span className="material-symbols-outlined text-gray-500" style={{ fontSize: 18 }}>person</span>
+                <span
+                  className="material-symbols-outlined text-gray-500"
+                  style={{ fontSize: 18 }}
+                >
+                  person
+                </span>
                 My Profile
               </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
               >
-                <span className="material-symbols-outlined text-red-500" style={{ fontSize: 18 }}>logout</span>
+                <span
+                  className="material-symbols-outlined text-red-500"
+                  style={{ fontSize: 18 }}
+                >
+                  logout
+                </span>
                 Logout
               </button>
             </div>
