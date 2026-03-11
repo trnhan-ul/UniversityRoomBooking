@@ -471,10 +471,179 @@ const adminPasswordResetTemplate = (user, newPassword) => {
   `;
 };
 
+/**
+ * Template email thông báo thay đổi thông tin user
+ * @param {Object} user - User object {email, full_name}
+ * @param {Object} changes - Object chứa các thay đổi {field: {oldValue, newValue}}
+ * @returns {string} HTML string
+ */
+const profileUpdateNotificationTemplate = (user, changes) => {
+  const { email, full_name } = user;
+
+  // Map field names to display names
+  const fieldDisplayNames = {
+    full_name: "Full Name",
+    phone_number: "Phone Number",
+    role: "Role",
+    status: "Account Status",
+    avatar_url: "Avatar",
+  };
+
+  const roleDisplayNames = {
+    STUDENT: "Student",
+    LECTURER: "Lecturer",
+    FACILITY_MANAGER: "Facility Manager",
+    ADMINISTRATOR: "Administrator",
+  };
+
+  const statusDisplayNames = {
+    ACTIVE: "Active",
+    INACTIVE: "Inactive",
+  };
+
+  // Generate change rows HTML
+  const changeRows = Object.entries(changes)
+    .map(([field, change]) => {
+      const displayName = fieldDisplayNames[field] || field;
+      let oldValue = change.oldValue || "—";
+      let newValue = change.newValue || "—";
+
+      // Format role values
+      if (field === "role") {
+        oldValue = roleDisplayNames[oldValue] || oldValue;
+        newValue = roleDisplayNames[newValue] || newValue;
+      }
+
+      // Format status values
+      if (field === "status") {
+        oldValue = statusDisplayNames[oldValue] || oldValue;
+        newValue = statusDisplayNames[newValue] || newValue;
+      }
+
+      // Don't show full avatar URLs
+      if (field === "avatar_url") {
+        oldValue = oldValue === "—" ? "No avatar" : "Avatar set";
+        newValue = newValue === "—" ? "Avatar removed" : "Avatar updated";
+      }
+
+      return `
+        <tr>
+          <td style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb;">
+            <div style="color: #6b7280; font-size: 13px; font-weight: 600; margin-bottom: 6px;">${displayName}</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="flex: 1;">
+                <div style="color: #ef4444; font-size: 14px; text-decoration: line-through;">${oldValue}</div>
+              </div>
+              <div style="color: #9ca3af; font-size: 20px;">→</div>
+              <div style="flex: 1;">
+                <div style="color: #10b981; font-size: 15px; font-weight: 600;">${newValue}</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Profile Updated | UniBooking</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px; background-color: #f5f5f5;">
+        <tr>
+          <td align="center">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 48px 32px; text-align: center;">
+                  <div style="margin: 0 auto 24px; width: 100px; height: 100px; background-color: rgba(255,255,255,0.2); border-radius: 50%; display: inline-block;">
+                    <table width="100" height="100" cellpadding="0" cellspacing="0">
+                      <tr><td align="center" valign="middle"><span style="font-size: 48px; display: inline-block;">🔔</span></td></tr>
+                    </table>
+                  </div>
+                  <h1 style="color: white; font-size: 32px; font-weight: 700; margin: 0 0 12px 0; line-height: 1.2;">Profile Updated</h1>
+                  <p style="color: rgba(255,255,255,0.9); font-size: 16px; margin: 0; font-weight: 500;">Your account information has been changed</p>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 48px 32px;">
+                  <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+                    Hello <strong style="color: #d97706;">${full_name}</strong>,
+                  </p>
+                  
+                  <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
+                    An administrator has updated your account information in the <strong>FPT University Room Booking System</strong>. Here are the changes:
+                  </p>
+
+                  <!-- Changes Table -->
+                  <div style="background-color: #fff7ed; border-radius: 12px; padding: 4px; margin-bottom: 32px; border: 2px solid #fed7aa;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      ${changeRows}
+                    </table>
+                  </div>
+
+                  <!-- Info Box -->
+                  <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 18px 20px; margin-bottom: 32px;">
+                    <div style="color: #1e40af; font-size: 14px; line-height: 1.5;">
+                      <strong>ℹ️ Note:</strong> If you didn't expect this change or have any concerns, please contact the system administrator immediately.
+                    </div>
+                  </div>
+
+                  <!-- Action Button -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
+                    <tr><td align="center">
+                      <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/profile"
+                         style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; text-decoration: none; font-weight: 700; padding: 16px 48px; border-radius: 8px; font-size: 16px;">
+                        View My Profile
+                      </a>
+                    </td></tr>
+                  </table>
+
+                  <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0;">
+                    If you have any questions about these changes, please contact your system administrator.
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="color: #9ca3af; font-size: 13px; margin: 0 0 8px 0;">
+                    📧 Notification Date: ${new Date().toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  <p style="color: #d1d5db; font-size: 11px; margin: 0;">
+                    © 2026 FPT University Room Booking System — This is an automated email, please do not reply.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+};
+
 module.exports = {
   passwordResetTemplate,
   emailVerificationTemplate,
   bookingApprovalTemplate,
   accountCreatedTemplate,
   adminPasswordResetTemplate,
+  profileUpdateNotificationTemplate,
 };

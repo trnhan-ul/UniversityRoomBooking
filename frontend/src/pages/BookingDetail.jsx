@@ -313,35 +313,25 @@ const BookingDetail = () => {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-2">Start Time</label>
-                  <select
+                  <input
+                    type="time"
                     name="start_time"
                     value={formData.start_time}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
-                  >
-                    {timeOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-2">End Time</label>
-                  <select
+                  <input
+                    type="time"
                     name="end_time"
                     value={formData.end_time}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
-                  >
-                    {timeOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
             ) : (

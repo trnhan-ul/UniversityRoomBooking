@@ -426,29 +426,23 @@ const ClassroomDetails = () => {
                       <label className="block">
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Start Time</span>
                         <div className="mt-1 relative">
-                          <select 
+                          <input 
+                            type="time"
                             className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
                             value={bookingData.startTime}
                             onChange={(e) => setBookingData(prev => ({ ...prev, startTime: e.target.value }))}
-                          >
-                            {timeOptions.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
+                          />
                         </div>
                       </label>
                       <label className="block">
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">End Time</span>
                         <div className="mt-1 relative">
-                          <select 
+                          <input 
+                            type="time"
                             className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
                             value={bookingData.endTime}
                             onChange={(e) => setBookingData(prev => ({ ...prev, endTime: e.target.value }))}
-                          >
-                            {timeOptions.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
+                          />
                         </div>
                       </label>
                     </div>

@@ -417,7 +417,7 @@ const ScheduleManagement = () => {
               {/* Calendar Days */}
               {generateCalendarDays().map((day, index) => {
                 const isCurrentMonth = day.month() === selectedDate.month();
-                const isToday = day.isSame(moment(), 'day');
+                const isSelected = day.isSame(selectedDate, 'day');
                 
                 return (
                   <button
@@ -426,7 +426,7 @@ const ScheduleManagement = () => {
                     className={`h-8 flex items-center justify-center text-xs rounded-lg transition-all ${
                       !isCurrentMonth
                         ? 'text-slate-300 dark:text-slate-700'
-                        : isToday
+                        : isSelected
                         ? 'bg-primary text-white font-bold'
                         : 'text-[#0d141b] dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
@@ -535,14 +535,14 @@ const ScheduleManagement = () => {
                       <div
                         key={index}
                         className={`flex-1 p-3 text-center border-r border-[#cfdbe7] dark:border-slate-800 ${
-                          day.isSame(moment(), 'day') ? 'bg-primary/5' : ''
+                          day.isSame(selectedDate, 'day') ? 'bg-primary/5' : ''
                         }`}
                       >
                         <div className="text-xs font-semibold text-[#4c6c9a] mb-1">
                           {day.format('ddd')}
                         </div>
                         <div className={`text-lg font-bold mx-auto ${
-                          day.isSame(moment(), 'day')
+                          day.isSame(selectedDate, 'day')
                             ? 'bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center'
                             : 'text-[#0d141b] dark:text-white'
                         }`}>
@@ -569,7 +569,11 @@ const ScheduleManagement = () => {
                       {weekDays.map((day, dayIndex) => (
                         <div
                           key={dayIndex}
-                          className="flex-1 relative border-r border-[#cfdbe7] dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                          className={`flex-1 relative border-r border-[#cfdbe7] dark:border-slate-800 transition-colors ${
+                            day.isSame(selectedDate, 'day') 
+                              ? 'bg-primary/5' 
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                          }`}
                         >
                           {timeIndex === 0 && getEventsForDay(day).map((event) => {
                             const { top, height } = getEventStyle(event, day);
@@ -937,39 +941,27 @@ const ScheduleManagement = () => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Start Time <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="time"
                     name="start_time"
                     value={blockFormData.start_time}
                     onChange={handleBlockChange}
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
                     required
-                  >
-                    <option value="">Select time</option>
-                    {timeOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     End Time <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="time"
                     name="end_time"
                     value={blockFormData.end_time}
                     onChange={handleBlockChange}
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:text-white"
                     required
-                  >
-                    <option value="">Select time</option>
-                    {timeOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
 

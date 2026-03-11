@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { sendAdminResetPasswordEmail } = require('../services/emailService');
+const { sendAdminResetPasswordEmail, sendProfileUpdateNotification } = require('../services/emailService');
 const { logUserAction } = require('../utils/auditLogger');
 
 // Danh sách role hợp lệ lấy từ enum của User
@@ -308,7 +308,7 @@ exports.updateUser = async (req, res) => {
       updateData.is_email_verified = is_email_verified;
 
     const existingUser = await User.findById(id).select(
-      "full_name email role status",
+      "full_name email role status phone_number avatar_url",
     );
 
     if (!existingUser) {
@@ -323,16 +323,47 @@ exports.updateUser = async (req, res) => {
       runValidators: true,
     }).select("-password");
 
+    // Track changes for audit log and email notification
     const changeLogs = [];
+    const emailChanges = {};
+
+    // Check each field for changes
     if (status !== undefined && existingUser.status !== updatedUser.status) {
       changeLogs.push(
         `status: ${existingUser.status} -> ${updatedUser.status}`,
       );
+      emailChanges.status = {
+        oldValue: existingUser.status,
+        newValue: updatedUser.status,
+      };
     }
     if (role !== undefined && existingUser.role !== updatedUser.role) {
       changeLogs.push(`role: ${existingUser.role} -> ${updatedUser.role}`);
+      emailChanges.role = {
+        oldValue: existingUser.role,
+        newValue: updatedUser.role,
+      };
+    }
+    if (full_name !== undefined && existingUser.full_name !== updatedUser.full_name) {
+      emailChanges.full_name = {
+        oldValue: existingUser.full_name,
+        newValue: updatedUser.full_name,
+      };
+    }
+    if (phone_number !== undefined && existingUser.phone_number !== updatedUser.phone_number) {
+      emailChanges.phone_number = {
+        oldValue: existingUser.phone_number || "—",
+        newValue: updatedUser.phone_number || "—",
+      };
+    }
+    if (avatar_url !== undefined && existingUser.avatar_url !== updatedUser.avatar_url) {
+      emailChanges.avatar_url = {
+        oldValue: existingUser.avatar_url || "—",
+        newValue: updatedUser.avatar_url || "—",
+      };
     }
 
+    // Log audit trail for critical changes
     if (changeLogs.length > 0) {
       await logUserAction(
         req.user,
@@ -341,6 +372,23 @@ exports.updateUser = async (req, res) => {
         `Admin ${req.user.email} updated user ${updatedUser.email} (${changeLogs.join(", ")})`,
         req,
       );
+    }
+
+    // Send email notification if there are any changes
+    if (Object.keys(emailChanges).length > 0) {
+      try {
+        await sendProfileUpdateNotification(
+          {
+            email: updatedUser.email,
+            full_name: updatedUser.full_name,
+          },
+          emailChanges
+        );
+        console.log(`Profile update notification sent to ${updatedUser.email}`);
+      } catch (emailError) {
+        console.error('Failed to send profile update email:', emailError);
+        // Continue even if email fails - don't block the update
+      }
     }
 
     res.status(200).json({

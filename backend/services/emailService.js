@@ -1,5 +1,10 @@
 const nodemailer = require('nodemailer');
-const { bookingApprovalTemplate, accountCreatedTemplate, adminPasswordResetTemplate } = require('../templates/emailTemplates');
+const { 
+  bookingApprovalTemplate, 
+  accountCreatedTemplate, 
+  adminPasswordResetTemplate,
+  profileUpdateNotificationTemplate 
+} = require('../templates/emailTemplates');
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
@@ -78,8 +83,32 @@ const sendAdminResetPasswordEmail = async (user, newPassword) => {
   }
 };
 
+/**
+ * Gửi email thông báo khi thông tin profile thay đổi
+ * @param {Object} user - User object {email, full_name}
+ * @param {Object} changes - Object chứa các thay đổi {field: {oldValue, newValue}}
+ */
+const sendProfileUpdateNotification = async (user, changes) => {
+  try {
+    const htmlContent = profileUpdateNotificationTemplate(user, changes);
+    const mailOptions = {
+      from: `"UniBooking - FPT University" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: '🔔 Your Profile Has Been Updated',
+      html: htmlContent,
+    };
+    await transporter.sendMail(mailOptions);
+    console.log(`Profile update notification sent to ${user.email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending profile update notification:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendApprovalEmail,
   sendAccountCreatedEmail,
   sendAdminResetPasswordEmail,
+  sendProfileUpdateNotification,
 };
