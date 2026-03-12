@@ -42,7 +42,7 @@ const BookingDetail = () => {
 
   // Check if booking is currently in progress
   const isOngoing = () => {
-    if (!booking || booking.status !== 'APPROVED') return false;
+    if (!booking || !['APPROVED', 'CHECKED-IN'].includes(booking.status)) return false;
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const bookingDateStr = new Date(booking.date).toISOString().split('T')[0];

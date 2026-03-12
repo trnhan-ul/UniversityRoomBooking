@@ -141,6 +141,7 @@ const createBooking = async (req, res) => {
       end_time,
       purpose,
       status: "PENDING",
+      qr_code_token: uuidv4(),
     });
 
     // Populate room info
@@ -1049,6 +1050,7 @@ const createRecurringBooking = async (req, res) => {
         status: "PENDING",
         recurrence_id,
         recurrence_type,
+        qr_code_token: uuidv4(),
       });
     }
 
@@ -1129,12 +1131,12 @@ const getExtendOptions = async (req, res) => {
         .status(403)
         .json({ success: false, message: "Forbidden: not your booking" });
     }
-    if (booking.status !== "APPROVED") {
+    if (!['APPROVED', 'CHECKED-IN'].includes(booking.status)) {
       return res
         .status(400)
         .json({
           success: false,
-          message: "Only approved bookings can be extended",
+          message: "Only approved or checked-in bookings can be extended",
         });
     }
 
@@ -1265,12 +1267,12 @@ const extendBooking = async (req, res) => {
         .status(403)
         .json({ success: false, message: "Forbidden: not your booking" });
     }
-    if (booking.status !== "APPROVED") {
+    if (!['APPROVED', 'CHECKED-IN'].includes(booking.status)) {
       return res
         .status(400)
         .json({
           success: false,
-          message: "Only approved bookings can be extended",
+          message: "Only approved or checked-in bookings can be extended",
         });
     }
 

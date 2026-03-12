@@ -60,8 +60,7 @@ const bookingSchema = new mongoose.Schema(
     qr_code_token: {
       type: String,
       unique: true,
-      sparse: true,
-      default: null,
+      required: true,
     },
     checked_in_at: {
       type: Date,

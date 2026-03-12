@@ -3,6 +3,7 @@ const router = express.Router();
 const Booking = require("../models/Booking");
 const bookingController = require("../controllers/bookingController");
 const { authenticate, authorizeRoles } = require("../middleware/auth");
+const { v4: uuidv4 } = require("uuid");
 
 // POST /api/bookings/recurring -> create recurring bookings
 router.post("/recurring", authenticate, authorizeRoles(["STUDENT", "LECTURER"]), bookingController.createRecurringBooking);
@@ -20,6 +21,7 @@ router.post("/", authenticate, authorizeRoles(["STUDENT", "LECTURER"]), async (r
       end_time,
       purpose: purpose.trim(),
       status: "PENDING",
+      qr_code_token: uuidv4(),
     });
 
     res.status(201).json({
