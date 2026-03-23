@@ -24,9 +24,9 @@ router.delete('/:id', notificationController.deleteNotification);
 // Admin only - Send system notification to all users
 // POST /api/notifications/system-broadcast - Send to all users
 router.post(
-  '/system-broadcast', 
-  authorizeRoles('ADMINISTRATOR', 'FACILITY_MANAGER'), 
-  notificationController.sendSystemBroadcast
+  "/system-broadcast",
+  authorizeRoles("ADMINISTRATOR"),
+  notificationController.sendSystemBroadcast,
 );
 
 module.exports = router;

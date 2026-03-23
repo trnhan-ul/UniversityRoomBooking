@@ -55,15 +55,15 @@ router.get("/my-bookings", authenticate, async (req, res) => {
 router.get(
   "/pending",
   authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  authorizeRoles(["FACILITY_MANAGER"]),
   bookingController.getPendingBookings,
 );
 
-// GET /api/bookings/report - booking report with filters (Admin/Facility Manager)
+// GET /api/bookings/report - booking report with filters (Facility Manager)
 router.get(
   "/report",
   authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  authorizeRoles(["FACILITY_MANAGER"]),
   bookingController.getBookingReport,
 );
 
@@ -71,7 +71,7 @@ router.get(
 router.get(
   "/statistics",
   authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  authorizeRoles(["ADMINISTRATOR"]),
   bookingController.getBookingStatistics,
 );
 
@@ -79,7 +79,7 @@ router.get(
 router.patch(
   "/recurring/:recurrence_id/approve",
   authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  authorizeRoles(["FACILITY_MANAGER"]),
   bookingController.approveRecurringGroup,
 );
 
@@ -87,21 +87,21 @@ router.patch(
 router.patch(
   "/recurring/:recurrence_id/reject",
   authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  authorizeRoles(["FACILITY_MANAGER"]),
   bookingController.rejectRecurringGroup,
 );
 
 router.patch(
   "/:id/approve",
   authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  authorizeRoles(["FACILITY_MANAGER"]),
   bookingController.approveBooking,
 );
 
 router.patch(
   "/:id/reject",
   authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
+  authorizeRoles(["FACILITY_MANAGER"]),
   bookingController.rejectBooking,
 );
 
@@ -109,7 +109,11 @@ router.patch(
 router.patch("/:id/cancel", authenticate, bookingController.cancelBooking);
 
 // GET /api/bookings/:id/extend-options - get available extension time slots (User, booking owner, ongoing)
-router.get("/:id/extend-options", authenticate, bookingController.getExtendOptions);
+router.get(
+  "/:id/extend-options",
+  authenticate,
+  bookingController.getExtendOptions,
+);
 
 // PATCH /api/bookings/:id/extend - extend booking end time (User, booking owner, ongoing)
 router.patch("/:id/extend", authenticate, bookingController.extendBooking);
@@ -121,8 +125,8 @@ router.get("/:id/qr-data", authenticate, bookingController.getBookingQRData);
 router.post(
   "/check-in",
   authenticate,
-  authorizeRoles(["FACILITY_MANAGER", "ADMINISTRATOR"]),
-  bookingController.checkInBooking
+  authorizeRoles(["FACILITY_MANAGER"]),
+  bookingController.checkInBooking,
 );
 
 // PATCH /api/bookings/:id - update booking (User) - MUST be last

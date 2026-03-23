@@ -1,6 +1,8 @@
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
-import { useAuthContext } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthContext } from '../context/AuthContext';
+import { COLORS } from '../constants/theme';
+import { Card, Section } from '../components';
 
 export default function HomeScreen() {
   const { user, logout } = useAuthContext();
@@ -23,17 +25,16 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.card}>
+        <Card style={{ marginBottom: 24, alignItems: 'center', padding: 24 }}>
           <Ionicons name="person" size={48} color="#136dec" />
           <Text style={styles.cardTitle}>Welcome, {user?.full_name}!</Text>
           <Text style={styles.cardEmail}>{user?.email}</Text>
           <View style={styles.roleBadge}>
             <Text style={styles.roleBadgeText}>{user?.role}</Text>
           </View>
-        </View>
+        </Card>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>User Info</Text>
+        <Section title="User Info">
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Email:</Text>
             <Text style={styles.infoValue}>{user?.email}</Text>
@@ -50,7 +51,7 @@ export default function HomeScreen() {
             <Text style={styles.infoLabel}>Status:</Text>
             <Text style={styles.infoValue}>{user?.status}</Text>
           </View>
-        </View>
+        </Section>
       </View>
     </SafeAreaView>
   );
@@ -59,7 +60,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: COLORS.background2,
   },
   header: {
     flexDirection: 'row',
@@ -73,39 +74,25 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0d131b',
+    color: COLORS.dark,
   },
   content: {
     padding: 20,
   },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0d131b',
+    color: COLORS.dark,
     marginTop: 16,
   },
   cardEmail: {
     fontSize: 14,
-    color: '#4c6c9a',
+    color: COLORS.lightText,
     marginTop: 4,
   },
   roleBadge: {
     marginTop: 12,
-    backgroundColor: '#136dec',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -114,19 +101,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
-  },
-  section: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0d131b',
-    marginBottom: 16,
   },
   infoItem: {
     flexDirection: 'row',
@@ -138,11 +112,11 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4c6c9a',
+    color: COLORS.lightText,
   },
   infoValue: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#0d131b',
+    color: COLORS.dark,
   },
 });

@@ -13,49 +13,45 @@ router.post(
 
 // GET /api/facility-issues - Get all facility issues (Admin only)
 router.get(
-  '/',
+  "/",
   authenticate,
-  authorizeRoles(['ADMINISTRATOR', 'FACILITY_MANAGER']),
-  facilityIssueController.getAllFacilityIssues
+  authorizeRoles(["FACILITY_MANAGER"]),
+  facilityIssueController.getAllFacilityIssues,
 );
 
 // GET /api/facility-issues/my-issues - Get current user's facility issues
 router.get(
-  '/my-issues',
+  "/my-issues",
   authenticate,
-  authorizeRoles(['STUDENT', 'LECTURER']),
-  facilityIssueController.getMyFacilityIssues
+  authorizeRoles(["STUDENT", "LECTURER"]),
+  facilityIssueController.getMyFacilityIssues,
 );
 
 // GET /api/facility-issues/stats - Get facility issue statistics (Admin only)
 router.get(
-  '/stats',
+  "/stats",
   authenticate,
-  authorizeRoles(['ADMINISTRATOR', 'FACILITY_MANAGER']),
-  facilityIssueController.getFacilityIssueStats
+  authorizeRoles(["FACILITY_MANAGER"]),
+  facilityIssueController.getFacilityIssueStats,
 );
 
 // GET /api/facility-issues/:id - Get a specific facility issue by ID
-router.get(
-  '/:id',
-  authenticate,
-  facilityIssueController.getFacilityIssueById
-);
+router.get("/:id", authenticate, facilityIssueController.getFacilityIssueById);
 
 // PUT /api/facility-issues/:id/status - Update facility issue status (Admin only)
 router.put(
-  '/:id/status',
+  "/:id/status",
   authenticate,
-  authorizeRoles(['ADMINISTRATOR', 'FACILITY_MANAGER']),
-  facilityIssueController.updateFacilityIssueStatus
+  authorizeRoles(["FACILITY_MANAGER"]),
+  facilityIssueController.updateFacilityIssueStatus,
 );
 
 // DELETE /api/facility-issues/:id - Delete a facility issue (Admin only)
 router.delete(
-  '/:id',
+  "/:id",
   authenticate,
-  authorizeRoles(['ADMINISTRATOR', 'FACILITY_MANAGER']),
-  facilityIssueController.deleteFacilityIssue
+  authorizeRoles(["FACILITY_MANAGER"]),
+  facilityIssueController.deleteFacilityIssue,
 );
 
 module.exports = router;

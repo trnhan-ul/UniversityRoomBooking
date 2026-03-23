@@ -7,78 +7,36 @@ const AdminLayout = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuthContext();
 
-  const menuItems = [
-    {
-      path: "/admin/dashboard",
-      icon: "📊",
-      label: "Dashboard",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
-    },
-    {
-      path: "/user-management",
-      icon: "👥",
-      label: "User Management",
-      roles: ["ADMINISTRATOR"],
-    },
-    {
-      path: "/pending-requests",
-      icon: "⏳",
-      label: "Pending Requests",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
-    },
-    {
-      path: "/room-inventory",
-      icon: "🏛️",
-      label: "Room Inventory",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
-    },
-    {
-      path: "/schedule-management",
-      icon: "📅",
-      label: "Schedule Management",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
-    },
-    {
-      path: "/working-hours-settings",
-      icon: "🕐",
-      label: "Working Hours",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
-    },
+  const adminMenuItems = [
+    { path: "/admin/dashboard", icon: "📊", label: "Admin Dashboard" },
+    { path: "/user-management", icon: "👥", label: "User Management" },
+    { path: "/working-hours-settings", icon: "🕐", label: "Working Hours" },
+    { path: "/room-usage-report", icon: "📊", label: "Room Usage" },
+    { path: "/audit-logs", icon: "📋", label: "Audit Logs" },
+  ];
+
+  const managerMenuItems = [
+    { path: "/manager/dashboard", icon: "📊", label: "Manager Dashboard" },
+    { path: "/pending-requests", icon: "⏳", label: "Pending Requests" },
+    { path: "/room-inventory", icon: "🏛️", label: "Room Inventory" },
+    { path: "/schedule-management", icon: "📅", label: "Schedule Management" },
     {
       path: "/equipment-management",
       icon: "🔧",
       label: "Equipment Management",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
+    { path: "/booking-report", icon: "📈", label: "Booking Reports" },
+    { path: "/holiday-management", icon: "🏖️", label: "Holiday Management" },
     {
       path: "/facility-issues-management",
       icon: "⚠️",
       label: "Facility Issues",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
     },
-    {
-      path: "/booking-report",
-      icon: "📈",
-      label: "Booking Reports",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
-    },
-    {
-      path: "/room-usage-report",
-      icon: "📊",
-      label: "Room Usage",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
-    },
-    {
-      path: "/audit-logs",
-      icon: "📋",
-      label: "Audit Logs",
-      roles: ["ADMINISTRATOR", "FACILITY_MANAGER"],
-    },
+    { path: "/qr-scanner", icon: "📷", label: "QR Check-in" },
   ];
 
-  const filteredMenuItems = menuItems.filter((item) =>
-    item.roles.includes(user?.role)
-  );
+  const filteredMenuItems =
+    user?.role === "FACILITY_MANAGER" ? managerMenuItems : adminMenuItems;
 
   const isActive = (path) => location.pathname === path;
 
@@ -99,7 +57,9 @@ const AdminLayout = ({ children }) => {
             </div>
             <div>
               <h1 className="text-sm font-semibold text-slate-800">
-                Super Admin Console
+                {user?.role === "FACILITY_MANAGER"
+                  ? "Facility Manager Console"
+                  : "Administrator Console"}
               </h1>
             </div>
           </div>

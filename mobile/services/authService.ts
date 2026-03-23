@@ -5,18 +5,18 @@ import { CustomApiError } from '../utils/errorHandler';
 import { getErrorMessage } from '../utils/validation';
 
 // Create axios instance
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Request interceptor - add token to headers
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('token');
+    const token = await AsyncStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,7 +24,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor - handle token expiration
@@ -33,11 +33,11 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
       // Token expired, clear storage
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
+      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("user");
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export interface LoginResponse {
@@ -59,17 +59,23 @@ export interface LoginResponse {
 }
 
 // Login
-export const login = async (email: string, password: string): Promise<LoginResponse> => {
+export const login = async (
+  email: string,
+  password: string,
+): Promise<LoginResponse> => {
   try {
-    const response = await api.post<LoginResponse>(API_CONFIG.ENDPOINTS.AUTH.LOGIN, {
-      email,
-      password,
-    });
+    const response = await api.post<LoginResponse>(
+      API_CONFIG.ENDPOINTS.AUTH.LOGIN,
+      {
+        email,
+        password,
+      },
+    );
 
     if (response.data.success && response.data.data) {
       const { token, user } = response.data.data;
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('user', JSON.stringify(user));
+      await AsyncStorage.setItem("token", token);
+      await AsyncStorage.setItem("user", JSON.stringify(user));
     }
 
     return response.data;
@@ -77,15 +83,15 @@ export const login = async (email: string, password: string): Promise<LoginRespo
     const axiosError = error as AxiosError<LoginResponse>;
     const errorData = axiosError.response?.data;
     const errorMessage = getErrorMessage(errorData) || getErrorMessage(error);
-    
+
     throw new CustomApiError(errorMessage, errorData);
   }
 };
 
 // Logout
 export const logout = async (): Promise<void> => {
-  await AsyncStorage.removeItem('token');
-  await AsyncStorage.removeItem('user');
+  await AsyncStorage.removeItem("token");
+  await AsyncStorage.removeItem("user");
 };
 
 // Verify token
@@ -101,9 +107,9 @@ export const verifyToken = async () => {
 // Get stored user
 export const getStoredUser = async () => {
   try {
-    const userStr = await AsyncStorage.getItem('user');
+    const userStr = await AsyncStorage.getItem("user");
     return userStr ? JSON.parse(userStr) : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -111,8 +117,8 @@ export const getStoredUser = async () => {
 // Get stored token
 export const getStoredToken = async () => {
   try {
-    return await AsyncStorage.getItem('token');
-  } catch (error) {
+    return await AsyncStorage.getItem("token");
+  } catch {
     return null;
   }
 };

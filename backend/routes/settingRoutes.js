@@ -18,10 +18,10 @@ router.get('/working-hours', getWorkingHours);
 
 // Update working hours (Admin/Facility Manager only)
 router.put(
-  '/working-hours',
+  "/working-hours",
   authenticate,
-  authorizeRoles('ADMIN', 'FACILITY_MANAGER'),
-  updateWorkingHours
+  authorizeRoles("ADMINISTRATOR"),
+  updateWorkingHours,
 );
 
 // ============================================
@@ -29,27 +29,22 @@ router.put(
 // ============================================
 
 // Get all settings (Admin only)
-router.get(
-  '/',
-  authenticate,
-  authorizeRoles('ADMIN', 'FACILITY_MANAGER'),
-  getAllSettings
-);
+router.get("/", authenticate, authorizeRoles("ADMINISTRATOR"), getAllSettings);
 
 // Get setting by key (Admin only)
 router.get(
-  '/:key',
+  "/:key",
   authenticate,
-  authorizeRoles('ADMIN', 'FACILITY_MANAGER'),
-  getSettingByKey
+  authorizeRoles("ADMINISTRATOR"),
+  getSettingByKey,
 );
 
 // Update setting by key (Admin only)
 router.put(
-  '/:key',
+  "/:key",
   authenticate,
-  authorizeRoles('ADMIN', 'FACILITY_MANAGER'),
-  updateSetting
+  authorizeRoles("ADMINISTRATOR"),
+  updateSetting,
 );
 
 module.exports = router;

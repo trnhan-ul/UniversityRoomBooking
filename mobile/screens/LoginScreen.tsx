@@ -11,9 +11,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuthContext } from '../../context/AuthContext';
-import { validateLoginForm, getErrorMessage } from '../../utils/validation';
-import { COLORS } from '../../constants/theme';
+import { useAuthContext } from '../context/AuthContext';
+import { validateLoginForm, getErrorMessage } from '../utils/validation';
+import { COLORS } from '../constants/theme';
 
 export default function LoginScreen() {
   const { login, loading: authLoading } = useAuthContext();
@@ -30,22 +30,18 @@ export default function LoginScreen() {
       setSuccessMessage('');
       setLoading(true);
 
-      // Validate form
       const validationError = validateLoginForm(email, password);
       if (validationError) {
         setError(validationError);
         return;
       }
 
-      // Attempt login
       const success = await login(email, password);
 
       if (success) {
-        // Reset form
         setEmail('');
         setPassword('');
-        setSuccessMessage('✓ Login successful! Welcome!');
-        // Hide message after 2 seconds
+        setSuccessMessage('Login successful! Welcome!');
         setTimeout(() => setSuccessMessage(''), 2000);
       }
     } catch (err: any) {
@@ -65,7 +61,6 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header/Branding Section */}
         <View style={styles.headerSection}>
           <View style={styles.logoBox}>
             <Ionicons name="school" size={28} color="white" />
@@ -73,9 +68,7 @@ export default function LoginScreen() {
           <Text style={styles.brandText}>FPT University</Text>
         </View>
 
-        {/* Main Card */}
         <View style={styles.card}>
-          {/* Card Header */}
           <View style={styles.cardHeader}>
             <Text style={styles.cardHeaderTitle}>Welcome Back</Text>
             <Text style={styles.cardHeaderSubtitle}>
@@ -83,23 +76,19 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {/* Form Content */}
           <View style={styles.formContainer}>
-            {/* Success Message */}
             {successMessage ? (
               <View style={styles.successContainer}>
                 <Text style={styles.successText}>{successMessage}</Text>
               </View>
             ) : null}
 
-            {/* Error Message */}
             {error ? (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
-            {/* Email Field */}
             <View style={styles.fieldContainer}>
               <Text style={styles.label}>Email Address</Text>
               <View style={styles.inputWrapper}>
@@ -124,7 +113,6 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Password Field */}
             <View style={styles.fieldContainer}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Password</Text>
@@ -164,7 +152,6 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Sign In Button */}
             <TouchableOpacity
               style={[
                 styles.signInButton,
@@ -181,10 +168,9 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <View style={styles.footerContent}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
+              <Text style={styles.footerText}>Do not have an account? </Text>
               <TouchableOpacity>
                 <Text style={styles.registerLink}>Register now</Text>
               </TouchableOpacity>
@@ -192,9 +178,8 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* Copyright */}
         <Text style={styles.copyright}>
-          © 2024 FPT University Room Booking System. All rights reserved.
+          Copyright 2024 FPT University Room Booking System. All rights reserved.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
