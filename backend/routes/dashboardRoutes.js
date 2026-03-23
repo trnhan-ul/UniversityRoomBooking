@@ -7,8 +7,8 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
 router.get(
   "/stats",
   authenticate,
-  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
-  getDashboardStats
+  authorizeRoles("ADMINISTRATOR"),
+  getDashboardStats,
 );
 
 module.exports = router;

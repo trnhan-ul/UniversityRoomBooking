@@ -5,10 +5,10 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
 
 // GET /api/schedules/calendar - Get calendar data
 router.get(
-    "/calendar",
-    authenticate,
-    authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
-    scheduleController.getCalendarData
+  "/calendar",
+  authenticate,
+  authorizeRoles("FACILITY_MANAGER"),
+  scheduleController.getCalendarData,
 );
 
 module.exports = router;

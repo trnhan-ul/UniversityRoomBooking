@@ -10,8 +10,8 @@ router.get("/", authenticate, roomController.getRooms);
 router.get(
   "/usage-report",
   authenticate,
-  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
-  roomController.getRoomUsageReport
+  authorizeRoles("ADMINISTRATOR"),
+  roomController.getRoomUsageReport,
 );
 
 // GET /api/rooms/:id - Get room by ID
@@ -21,48 +21,46 @@ router.get("/:id", authenticate, roomController.getRoomById);
 router.post(
   "/",
   authenticate,
-  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
-  roomController.createRoom
+  authorizeRoles("FACILITY_MANAGER"),
+  roomController.createRoom,
 );
 
 // PUT /api/rooms/:id - Update room (Admin/Facility Manager only)
 router.put(
   "/:id",
   authenticate,
-  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
-  roomController.updateRoom
+  authorizeRoles("FACILITY_MANAGER"),
+  roomController.updateRoom,
 );
 
 // PUT /api/rooms/:id/images - Update room images only (Admin/Facility Manager only)
 router.put(
   "/:id/images",
   authenticate,
-  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
-  roomController.updateRoomImages
+  authorizeRoles("FACILITY_MANAGER"),
+  roomController.updateRoomImages,
 );
 
-// DELETE /api/rooms/:id - Delete room (Admin only)
+// DELETE /api/rooms/:id - Delete room (Facility Manager only)
 router.delete(
   "/:id",
   authenticate,
-  authorizeRoles("ADMINISTRATOR"),
-  roomController.deleteRoom
+  authorizeRoles("FACILITY_MANAGER"),
+  roomController.deleteRoom,
 );
 
 router.post(
   "/block",
   authenticate,
-  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
-  roomController.blockTimeSlot
+  authorizeRoles("FACILITY_MANAGER"),
+  roomController.blockTimeSlot,
 );
-
-
 
 router.delete(
   "/unblock/:schedule_id",
   authenticate,
-  authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"),
-  roomController.unblockTimeSlot
+  authorizeRoles("FACILITY_MANAGER"),
+  roomController.unblockTimeSlot,
 );
 
 module.exports = router;

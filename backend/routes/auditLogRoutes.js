@@ -4,7 +4,7 @@ const auditLogController = require("../controllers/auditLogController");
 const { authenticate, authorizeRoles } = require("../middleware/auth");
 
 router.use(authenticate);
-router.use(authorizeRoles("ADMINISTRATOR", "FACILITY_MANAGER"));
+router.use(authorizeRoles("ADMINISTRATOR"));
 
 router.get("/", auditLogController.getAuditLogs);
 

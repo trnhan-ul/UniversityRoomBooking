@@ -9,8 +9,23 @@ router.get('/room/:roomId', authenticate, equipmentController.getEquipmentByRoom
 router.get('/:id', authenticate, equipmentController.getEquipmentById);
 
 // Protected routes (only FM/Admin can create/update/delete)
-router.post('/', authenticate, authorizeRoles('FACILITY_MANAGER', 'ADMINISTRATOR'), equipmentController.createEquipment);
-router.patch('/:id', authenticate, authorizeRoles('FACILITY_MANAGER', 'ADMINISTRATOR'), equipmentController.updateEquipment);
-router.delete('/:id', authenticate, authorizeRoles('FACILITY_MANAGER', 'ADMINISTRATOR'), equipmentController.deleteEquipment);
+router.post(
+  "/",
+  authenticate,
+  authorizeRoles("FACILITY_MANAGER"),
+  equipmentController.createEquipment,
+);
+router.patch(
+  "/:id",
+  authenticate,
+  authorizeRoles("FACILITY_MANAGER"),
+  equipmentController.updateEquipment,
+);
+router.delete(
+  "/:id",
+  authenticate,
+  authorizeRoles("FACILITY_MANAGER"),
+  equipmentController.deleteEquipment,
+);
 
 module.exports = router;
