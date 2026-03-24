@@ -7,14 +7,12 @@ import { COLORS } from './constants/theme';
 import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import RoomDetailScreen from './screens/RoomDetailScreen';
-import BookingScreen from './screens/BookingScreen';
 import { RootStackParamList } from './types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
   const { loading, isAuthenticated } = useAuthContext();
-
   const screenOptions = useMemo(() => ({ headerShown: false }), []);
 
   if (loading) {
@@ -35,11 +33,6 @@ function RootNavigator() {
               name="RoomDetail"
               component={RoomDetailScreen}
               options={{ headerShown: true, title: 'Room Details' }}
-            />
-            <Stack.Screen
-              name="Booking"
-              component={BookingScreen}
-              options={{ headerShown: true, title: 'Book Room' }}
             />
           </>
         ) : (

@@ -61,14 +61,8 @@ export default function RoomDetailScreen() {
 
   const availableSlots = useMemo(() => buildTimeSlots(selectedDate, room?.status), [selectedDate, room?.status]);
 
-  const handleGoBooking = (slot?: TimeSlot) => {
-    navigation.navigate('Booking', {
-        roomId: room?._id,
-        roomName: room?.room_name,
-        date: selectedDate,
-        start: slot?.start,
-        end: slot?.end,
-    });
+  const handleBackHome = () => {
+    navigation.navigate('Home');
   };
 
   if (loading) {
@@ -110,11 +104,11 @@ export default function RoomDetailScreen() {
       </Section>
 
       <Section title="Available Time Slots">
-        <TimeSlotGrid slots={availableSlots} onSlotPress={handleGoBooking} />
+        <TimeSlotGrid slots={availableSlots} onSlotPress={() => {}} />
       </Section>
 
-      <TouchableOpacity style={styles.bookButton} onPress={() => handleGoBooking()}>
-        <Text style={styles.bookButtonText}>Go to Booking Screen</Text>
+      <TouchableOpacity style={styles.bookButton} onPress={handleBackHome}>
+        <Text style={styles.bookButtonText}>Back to Home</Text>
       </TouchableOpacity>
     </ScrollView>
   );

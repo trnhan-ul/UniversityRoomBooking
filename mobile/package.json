@@ -1,5 +1,5 @@
 {
-  "name": "mobile",
+  "name": "university-booking-room",
   "main": "index.ts",
   "version": "1.0.0",
   "scripts": {
