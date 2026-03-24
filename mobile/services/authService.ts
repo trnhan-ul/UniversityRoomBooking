@@ -82,7 +82,9 @@ export const login = async (
   } catch (error) {
     const axiosError = error as AxiosError<LoginResponse>;
     const errorData = axiosError.response?.data;
-    const errorMessage = getErrorMessage(errorData) || getErrorMessage(error);
+    const errorMessage = errorData
+      ? getErrorMessage(errorData)
+      : getErrorMessage(error);
 
     throw new CustomApiError(errorMessage, errorData);
   }

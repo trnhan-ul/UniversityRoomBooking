@@ -41,11 +41,15 @@ interface EquipmentResponse {
 
 export const getRooms = async (): Promise<RoomListResponse> => {
   try {
-    const response = await api.get<RoomListResponse>('/rooms');
+    const response = await api.get<RoomListResponse>("/rooms");
     return response.data;
   } catch (error) {
-    const errorData = (error as { response?: { data?: RoomListResponse } })?.response?.data;
-    throw new CustomApiError(getErrorMessage(errorData) || getErrorMessage(error), errorData);
+    const errorData = (error as { response?: { data?: RoomListResponse } })
+      ?.response?.data;
+    const message = errorData
+      ? getErrorMessage(errorData)
+      : getErrorMessage(error);
+    throw new CustomApiError(message, errorData);
   }
 };
 
@@ -54,17 +58,29 @@ export const getRoomById = async (id: string): Promise<RoomDetailResponse> => {
     const response = await api.get<RoomDetailResponse>(`/rooms/${id}`);
     return response.data;
   } catch (error) {
-    const errorData = (error as { response?: { data?: RoomDetailResponse } })?.response?.data;
-    throw new CustomApiError(getErrorMessage(errorData) || getErrorMessage(error), errorData);
+    const errorData = (error as { response?: { data?: RoomDetailResponse } })
+      ?.response?.data;
+    const message = errorData
+      ? getErrorMessage(errorData)
+      : getErrorMessage(error);
+    throw new CustomApiError(message, errorData);
   }
 };
 
-export const getEquipmentByRoom = async (roomId: string): Promise<EquipmentResponse> => {
+export const getEquipmentByRoom = async (
+  roomId: string,
+): Promise<EquipmentResponse> => {
   try {
-    const response = await api.get<EquipmentResponse>(`/equipment/room/${roomId}`);
+    const response = await api.get<EquipmentResponse>(
+      `/equipment/room/${roomId}`,
+    );
     return response.data;
   } catch (error) {
-    const errorData = (error as { response?: { data?: EquipmentResponse } })?.response?.data;
-    throw new CustomApiError(getErrorMessage(errorData) || getErrorMessage(error), errorData);
+    const errorData = (error as { response?: { data?: EquipmentResponse } })
+      ?.response?.data;
+    const message = errorData
+      ? getErrorMessage(errorData)
+      : getErrorMessage(error);
+    throw new CustomApiError(message, errorData);
   }
 };
