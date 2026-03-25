@@ -6,6 +6,7 @@ import {
   deleteEquipment 
 } from '../services/equipmentService';
 import { getRooms } from '../services/roomService';
+import { runMutationWithRefresh } from "../utils/mutationRefresh";
 
 const EquipmentManagement = () => {
   const [equipment, setEquipment] = useState([]);
@@ -18,16 +19,16 @@ const EquipmentManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState({
-    room_id: '',
-    status: ''
+    room_id: "",
+    status: "",
   });
 
   const [formData, setFormData] = useState({
-    room_id: '',
-    name: '',
+    room_id: "",
+    name: "",
     quantity: 1,
-    status: 'WORKING',
-    description: ''
+    status: "WORKING",
+    description: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -39,7 +40,7 @@ const EquipmentManagement = () => {
         setRooms(response.data);
       }
     } catch (error) {
-      console.error('Error fetching rooms:', error);
+      console.error("Error fetching rooms:", error);
     }
   }, []);
 
@@ -49,15 +50,15 @@ const EquipmentManagement = () => {
       const response = await getAllEquipment({
         ...filters,
         page: currentPage,
-        limit: 10
+        limit: 10,
       });
-      
+
       if (response.success) {
         setEquipment(response.data);
         setTotalPages(response.pagination.totalPages);
       }
     } catch (error) {
-      console.error('Error fetching equipment:', error);
+      console.error("Error fetching equipment:", error);
     } finally {
       setLoading(false);
     }
@@ -72,58 +73,64 @@ const EquipmentManagement = () => {
   }, [fetchEquipment]);
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
     setCurrentPage(1);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.room_id) {
-      newErrors.room_id = 'Room is required';
+      newErrors.room_id = "Room is required";
     }
-    if (!formData.name || formData.name.trim() === '') {
-      newErrors.name = 'Equipment name is required';
+    if (!formData.name || formData.name.trim() === "") {
+      newErrors.name = "Equipment name is required";
     }
     if (!formData.quantity || formData.quantity < 0) {
-      newErrors.quantity = 'Quantity must be at least 0';
+      newErrors.quantity = "Quantity must be at least 0";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     try {
+      const mutate = editingEquipment
+        ? () => updateEquipment(editingEquipment._id, formData)
+        : () => createEquipment(formData);
+
+      await runMutationWithRefresh({
+        mutate,
+        refresh: fetchEquipment,
+      });
+
       if (editingEquipment) {
-        await updateEquipment(editingEquipment._id, formData);
-        alert('Equipment updated successfully!');
+        alert("Equipment updated successfully!");
       } else {
-        await createEquipment(formData);
-        alert('Equipment added successfully!');
+        alert("Equipment added successfully!");
       }
-      
+
       handleCloseModal();
-      fetchEquipment();
     } catch (error) {
-      console.error('Error saving equipment:', error);
-      alert(error.response?.data?.message || 'Failed to save equipment');
+      console.error("Error saving equipment:", error);
+      alert(error.response?.data?.message || "Failed to save equipment");
     }
   };
 
@@ -134,21 +141,23 @@ const EquipmentManagement = () => {
       name: equip.name,
       quantity: equip.quantity,
       status: equip.status,
-      description: equip.description || ''
+      description: equip.description || "",
     });
     setShowModal(true);
   };
 
   const handleDelete = async () => {
     try {
-      await deleteEquipment(equipmentToDelete._id);
-      alert('Equipment deleted successfully!');
+      await runMutationWithRefresh({
+        mutate: () => deleteEquipment(equipmentToDelete._id),
+        refresh: fetchEquipment,
+      });
+      alert("Equipment deleted successfully!");
       setShowDeleteModal(false);
       setEquipmentToDelete(null);
-      fetchEquipment();
     } catch (error) {
-      console.error('Error deleting equipment:', error);
-      alert(error.response?.data?.message || 'Failed to delete equipment');
+      console.error("Error deleting equipment:", error);
+      alert(error.response?.data?.message || "Failed to delete equipment");
     }
   };
 
@@ -156,11 +165,11 @@ const EquipmentManagement = () => {
     setShowModal(false);
     setEditingEquipment(null);
     setFormData({
-      room_id: '',
-      name: '',
+      room_id: "",
+      name: "",
       quantity: 1,
-      status: 'WORKING',
-      description: ''
+      status: "WORKING",
+      description: "",
     });
     setErrors({});
   };
@@ -172,25 +181,25 @@ const EquipmentManagement = () => {
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case 'WORKING':
-        return 'bg-green-100 text-green-800';
-      case 'BROKEN':
-        return 'bg-red-100 text-red-800';
-      case 'MAINTENANCE':
-        return 'bg-yellow-100 text-yellow-800';
+      case "WORKING":
+        return "bg-green-100 text-green-800";
+      case "BROKEN":
+        return "bg-red-100 text-red-800";
+      case "MAINTENANCE":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'WORKING':
-        return 'Working';
-      case 'BROKEN':
-        return 'Broken';
-      case 'MAINTENANCE':
-        return 'Maintenance';
+      case "WORKING":
+        return "Working";
+      case "BROKEN":
+        return "Broken";
+      case "MAINTENANCE":
+        return "Maintenance";
       default:
         return status;
     }
@@ -201,7 +210,9 @@ const EquipmentManagement = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Equipment Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Equipment Management
+          </h1>
           <p className="mt-2 text-sm text-gray-600">
             Manage classroom equipment and their status
           </p>
@@ -214,8 +225,18 @@ const EquipmentManagement = () => {
               onClick={() => setShowModal(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
               Add Equipment
             </button>
@@ -224,11 +245,11 @@ const EquipmentManagement = () => {
               {/* Room Filter */}
               <select
                 value={filters.room_id}
-                onChange={(e) => handleFilterChange('room_id', e.target.value)}
+                onChange={(e) => handleFilterChange("room_id", e.target.value)}
                 className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
                 <option value="">All Rooms</option>
-                {rooms.map(room => (
+                {rooms.map((room) => (
                   <option key={room._id} value={room._id}>
                     {room.room_name} - {room.room_code}
                   </option>
@@ -238,7 +259,7 @@ const EquipmentManagement = () => {
               {/* Status Filter */}
               <select
                 value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
                 className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
                 <option value="">All Status</option>
@@ -259,11 +280,25 @@ const EquipmentManagement = () => {
             </div>
           ) : equipment.length === 0 ? (
             <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No equipment found</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by adding new equipment.</p>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No equipment found
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Get started by adding new equipment.
+              </p>
             </div>
           ) : (
             <>
@@ -294,30 +329,37 @@ const EquipmentManagement = () => {
                   {equipment.map((equip) => (
                     <tr key={equip._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{equip.name}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {equip.name}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {equip.room_id?.room_name || 'N/A'}
+                          {equip.room_id?.room_name || "N/A"}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {equip.room_id?.room_code || ''} | {equip.room_id?.location || ''}
+                          {equip.room_id?.room_code || ""} |{" "}
+                          {equip.room_id?.location || ""}
                         </div>
                         <div className="text-xs text-gray-400">
                           ID: {equip.room_id?._id?.substring(0, 8)}...
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{equip.quantity}</div>
+                        <div className="text-sm text-gray-900">
+                          {equip.quantity}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(equip.status)}`}>
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(equip.status)}`}
+                        >
                           {getStatusText(equip.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-500 max-w-xs truncate">
-                          {equip.description || '-'}
+                          {equip.description || "-"}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -344,14 +386,18 @@ const EquipmentManagement = () => {
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                   <div className="flex-1 flex justify-between sm:hidden">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(prev - 1, 1))
+                      }
                       disabled={currentPage === 1}
                       className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
                       Previous
                     </button>
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      }
                       disabled={currentPage === totalPages}
                       className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -361,21 +407,27 @@ const EquipmentManagement = () => {
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
-                        Page <span className="font-medium">{currentPage}</span> / {' '}
-                        <span className="font-medium">{totalPages}</span>
+                        Page <span className="font-medium">{currentPage}</span>{" "}
+                        / <span className="font-medium">{totalPages}</span>
                       </p>
                     </div>
                     <div>
                       <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                         <button
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          onClick={() =>
+                            setCurrentPage((prev) => Math.max(prev - 1, 1))
+                          }
                           disabled={currentPage === 1}
                           className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                         >
                           Previous
                         </button>
                         <button
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          onClick={() =>
+                            setCurrentPage((prev) =>
+                              Math.min(prev + 1, totalPages),
+                            )
+                          }
                           disabled={currentPage === totalPages}
                           className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                         >
@@ -401,7 +453,7 @@ const EquipmentManagement = () => {
               <form onSubmit={handleSubmit}>
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    {editingEquipment ? 'Edit Equipment' : 'Add New Equipment'}
+                    {editingEquipment ? "Edit Equipment" : "Add New Equipment"}
                   </h3>
 
                   {/* Room Select */}
@@ -413,20 +465,26 @@ const EquipmentManagement = () => {
                       name="room_id"
                       value={formData.room_id}
                       onChange={handleInputChange}
-                      className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${errors.room_id ? 'border-red-500' : ''}`}
+                      className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${errors.room_id ? "border-red-500" : ""}`}
                     >
-                      <option value="">Select room ({rooms.length} rooms)</option>
-                      {rooms.map(room => (
+                      <option value="">
+                        Select room ({rooms.length} rooms)
+                      </option>
+                      {rooms.map((room) => (
                         <option key={room._id} value={room._id}>
                           [{room.room_code}] {room.room_name} - {room.location}
                         </option>
                       ))}
                     </select>
                     {rooms.length === 0 && (
-                      <p className="mt-1 text-sm text-yellow-600">Loading room list...</p>
+                      <p className="mt-1 text-sm text-yellow-600">
+                        Loading room list...
+                      </p>
                     )}
                     {errors.room_id && (
-                      <p className="mt-1 text-sm text-red-600">{errors.room_id}</p>
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.room_id}
+                      </p>
                     )}
                   </div>
 
@@ -441,7 +499,7 @@ const EquipmentManagement = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       placeholder="e.g. Projector, Whiteboard, Computer..."
-                      className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${errors.name ? 'border-red-500' : ''}`}
+                      className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${errors.name ? "border-red-500" : ""}`}
                     />
                     {errors.name && (
                       <p className="mt-1 text-sm text-red-600">{errors.name}</p>
@@ -459,10 +517,12 @@ const EquipmentManagement = () => {
                       value={formData.quantity}
                       onChange={handleInputChange}
                       min="0"
-                      className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${errors.quantity ? 'border-red-500' : ''}`}
+                      className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${errors.quantity ? "border-red-500" : ""}`}
                     />
                     {errors.quantity && (
-                      <p className="mt-1 text-sm text-red-600">{errors.quantity}</p>
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.quantity}
+                      </p>
                     )}
                   </div>
 
@@ -504,7 +564,7 @@ const EquipmentManagement = () => {
                     type="submit"
                     className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
                   >
-                    {editingEquipment ? 'Update' : 'Add'}
+                    {editingEquipment ? "Update" : "Add"}
                   </button>
                   <button
                     type="button"
@@ -530,8 +590,18 @@ const EquipmentManagement = () => {
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <svg
+                      className="h-6 w-6 text-red-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
                     </svg>
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
@@ -540,7 +610,9 @@ const EquipmentManagement = () => {
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        Are you sure you want to delete "{equipmentToDelete?.name}"? This action cannot be undone.
+                        Are you sure you want to delete "
+                        {equipmentToDelete?.name}"? This action cannot be
+                        undone.
                       </p>
                     </div>
                   </div>

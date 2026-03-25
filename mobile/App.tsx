@@ -12,7 +12,8 @@ import BookingRoomScreen from './screens/BookingRoomScreen';
 import RoomDetailScreen from './screens/RoomDetailScreen';
 import MyBookingsScreen from './screens/MyBookingsScreen';
 import BookingDetailScreen from './screens/BookingDetailScreen';
-import { RootStackParamList } from './types/navigation';
+import ProfileScreen from "./screens/ProfileScreen";
+import { RootStackParamList } from "./types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -22,7 +23,7 @@ function RootNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -55,9 +56,14 @@ function RootNavigator() {
               options={{ headerShown: true, title: 'Booking Detail' }}
             />
             <Stack.Screen
+              name="Profile"
+              component={ProfileScreen}
+              options={{ headerShown: true, title: "My Profile" }}
+            />
+            <Stack.Screen
               name="RoomDetail"
               component={RoomDetailScreen}
-              options={{ headerShown: true, title: 'Room Details' }}
+              options={{ headerShown: true, title: "Room Details" }}
             />
           </>
         ) : (

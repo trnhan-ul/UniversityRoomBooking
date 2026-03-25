@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { getAllUsers, createUser, updateUser, adminResetUserPassword, getUserById } from "../services/userService";
 import { Button, Badge } from "../components/common";
 import { useAuthContext } from "../context/AuthContext";
+import { runMutationWithRefresh } from "../utils/mutationRefresh";
 
 const InfoRow = ({ icon, label, value }) => (
   <div className="flex items-start gap-3">
     <span className="text-base w-5 flex-shrink-0 mt-0.5">{icon}</span>
     <div className="flex-1 min-w-0">
-      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{label}</p>
+      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">
+        {label}
+      </p>
       <div className="text-sm text-slate-800 mt-0.5 break-all">{value}</div>
     </div>
   </div>
@@ -37,23 +40,27 @@ const UserManagement = () => {
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] =
+    useState(false);
   const [isViewDetailModalOpen, setIsViewDetailModalOpen] = useState(false);
   const [viewDetailUser, setViewDetailUser] = useState(null);
   const [viewDetailLoading, setViewDetailLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
+  const [resetPasswordData, setResetPasswordData] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [showResetNewPass, setShowResetNewPass] = useState(false);
   const [showResetConfirmPass, setShowResetConfirmPass] = useState(false);
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
-  
+
   // Notification Popup State
   const [notification, setNotification] = useState({
     show: false,
-    type: '', // 'success' or 'error'
-    title: '',
-    message: ''
+    type: "", // 'success' or 'error'
+    title: "",
+    message: "",
   });
 
   // Form data
@@ -77,9 +84,9 @@ const UserManagement = () => {
       }
     } catch (err) {
       showNotification(
-        'error',
-        'Failed to Load Users',
-        err.message || 'An error occurred while loading users'
+        "error",
+        "Failed to Load Users",
+        err.message || "An error occurred while loading users",
       );
     } finally {
       setLoading(false);
@@ -97,30 +104,27 @@ const UserManagement = () => {
       show: true,
       type,
       title,
-      message
+      message,
     });
-    
+
     // Auto close after 3 seconds
     setTimeout(() => {
-      setNotification(prev => ({ ...prev, show: false }));
+      setNotification((prev) => ({ ...prev, show: false }));
     }, 3000);
   };
 
   // Close notification
   const closeNotification = () => {
-    setNotification(prev => ({ ...prev, show: false }));
+    setNotification((prev) => ({ ...prev, show: false }));
   };
 
-  
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
-  
   const handlePageChange = (newPage) => {
     setFilters((prev) => ({ ...prev, page: newPage }));
   };
-
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -128,30 +132,33 @@ const UserManagement = () => {
     // Validate email @fpt.edu.vn
     if (!formData.email.toLowerCase().endsWith("@fpt.edu.vn")) {
       showNotification(
-        'error',
-        'Invalid Email',
-        'Please use FPT University email (@fpt.edu.vn)'
+        "error",
+        "Invalid Email",
+        "Please use FPT University email (@fpt.edu.vn)",
       );
       return;
     }
 
     try {
-      const response = await createUser(formData);
+      const response = await runMutationWithRefresh({
+        mutate: () => createUser(formData),
+        refresh: fetchUsers,
+      });
       if (response.success) {
         showNotification(
-          'success',
-          'User Created Successfully!',
-          `User ${formData.full_name} has been created. Welcome email has been sent.`
+          "success",
+          "User Created Successfully!",
+          `User ${formData.full_name} has been created. Welcome email has been sent.`,
         );
         setIsCreateModalOpen(false);
         resetForm();
-        fetchUsers();
       }
     } catch (err) {
       showNotification(
-        'error',
-        'Failed to Create User',
-        err.message || 'An error occurred while creating the user. Please try again.'
+        "error",
+        "Failed to Create User",
+        err.message ||
+          "An error occurred while creating the user. Please try again.",
       );
     }
   };
@@ -161,22 +168,25 @@ const UserManagement = () => {
     e.preventDefault();
     try {
       const { password, email, ...updateData } = formData;
-      const response = await updateUser(selectedUser._id, updateData);
+      const response = await runMutationWithRefresh({
+        mutate: () => updateUser(selectedUser._id, updateData),
+        refresh: fetchUsers,
+      });
       if (response.success) {
         showNotification(
-          'success',
-          'User Updated Successfully!',
-          `User ${formData.full_name} has been updated successfully.`
+          "success",
+          "User Updated Successfully!",
+          `User ${formData.full_name} has been updated successfully.`,
         );
         setIsEditModalOpen(false);
         resetForm();
-        fetchUsers();
       }
     } catch (err) {
       showNotification(
-        'error',
-        'Failed to Update User',
-        err.message || 'An error occurred while updating the user. Please try again.'
+        "error",
+        "Failed to Update User",
+        err.message ||
+          "An error occurred while updating the user. Please try again.",
       );
     }
   };
@@ -187,11 +197,11 @@ const UserManagement = () => {
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       showNotification(
-        'error',
-        'Invalid File Type',
-        'Please select a valid image file (JPG, PNG, GIF)'
+        "error",
+        "Invalid File Type",
+        "Please select a valid image file (JPG, PNG, GIF)",
       );
       return;
     }
@@ -199,9 +209,9 @@ const UserManagement = () => {
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       showNotification(
-        'error',
-        'File Too Large',
-        'Image size must be less than 5MB'
+        "error",
+        "File Too Large",
+        "Image size must be less than 5MB",
       );
       return;
     }
@@ -225,18 +235,20 @@ const UserManagement = () => {
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
       const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-      await updateUser(userId, { status: newStatus });
+      await runMutationWithRefresh({
+        mutate: () => updateUser(userId, { status: newStatus }),
+        refresh: fetchUsers,
+      });
       showNotification(
-        'success',
-        'Status Updated',
-        `User status has been updated to ${newStatus}`
+        "success",
+        "Status Updated",
+        `User status has been updated to ${newStatus}`,
       );
-      fetchUsers();
     } catch (err) {
       showNotification(
-        'error',
-        'Failed to Update Status',
-        err.message || 'An error occurred while updating status'
+        "error",
+        "Failed to Update Status",
+        err.message || "An error occurred while updating status",
       );
     }
   };
@@ -244,18 +256,20 @@ const UserManagement = () => {
   // Handle role change
   const handleRoleChange = async (userId, newRole) => {
     try {
-      await updateUser(userId, { role: newRole });
+      await runMutationWithRefresh({
+        mutate: () => updateUser(userId, { role: newRole }),
+        refresh: fetchUsers,
+      });
       showNotification(
-        'success',
-        'Role Updated',
-        'User role has been updated successfully'
+        "success",
+        "Role Updated",
+        "User role has been updated successfully",
       );
-      fetchUsers();
     } catch (err) {
       showNotification(
-        'error',
-        'Failed to Update Role',
-        err.message || 'An error occurred while updating role'
+        "error",
+        "Failed to Update Role",
+        err.message || "An error occurred while updating role",
       );
     }
   };
@@ -296,7 +310,7 @@ const UserManagement = () => {
   // Open reset password modal
   const openResetPasswordModal = (user) => {
     setSelectedUser(user);
-    setResetPasswordData({ newPassword: '', confirmPassword: '' });
+    setResetPasswordData({ newPassword: "", confirmPassword: "" });
     setShowResetNewPass(false);
     setShowResetConfirmPass(false);
     setIsResetPasswordModalOpen(true);
@@ -307,21 +321,24 @@ const UserManagement = () => {
     e.preventDefault();
     setResetPasswordLoading(true);
     try {
-      const response = await adminResetUserPassword(selectedUser._id, resetPasswordData);
+      const response = await adminResetUserPassword(
+        selectedUser._id,
+        resetPasswordData,
+      );
       if (response.success) {
         showNotification(
-          'success',
-          'Password Reset Successfully',
-          response.message || 'New password has been sent to user\'s email'
+          "success",
+          "Password Reset Successfully",
+          response.message || "New password has been sent to user's email",
         );
         setIsResetPasswordModalOpen(false);
         setSelectedUser(null);
       }
     } catch (err) {
       showNotification(
-        'error',
-        'Failed to Reset Password',
-        err.message || 'An error occurred while resetting password'
+        "error",
+        "Failed to Reset Password",
+        err.message || "An error occurred while resetting password",
       );
     } finally {
       setResetPasswordLoading(false);
@@ -493,7 +510,9 @@ const UserManagement = () => {
                           <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm group-hover:bg-blue-200 transition-colors">
                             {getInitials(user.full_name)}
                           </div>
-                          <div className="font-medium group-hover:underline">{user.full_name}</div>
+                          <div className="font-medium group-hover:underline">
+                            {user.full_name}
+                          </div>
                         </button>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-500">
@@ -643,7 +662,10 @@ const UserManagement = () => {
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold">User Detail</h2>
               <button
-                onClick={() => { setIsViewDetailModalOpen(false); setViewDetailUser(null); }}
+                onClick={() => {
+                  setIsViewDetailModalOpen(false);
+                  setViewDetailUser(null);
+                }}
                 className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors text-lg"
               >
                 ✕
@@ -660,12 +682,16 @@ const UserManagement = () => {
                     {getInitials(viewDetailUser.full_name)}
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-800">{viewDetailUser.full_name}</h3>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                      viewDetailUser.status === "ACTIVE"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}>
+                    <h3 className="text-lg font-semibold text-slate-800">
+                      {viewDetailUser.full_name}
+                    </h3>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                        viewDetailUser.status === "ACTIVE"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
                       {viewDetailUser.status}
                     </span>
                   </div>
@@ -674,17 +700,33 @@ const UserManagement = () => {
                 {/* Info Grid */}
                 <div className="grid grid-cols-1 gap-4">
                   <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-                    <InfoRow icon="📧" label="Email" value={viewDetailUser.email} />
+                    <InfoRow
+                      icon="📧"
+                      label="Email"
+                      value={viewDetailUser.email}
+                    />
                     <InfoRow
                       icon="✅"
                       label="Email Verified"
                       value={
-                        <span className={viewDetailUser.is_email_verified ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
-                          {viewDetailUser.is_email_verified ? "Verified" : "Not Verified"}
+                        <span
+                          className={
+                            viewDetailUser.is_email_verified
+                              ? "text-green-600 font-medium"
+                              : "text-red-500 font-medium"
+                          }
+                        >
+                          {viewDetailUser.is_email_verified
+                            ? "Verified"
+                            : "Not Verified"}
                         </span>
                       }
                     />
-                    <InfoRow icon="📞" label="Phone" value={viewDetailUser.phone_number || "—"} />
+                    <InfoRow
+                      icon="📞"
+                      label="Phone"
+                      value={viewDetailUser.phone_number || "—"}
+                    />
                     <InfoRow
                       icon="🎭"
                       label="Role"
@@ -692,7 +734,8 @@ const UserManagement = () => {
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                           {viewDetailUser.role === "FACILITY_MANAGER"
                             ? "Facility Manager"
-                            : viewDetailUser.role.charAt(0) + viewDetailUser.role.slice(1).toLowerCase()}
+                            : viewDetailUser.role.charAt(0) +
+                              viewDetailUser.role.slice(1).toLowerCase()}
                         </span>
                       }
                     />
@@ -701,7 +744,9 @@ const UserManagement = () => {
                       label="Member Since"
                       value={
                         viewDetailUser.created_at
-                          ? new Date(viewDetailUser.created_at).toLocaleDateString("en-GB", {
+                          ? new Date(
+                              viewDetailUser.created_at,
+                            ).toLocaleDateString("en-GB", {
                               year: "numeric",
                               month: "long",
                               day: "numeric",
@@ -714,7 +759,9 @@ const UserManagement = () => {
                       label="Last Updated"
                       value={
                         viewDetailUser.updated_at
-                          ? new Date(viewDetailUser.updated_at).toLocaleDateString("en-GB", {
+                          ? new Date(
+                              viewDetailUser.updated_at,
+                            ).toLocaleDateString("en-GB", {
                               year: "numeric",
                               month: "long",
                               day: "numeric",
@@ -740,7 +787,10 @@ const UserManagement = () => {
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => { setIsViewDetailModalOpen(false); setViewDetailUser(null); }}
+                    onClick={() => {
+                      setIsViewDetailModalOpen(false);
+                      setViewDetailUser(null);
+                    }}
                     className="flex-1"
                   >
                     Close
@@ -762,7 +812,9 @@ const UserManagement = () => {
                   <h2 className="text-xl font-semibold">🔑 Reset Password</h2>
                   <p className="text-sm text-slate-500 mt-1">
                     {selectedUser.full_name}{" "}
-                    <span className="text-slate-400">({selectedUser.email})</span>
+                    <span className="text-slate-400">
+                      ({selectedUser.email})
+                    </span>
                   </p>
                 </div>
                 <button
@@ -780,7 +832,8 @@ const UserManagement = () => {
             <form onSubmit={handleResetPassword} className="p-6 space-y-4">
               {/* Info banner */}
               <div className="p-3 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-sm">
-                ⚠️ The new password will be sent to the user's email address after reset.
+                ⚠️ The new password will be sent to the user's email address
+                after reset.
               </div>
 
               {/* New Password */}
@@ -793,7 +846,10 @@ const UserManagement = () => {
                     type={showResetNewPass ? "text" : "password"}
                     value={resetPasswordData.newPassword}
                     onChange={(e) =>
-                      setResetPasswordData({ ...resetPasswordData, newPassword: e.target.value })
+                      setResetPasswordData({
+                        ...resetPasswordData,
+                        newPassword: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
                     placeholder="Min. 6 characters, include letters & numbers"
@@ -820,11 +876,15 @@ const UserManagement = () => {
                     type={showResetConfirmPass ? "text" : "password"}
                     value={resetPasswordData.confirmPassword}
                     onChange={(e) =>
-                      setResetPasswordData({ ...resetPasswordData, confirmPassword: e.target.value })
+                      setResetPasswordData({
+                        ...resetPasswordData,
+                        confirmPassword: e.target.value,
+                      })
                     }
                     className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-orange-500 focus:border-orange-500 ${
                       resetPasswordData.confirmPassword &&
-                      resetPasswordData.newPassword !== resetPasswordData.confirmPassword
+                      resetPasswordData.newPassword !==
+                        resetPasswordData.confirmPassword
                         ? "border-red-400 bg-red-50"
                         : "border-slate-300"
                     }`}
@@ -833,36 +893,59 @@ const UserManagement = () => {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowResetConfirmPass(!showResetConfirmPass)}
+                    onClick={() =>
+                      setShowResetConfirmPass(!showResetConfirmPass)
+                    }
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
                     {showResetConfirmPass ? "🙈" : "👁"}
                   </button>
                 </div>
                 {resetPasswordData.confirmPassword &&
-                  resetPasswordData.newPassword !== resetPasswordData.confirmPassword && (
-                    <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                  resetPasswordData.newPassword !==
+                    resetPasswordData.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-500">
+                      Passwords do not match
+                    </p>
                   )}
               </div>
 
               {/* Password rules */}
               <ul className="text-xs text-slate-500 space-y-1 pl-1">
-                <li className={resetPasswordData.newPassword.length >= 6 ? "text-green-600" : ""}>
-                  {resetPasswordData.newPassword.length >= 6 ? "✅" : "○"} At least 6 characters
+                <li
+                  className={
+                    resetPasswordData.newPassword.length >= 6
+                      ? "text-green-600"
+                      : ""
+                  }
+                >
+                  {resetPasswordData.newPassword.length >= 6 ? "✅" : "○"} At
+                  least 6 characters
                 </li>
-                <li className={/(?=.*[A-Za-z])(?=.*\d)/.test(resetPasswordData.newPassword) ? "text-green-600" : ""}>
-                  {/(?=.*[A-Za-z])(?=.*\d)/.test(resetPasswordData.newPassword) ? "✅" : "○"} Contains letters and numbers
+                <li
+                  className={
+                    /(?=.*[A-Za-z])(?=.*\d)/.test(resetPasswordData.newPassword)
+                      ? "text-green-600"
+                      : ""
+                  }
+                >
+                  {/(?=.*[A-Za-z])(?=.*\d)/.test(resetPasswordData.newPassword)
+                    ? "✅"
+                    : "○"}{" "}
+                  Contains letters and numbers
                 </li>
                 <li
                   className={
                     resetPasswordData.confirmPassword &&
-                    resetPasswordData.newPassword === resetPasswordData.confirmPassword
+                    resetPasswordData.newPassword ===
+                      resetPasswordData.confirmPassword
                       ? "text-green-600"
                       : ""
                   }
                 >
                   {resetPasswordData.confirmPassword &&
-                  resetPasswordData.newPassword === resetPasswordData.confirmPassword
+                  resetPasswordData.newPassword ===
+                    resetPasswordData.confirmPassword
                     ? "✅"
                     : "○"}{" "}
                   Passwords match
@@ -875,7 +958,8 @@ const UserManagement = () => {
                   disabled={
                     resetPasswordLoading ||
                     !resetPasswordData.newPassword ||
-                    resetPasswordData.newPassword !== resetPasswordData.confirmPassword
+                    resetPasswordData.newPassword !==
+                      resetPasswordData.confirmPassword
                   }
                   className="flex-1 py-2 px-4 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
                 >
@@ -931,18 +1015,20 @@ const UserManagement = () => {
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
-                    formData.email && !formData.email.toLowerCase().endsWith("@fpt.edu.vn")
+                    formData.email &&
+                    !formData.email.toLowerCase().endsWith("@fpt.edu.vn")
                       ? "border-red-300 focus:border-red-500 focus:ring-red-500"
                       : "border-slate-300"
                   }`}
                   placeholder="example@fpt.edu.vn"
                   required
                 />
-                {formData.email && !formData.email.toLowerCase().endsWith("@fpt.edu.vn") && (
-                  <p className="mt-1 text-sm text-red-600">
-                    ⚠️ Must use FPT University email (@fpt.edu.vn)
-                  </p>
-                )}
+                {formData.email &&
+                  !formData.email.toLowerCase().endsWith("@fpt.edu.vn") && (
+                    <p className="mt-1 text-sm text-red-600">
+                      ⚠️ Must use FPT University email (@fpt.edu.vn)
+                    </p>
+                  )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -1036,7 +1122,6 @@ const UserManagement = () => {
               <h2 className="text-xl font-semibold">Edit User</h2>
             </div>
             <form onSubmit={handleEditUser} className="p-6 space-y-4">
-              
               {/* Avatar Upload Section */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -1053,11 +1138,13 @@ const UserManagement = () => {
                       />
                     ) : (
                       <span className="text-2xl text-slate-400">
-                        {formData.full_name ? getInitials(formData.full_name) : "?"}
+                        {formData.full_name
+                          ? getInitials(formData.full_name)
+                          : "?"}
                       </span>
                     )}
                   </div>
-                  
+
                   {/* Upload/Remove Buttons */}
                   <div className="flex-1 space-y-2">
                     <label className="cursor-pointer">
@@ -1068,7 +1155,7 @@ const UserManagement = () => {
                         className="hidden"
                       />
                       <span className="inline-block px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium rounded-lg transition-colors text-sm">
-                        📷 {avatarPreview ? 'Change Photo' : 'Upload Photo'}
+                        📷 {avatarPreview ? "Change Photo" : "Upload Photo"}
                       </span>
                     </label>
                     {avatarPreview && (

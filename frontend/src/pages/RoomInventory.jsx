@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRooms, deleteRoom, getRoomById, updateRoomImages } from '../services/roomService';
+import { runMutationWithRefresh } from "../utils/mutationRefresh";
 
 const RoomInventory = () => {
   const navigate = useNavigate();
@@ -71,11 +72,13 @@ const RoomInventory = () => {
     if (!roomToDelete) return;
 
     try {
-      const response = await deleteRoom(roomToDelete._id);
+      const response = await runMutationWithRefresh({
+        mutate: () => deleteRoom(roomToDelete._id),
+        refresh: fetchRooms,
+      });
       if (response.success) {
         setShowDeleteModal(false);
         setRoomToDelete(null);
-        fetchRooms(); // Refresh list
       }
     } catch (error) {
       console.error("Error deleting room:", error);
@@ -600,10 +603,12 @@ const ImageManagerModal = ({
       }
 
       // Call new API endpoint for updating images only
-      const response = await updateRoomImages(roomId, reorderedImages);
+      const response = await runMutationWithRefresh({
+        mutate: () => updateRoomImages(roomId, reorderedImages),
+        refresh: onSuccess,
+      });
 
       if (response.success) {
-        onSuccess?.();
         onClose();
       }
     } catch (err) {
