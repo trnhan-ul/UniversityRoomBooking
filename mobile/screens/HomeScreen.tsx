@@ -1,22 +1,18 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useAuthContext } from '../context/AuthContext';
-import { COLORS } from '../constants/theme';
-import { Card } from '../components';
-import { RootStackParamList } from '../types/navigation';
+import { Ionicons } from "@expo/vector-icons";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useAuthContext } from "../context/AuthContext";
+import { COLORS } from "../constants/theme";
+import { Card } from "../components";
+import { RootStackParamList } from "../types/navigation";
 
-export default function HomeScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { user, logout } = useAuthContext();
+type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+export default function HomeScreen({ navigation }: Props) {
+  const { user } = useAuthContext();
+
+  const handleOpenProfile = () => {
+    navigation.navigate("Profile");
   };
 
   return (
@@ -32,8 +28,15 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.profileButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={COLORS.primary} />
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={handleOpenProfile}
+        >
+          <Ionicons
+            name="person-circle-outline"
+            size={24}
+            color={COLORS.primary}
+          />
         </TouchableOpacity>
       </View>
 
@@ -42,15 +45,21 @@ export default function HomeScreen() {
         <View style={styles.welcomeGrid}>
           <View style={styles.welcomeItem}>
             <Text style={styles.welcomeLabel}>Full Name</Text>
-            <Text style={styles.welcomeValue}>{user?.full_name || 'Student User'}</Text>
+            <Text style={styles.welcomeValue}>
+              {user?.full_name || "Student User"}
+            </Text>
           </View>
           <View style={styles.welcomeItem}>
             <Text style={styles.welcomeLabel}>Email</Text>
-            <Text style={styles.welcomeValue}>{user?.email || 'student@fpt.edu.vn'}</Text>
+            <Text style={styles.welcomeValue}>
+              {user?.email || "student@fpt.edu.vn"}
+            </Text>
           </View>
           <View style={styles.welcomeItem}>
             <Text style={styles.welcomeLabel}>Role</Text>
-            <Text style={[styles.tagText, styles.roleTag]}>{user?.role || 'STUDENT'}</Text>
+            <Text style={[styles.tagText, styles.roleTag]}>
+              {user?.role || "STUDENT"}
+            </Text>
           </View>
           <View style={styles.welcomeItem}>
             <Text style={styles.welcomeLabel}>Status</Text>
@@ -62,7 +71,7 @@ export default function HomeScreen() {
       <TouchableOpacity
         style={styles.primaryActionButton}
         activeOpacity={0.9}
-        onPress={() => navigation.navigate('Rooms')}
+        onPress={() => navigation.navigate("Rooms")}
       >
         <Ionicons name="flash-outline" size={18} color="#ffffff" />
         <Text style={styles.primaryActionText}>Quick Booking</Text>
@@ -73,56 +82,79 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.featurePressable}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate('Rooms')}
+          onPress={() => navigation.navigate("Rooms")}
         >
           <Card style={styles.featureCard}>
-            <View style={[styles.featureIconBox, { backgroundColor: '#e0edff' }]}>
-              <Ionicons name="business-outline" size={20} color={COLORS.primary} />
+            <View
+              style={[styles.featureIconBox, { backgroundColor: "#e0edff" }]}
+            >
+              <Ionicons
+                name="business-outline"
+                size={20}
+                color={COLORS.primary}
+              />
             </View>
             <Text style={styles.featureTitle}>Room</Text>
-            <Text style={styles.featureDescription}>Find classrooms by location and capacity.</Text>
+            <Text style={styles.featureDescription}>
+              Find classrooms by location and capacity.
+            </Text>
           </Card>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.featurePressable}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate('BookingRoom')}
+          onPress={() => navigation.navigate("BookingRoom")}
         >
           <Card style={styles.featureCard}>
-            <View style={[styles.featureIconBox, { backgroundColor: '#dcfce7' }]}>
+            <View
+              style={[styles.featureIconBox, { backgroundColor: "#dcfce7" }]}
+            >
               <Ionicons name="book-outline" size={20} color="#16a34a" />
             </View>
             <Text style={styles.featureTitle}>Book Room</Text>
-            <Text style={styles.featureDescription}>Create a new booking request quickly.</Text>
+            <Text style={styles.featureDescription}>
+              Create a new booking request quickly.
+            </Text>
           </Card>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.featurePressable}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate('MyBookings')}
+          onPress={() => navigation.navigate("MyBookings")}
         >
           <Card style={styles.featureCard}>
-            <View style={[styles.featureIconBox, { backgroundColor: '#ede9fe' }]}>
+            <View
+              style={[styles.featureIconBox, { backgroundColor: "#ede9fe" }]}
+            >
               <Ionicons name="calendar-outline" size={20} color="#7c3aed" />
             </View>
             <Text style={styles.featureTitle}>My Bookings</Text>
-            <Text style={styles.featureDescription}>Track and manage your upcoming bookings.</Text>
+            <Text style={styles.featureDescription}>
+              Track and manage your upcoming bookings.
+            </Text>
           </Card>
         </TouchableOpacity>
 
         <View style={styles.featurePressable}>
           <Card style={styles.featureCard}>
-            <View style={[styles.featureIconBox, { backgroundColor: '#fee2e2' }]}>
-              <Ionicons name="notifications-outline" size={20} color="#dc2626" />
+            <View
+              style={[styles.featureIconBox, { backgroundColor: "#fee2e2" }]}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={20}
+                color="#dc2626"
+              />
             </View>
             <Text style={styles.featureTitle}>Notifications</Text>
-            <Text style={styles.featureDescription}>Stay updated with booking status changes.</Text>
+            <Text style={styles.featureDescription}>
+              Stay updated with booking status changes.
+            </Text>
           </Card>
         </View>
       </View>
-
     </ScrollView>
   );
 }
