@@ -8,6 +8,7 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
 import RoomsScreen from './screens/RoomsScreen';
+import BookingRoomScreen from './screens/BookingRoomScreen';
 import RoomDetailScreen from './screens/RoomDetailScreen';
 import MyBookingsScreen from './screens/MyBookingsScreen';
 import BookingDetailScreen from './screens/BookingDetailScreen';
@@ -37,6 +38,11 @@ function RootNavigator() {
               name="Rooms"
               component={RoomsScreen}
               options={{ headerShown: true, title: 'Rooms' }}
+            />
+            <Stack.Screen
+              name="BookingRoom"
+              component={BookingRoomScreen}
+              options={{ headerShown: true, title: 'Book Room' }}
             />
             <Stack.Screen
               name="MyBookings"

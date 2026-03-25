@@ -1,8 +1,19 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../components';
 import { COLORS } from '../constants/theme';
+import { cancelBooking } from '../services/bookingService';
 import { RootStackParamList } from '../types/navigation';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -23,12 +34,55 @@ const formatDateTime = (value: string) => {
 };
 
 export default function BookingDetailScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'BookingDetail'>>();
-  const { booking } = route.params;
+  const [booking, setBooking] = useState(route.params.booking);
+  const [submitting, setSubmitting] = useState(false);
 
   const colorSet = STATUS_COLORS[booking.status] || {
     bg: '#e2e8f0',
     text: '#334155',
+  };
+
+  const handleCancelBooking = () => {
+    Alert.alert(
+      'Cancel booking',
+      'Do you want to cancel this booking request?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setSubmitting(true);
+              const response = await cancelBooking(booking._id);
+              if (!response.success) {
+                Alert.alert('Cancel failed', response.message || 'Failed to cancel booking');
+                return;
+              }
+
+              const updatedBooking = response.data;
+              if (updatedBooking) {
+                setBooking(updatedBooking);
+              }
+
+              Alert.alert('Success', response.message || 'Booking has been cancelled', [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack(),
+                },
+              ]);
+            } catch (error: unknown) {
+              const message = error instanceof Error ? error.message : 'Failed to cancel booking';
+              Alert.alert('Cancel failed', message);
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -81,6 +135,21 @@ export default function BookingDetailScreen() {
             {booking._id}
           </Text>
         </View>
+
+        {booking.status === 'PENDING' ? (
+          <TouchableOpacity
+            style={[styles.cancelButton, submitting && styles.cancelButtonDisabled]}
+            onPress={handleCancelBooking}
+            disabled={submitting}
+            activeOpacity={0.9}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
       </Card>
     </ScrollView>
   );
@@ -156,5 +225,21 @@ const styles = StyleSheet.create({
     color: COLORS.dark,
     lineHeight: 20,
     marginBottom: 10,
+  },
+  cancelButton: {
+    marginTop: 6,
+    height: 42,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#dc2626',
+  },
+  cancelButtonDisabled: {
+    opacity: 0.7,
+  },
+  cancelButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
