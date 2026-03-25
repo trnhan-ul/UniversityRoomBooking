@@ -13,44 +13,59 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import { useAuthContext } from '../context/AuthContext';
-import { validateLoginForm, getErrorMessage } from '../utils/validation';
+import { register } from '../services/authService';
+import { validateRegisterForm, getErrorMessage } from '../utils/validation';
 import { COLORS } from '../constants/theme';
 import { RootStackParamList } from '../types/navigation';
 
-type LoginNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+type RegisterNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
-export default function LoginScreen() {
-  const navigation = useNavigation<LoginNavigationProp>();
-  const { login, loading: authLoading } = useAuthContext();
+export default function RegisterScreen() {
+  const navigation = useNavigation<RegisterNavigationProp>();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     try {
       setError('');
       setSuccessMessage('');
       setLoading(true);
 
-      const validationError = validateLoginForm(email, password);
+      const validationError = validateRegisterForm(
+        email,
+        password,
+        confirmPassword,
+        fullName,
+      );
+
       if (validationError) {
         setError(validationError);
         return;
       }
 
-      const success = await login(email, password);
+      const response = await register(email, password, fullName.trim());
 
-      if (success) {
+      if (response.success) {
+        setFullName('');
         setEmail('');
         setPassword('');
-        setSuccessMessage('Login successful! Welcome!');
-        setTimeout(() => setSuccessMessage(''), 2000);
+        setConfirmPassword('');
+        setSuccessMessage(
+          response.message || 'Registration successful! Please check your email.',
+        );
+
+        setTimeout(() => {
+          navigation.navigate('Login');
+        }, 1200);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage = getErrorMessage(err);
       setError(errorMessage);
     } finally {
@@ -69,16 +84,16 @@ export default function LoginScreen() {
       >
         <View style={styles.headerSection}>
           <View style={styles.logoBox}>
-            <Ionicons name="school" size={28} color="white" />
+            <Ionicons name="person-add" size={26} color="white" />
           </View>
           <Text style={styles.brandText}>FPT University</Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderTitle}>Welcome Back</Text>
+            <Text style={styles.cardHeaderTitle}>Create Account</Text>
             <Text style={styles.cardHeaderSubtitle}>
-              Access your campus scheduling dashboard.
+              Register to use the campus room booking system.
             </Text>
           </View>
 
@@ -96,6 +111,28 @@ export default function LoginScreen() {
             ) : null}
 
             <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Full Name</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons
+                  name="person"
+                  size={20}
+                  color={COLORS.textGray}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Nguyen Van A"
+                  placeholderTextColor={COLORS.lightText}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  editable={!loading}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                />
+              </View>
+            </View>
+
+            <View style={styles.fieldContainer}>
               <Text style={styles.label}>Email Address</Text>
               <View style={styles.inputWrapper}>
                 <Ionicons
@@ -110,7 +147,7 @@ export default function LoginScreen() {
                   placeholderTextColor={COLORS.lightText}
                   value={email}
                   onChangeText={setEmail}
-                  editable={!loading && !authLoading}
+                  editable={!loading}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
@@ -120,12 +157,7 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.fieldContainer}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Password</Text>
-                <TouchableOpacity>
-                  <Text style={styles.forgotPassword}>Forgot password?</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.label}>Password</Text>
               <View style={styles.inputWrapper}>
                 <Ionicons
                   name="lock-closed"
@@ -135,15 +167,14 @@ export default function LoginScreen() {
                 />
                 <TextInput
                   style={[styles.input, { paddingRight: 50 }]}
-                  placeholder="Enter your password"
+                  placeholder="At least 8 characters"
                   placeholderTextColor={COLORS.lightText}
                   value={password}
                   onChangeText={setPassword}
-                  editable={!loading && !authLoading}
+                  editable={!loading}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogin}
+                  returnKeyType="next"
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -158,35 +189,62 @@ export default function LoginScreen() {
               </View>
             </View>
 
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={20}
+                  color={COLORS.textGray}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={[styles.input, { paddingRight: 50 }]}
+                  placeholder="Re-enter your password"
+                  placeholderTextColor={COLORS.lightText}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  editable={!loading}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={handleRegister}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off' : 'eye'}
+                    size={20}
+                    color={COLORS.textGray}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <TouchableOpacity
-              style={[
-                styles.signInButton,
-                (loading || authLoading) && styles.signInButtonDisabled,
-              ]}
-              onPress={handleLogin}
-              disabled={loading || authLoading}
+              style={[styles.actionButton, loading && styles.actionButtonDisabled]}
+              onPress={handleRegister}
+              disabled={loading}
             >
-              {loading || authLoading ? (
+              {loading ? (
                 <ActivityIndicator color="white" size="small" />
               ) : (
-                <Text style={styles.signInButtonText}>Sign In</Text>
+                <Text style={styles.actionButtonText}>Create Account</Text>
               )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
             <View style={styles.footerContent}>
-              <Text style={styles.footerText}>Do not have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.registerLink}>Register now</Text>
+              <Text style={styles.footerText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.loginLink}>Sign in now</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
-
-        <Text style={styles.copyright}>
-          Copyright 2024 FPT University Room Booking System. All rights reserved.
-        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -256,24 +314,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   fieldContainer: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   label: {
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.dark,
     marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  forgotPassword: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.primary,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -312,9 +359,9 @@ const styles = StyleSheet.create({
     color: COLORS.errorText,
   },
   successContainer: {
-    backgroundColor: '#f0fdf4',
+    backgroundColor: COLORS.successBg,
     borderWidth: 1,
-    borderColor: '#86efac',
+    borderColor: COLORS.successBorder,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -322,10 +369,10 @@ const styles = StyleSheet.create({
   },
   successText: {
     fontSize: 14,
-    color: '#16a34a',
+    color: COLORS.successText,
     fontWeight: '600',
   },
-  signInButton: {
+  actionButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 8,
     height: 48,
@@ -338,18 +385,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  signInButtonDisabled: {
+  actionButtonDisabled: {
     opacity: 0.6,
   },
-  signInButtonText: {
+  actionButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: 'white',
+    color: COLORS.background,
   },
   footer: {
-    backgroundColor: COLORS.background2,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: '#f3f4f6',
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
@@ -359,18 +405,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
-    color: COLORS.lightText,
+    fontSize: 13,
+    color: COLORS.textGray,
   },
-  registerLink: {
-    fontSize: 14,
+  loginLink: {
+    fontSize: 13,
     fontWeight: '700',
     color: COLORS.primary,
-  },
-  copyright: {
-    fontSize: 12,
-    color: '#9ca3af',
-    textAlign: 'center',
-    marginTop: 24,
   },
 });

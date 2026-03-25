@@ -35,6 +35,35 @@ export const validateLoginForm = (email: string, password: string): string | nul
   return null;
 };
 
+export const validateRegisterForm = (
+  email: string,
+  password: string,
+  confirmPassword: string,
+  fullName: string,
+): string | null => {
+  if (!fullName.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+    return 'Please fill in all fields';
+  }
+
+  if (!validateEmail(email)) {
+    return 'Please enter a valid email address';
+  }
+
+  if (!validateFPTEmail(email)) {
+    return 'Please use FPT University email (@fpt.edu.vn)';
+  }
+
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+
+  if (password !== confirmPassword) {
+    return 'Confirm password does not match';
+  }
+
+  return null;
+};
+
 /**
  * Extract error message from various error types
  */

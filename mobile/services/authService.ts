@@ -58,6 +58,15 @@ export interface LoginResponse {
   message?: string;
 }
 
+export interface RegisterResponse {
+  success: boolean;
+  data?: {
+    email: string;
+    full_name: string;
+  };
+  message?: string;
+}
+
 // Login
 export const login = async (
   email: string,
@@ -81,6 +90,34 @@ export const login = async (
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<LoginResponse>;
+    const errorData = axiosError.response?.data;
+    const errorMessage = errorData
+      ? getErrorMessage(errorData)
+      : getErrorMessage(error);
+
+    throw new CustomApiError(errorMessage, errorData);
+  }
+};
+
+// Register
+export const register = async (
+  email: string,
+  password: string,
+  fullName: string,
+): Promise<RegisterResponse> => {
+  try {
+    const response = await api.post<RegisterResponse>(
+      API_CONFIG.ENDPOINTS.AUTH.REGISTER,
+      {
+        email,
+        password,
+        full_name: fullName,
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<RegisterResponse>;
     const errorData = axiosError.response?.data;
     const errorMessage = errorData
       ? getErrorMessage(errorData)
