@@ -137,7 +137,11 @@ export default function HomeScreen({ navigation }: Props) {
           </Card>
         </TouchableOpacity>
 
-        <View style={styles.featurePressable}>
+        <TouchableOpacity
+          style={styles.featurePressable}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate("Notifications")}
+        >
           <Card style={styles.featureCard}>
             <View
               style={[styles.featureIconBox, { backgroundColor: "#fee2e2" }]}
@@ -153,7 +157,7 @@ export default function HomeScreen({ navigation }: Props) {
               Stay updated with booking status changes.
             </Text>
           </Card>
-        </View>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

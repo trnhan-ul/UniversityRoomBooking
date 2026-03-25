@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Rooms: undefined;
   BookingRoom: { preselectedRoomId?: string } | undefined;
   Profile: undefined;
+  Notifications: undefined;
   RoomDetail: { id: string };
   MyBookings: undefined;
   BookingDetail: { booking: BookingItem };
