@@ -256,6 +256,51 @@ const getPendingBookings = async (req, res) => {
     const unwindUser = {
       $unwind: { path: "$user", preserveNullAndEmptyArrays: true },
     };
+    const lookupApprovedConflicts = {
+      $lookup: {
+        from: "bookings",
+        let: {
+          bookingId: "$_id",
+          roomId: "$room_id",
+          bookingDate: "$date",
+          startTime: "$start_time",
+          endTime: "$end_time",
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $ne: ["$_id", "$$bookingId"] },
+                  { $eq: ["$room_id", "$$roomId"] },
+                  {
+                    $eq: [
+                      { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+                      {
+                        $dateToString: {
+                          format: "%Y-%m-%d",
+                          date: "$$bookingDate",
+                        },
+                      },
+                    ],
+                  },
+                  { $eq: ["$status", "APPROVED"] },
+                  { $lt: ["$start_time", "$$endTime"] },
+                  { $gt: ["$end_time", "$$startTime"] },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: "approved_conflicts",
+      },
+    };
+    const addConflictFlag = {
+      $addFields: {
+        has_conflict: { $gt: [{ $size: "$approved_conflicts" }, 0] },
+      },
+    };
 
     const sortStage = { $sort: { date: 1, "room.name": 1, start_time: 1 } };
 
@@ -272,6 +317,8 @@ const getPendingBookings = async (req, res) => {
       unwindRoom,
       lookupUser,
       unwindUser,
+      lookupApprovedConflicts,
+      addConflictFlag,
       sortStage,
       facetStage,
     ];
@@ -747,7 +794,7 @@ const getBookingStatistics = async (req, res) => {
     // Count approved bookings today
     const approvedToday = await Booking.countDocuments({
       status: "APPROVED",
-      updated_at: { $gte: today, $lt: tomorrow },
+      approved_at: { $gte: today, $lt: tomorrow },
     });
 
     // Count pending bookings
@@ -760,12 +807,19 @@ const getBookingStatistics = async (req, res) => {
       status: "APPROVED",
     });
 
+    const conflictDetectedAgg = await Booking.aggregate([
+      { $match: { status: "REJECTED" } },
+      { $count: "count" },
+    ]);
+    const conflictDetected = conflictDetectedAgg[0]?.count || 0;
+
     res.status(200).json({
       success: true,
       data: {
         approvedToday,
         pendingTotal,
         approvedTotal,
+        conflictDetected,
       },
     });
   } catch (error) {

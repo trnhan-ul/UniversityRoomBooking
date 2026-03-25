@@ -1,19 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  fetchNotifications, 
-  markAsRead, 
-  markAllAsRead, 
-  deleteNotification 
-} from '../services/notificationService';
-import NotificationItem from '../components/common/NotificationItem';
-import Header from '../components/layout/Header';
-import { useAuthContext } from '../context/AuthContext';
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  fetchNotifications,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+} from "../services/notificationService";
+import NotificationItem from "../components/common/NotificationItem";
+import Header from "../components/layout/Header";
+import { useAuthContext } from "../context/AuthContext";
 import { runMutationWithRefresh } from "../utils/mutationRefresh";
 
 const NotificationPage = () => {
   const { user } = useAuthContext();
-  const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +58,14 @@ const NotificationPage = () => {
     loadNotifications();
   }, [loadNotifications]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadNotifications();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
+
   // Handle notification click
   const handleNotificationClick = async (notification) => {
     try {
@@ -72,11 +78,6 @@ const NotificationPage = () => {
             n._id === notification._id ? { ...n, is_read: true } : n,
           ),
         );
-      }
-
-      // Navigate to related page
-      if (notification.type === "BOOKING" && notification.target_id) {
-        navigate(`/bookings/${notification.target_id}`);
       }
     } catch (error) {
       console.error("Error handling notification:", error);

@@ -10,7 +10,6 @@ import {
 import { Button, Badge } from "../components/common";
 import { formatDate } from "../utils/helpers";
 import { formatTime12Hour } from "../utils/timeFormat";
-import { runMutationWithRefresh } from "../utils/mutationRefresh";
 
 const PendingRequests = () => {
   const [bookings, setBookings] = useState([]);
@@ -39,9 +38,17 @@ const PendingRequests = () => {
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
+  const getHasConflict = (booking) => {
+    return Boolean(
+      booking?.has_conflict ?? booking?.hasConflict ?? booking?.is_conflict,
+    );
+  };
+
   // Fetch pending bookings
-  const fetchPendingBookings = async () => {
-    setLoading(true);
+  const fetchPendingBookings = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError("");
     try {
       const response = await getPendingBookings(page, 10);
@@ -52,7 +59,9 @@ const PendingRequests = () => {
     } catch (err) {
       setError(err.message || "Failed to fetch pending bookings");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -79,13 +88,14 @@ const PendingRequests = () => {
       return bookings.filter((b) => b.priority === "HIGH");
     }
     if (filterType === "conflict") {
-      return bookings.filter((b) => b.has_conflict === true);
+      return bookings.filter((b) => getHasConflict(b));
     }
     return bookings;
   };
 
   const filteredBookings = getFilteredBookings();
-  const conflictCount = bookings.filter((b) => b.has_conflict === true).length;
+  const conflictCount = bookings.filter((b) => getHasConflict(b)).length;
+  const conflictDetected = statistics.conflictDetected ?? conflictCount;
   const today = new Date();
   const todaysBookings = bookings
     .filter((b) => {
@@ -119,17 +129,25 @@ const PendingRequests = () => {
 
   const handleApproveGroup = async () => {
     if (!groupActionBooking?.recurrence_id) return;
+    const recurrenceId = groupActionBooking.recurrence_id;
+
+    // Close modal immediately for snappier UX.
+    setIsGroupActionOpen(false);
+    setIsGroupRejecting(false);
+    setGroupRejectReason("");
+    setGroupActionBooking(null);
+
     setGroupActionLoading(true);
     setError("");
     try {
-      const res = await runMutationWithRefresh({
-        mutate: () => approveRecurringGroup(groupActionBooking.recurrence_id),
-        refresh: [fetchPendingBookings, fetchStatistics],
-      });
+      const res = await approveRecurringGroup(recurrenceId);
       if (res.success) {
         setSuccess(res.message || "Recurring group approved");
-        setIsGroupActionOpen(false);
         setTimeout(() => setSuccess(""), 4000);
+        Promise.all([
+          fetchPendingBookings({ silent: true }),
+          fetchStatistics(),
+        ]);
       }
     } catch (err) {
       setError(err.message || "Failed to approve group");
@@ -144,21 +162,27 @@ const PendingRequests = () => {
       setError("Rejection reason must be at least 10 characters");
       return;
     }
+
+    const recurrenceId = groupActionBooking.recurrence_id;
+    const reason = groupRejectReason;
+
+    // Close modal immediately for snappier UX.
+    setIsGroupActionOpen(false);
+    setIsGroupRejecting(false);
+    setGroupRejectReason("");
+    setGroupActionBooking(null);
+
     setGroupActionLoading(true);
     setError("");
     try {
-      const res = await runMutationWithRefresh({
-        mutate: () =>
-          rejectRecurringGroup(
-            groupActionBooking.recurrence_id,
-            groupRejectReason,
-          ),
-        refresh: [fetchPendingBookings, fetchStatistics],
-      });
+      const res = await rejectRecurringGroup(recurrenceId, reason);
       if (res.success) {
         setSuccess(res.message || "Recurring group rejected");
-        setIsGroupActionOpen(false);
         setTimeout(() => setSuccess(""), 4000);
+        Promise.all([
+          fetchPendingBookings({ silent: true }),
+          fetchStatistics(),
+        ]);
       }
     } catch (err) {
       setError(err.message || "Failed to reject group");
@@ -169,20 +193,53 @@ const PendingRequests = () => {
 
   // Handle approve
   const handleApprove = async (bookingId) => {
+    const snapshot = {
+      bookings,
+      pagination,
+      statistics,
+      selectedBooking,
+      isApproveModalOpen,
+      isRejecting,
+      rejectReason,
+    };
+
+    // Optimistic UX: close modal and update counts immediately.
+    setIsApproveModalOpen(false);
+    setIsRejecting(false);
+    setRejectReason("");
+    setSelectedBooking(null);
+    setBookings((prev) => prev.filter((b) => b._id !== bookingId));
+    setPagination((prev) => ({
+      ...prev,
+      total: Math.max(0, (prev.total || 0) - 1),
+    }));
+    setStatistics((prev) => ({
+      ...prev,
+      pendingTotal: Math.max(0, (prev.pendingTotal || 0) - 1),
+      approvedTotal: (prev.approvedTotal || 0) + 1,
+      approvedToday: (prev.approvedToday || 0) + 1,
+    }));
+
     try {
-      const response = await runMutationWithRefresh({
-        mutate: () => approveBooking(bookingId),
-        refresh: [fetchPendingBookings, fetchStatistics],
-      });
+      const response = await approveBooking(bookingId);
       if (response.success) {
         setSuccess("Booking approved successfully");
-        setIsApproveModalOpen(false);
-        setIsRejecting(false);
-        setRejectReason("");
-        setSelectedBooking(null);
         setTimeout(() => setSuccess(""), 3000);
+
+        Promise.all([
+          fetchPendingBookings({ silent: true }),
+          fetchStatistics(),
+        ]);
       }
     } catch (err) {
+      // Rollback optimistic update on failure.
+      setBookings(snapshot.bookings);
+      setPagination(snapshot.pagination);
+      setStatistics(snapshot.statistics);
+      setSelectedBooking(snapshot.selectedBooking);
+      setIsApproveModalOpen(snapshot.isApproveModalOpen);
+      setIsRejecting(snapshot.isRejecting);
+      setRejectReason(snapshot.rejectReason);
       setError(err.message || "Failed to approve booking");
     }
   };
@@ -193,20 +250,52 @@ const PendingRequests = () => {
       setError("Rejection reason must be at least 10 characters");
       return;
     }
+
+    const snapshot = {
+      bookings,
+      pagination,
+      statistics,
+      selectedBooking,
+      isApproveModalOpen,
+      isRejecting,
+      rejectReason,
+    };
+
+    // Optimistic UX: close modal and update counts immediately.
+    setIsApproveModalOpen(false);
+    setIsRejecting(false);
+    setRejectReason("");
+    setSelectedBooking(null);
+    setBookings((prev) => prev.filter((b) => b._id !== bookingId));
+    setPagination((prev) => ({
+      ...prev,
+      total: Math.max(0, (prev.total || 0) - 1),
+    }));
+    setStatistics((prev) => ({
+      ...prev,
+      pendingTotal: Math.max(0, (prev.pendingTotal || 0) - 1),
+    }));
+
     try {
-      const response = await runMutationWithRefresh({
-        mutate: () => rejectBooking(bookingId, rejectReason),
-        refresh: [fetchPendingBookings, fetchStatistics],
-      });
+      const response = await rejectBooking(bookingId, rejectReason);
       if (response.success) {
         setSuccess("Booking rejected successfully");
-        setIsApproveModalOpen(false);
-        setIsRejecting(false);
-        setRejectReason("");
-        setSelectedBooking(null);
         setTimeout(() => setSuccess(""), 3000);
+
+        Promise.all([
+          fetchPendingBookings({ silent: true }),
+          fetchStatistics(),
+        ]);
       }
     } catch (err) {
+      // Rollback optimistic update on failure.
+      setBookings(snapshot.bookings);
+      setPagination(snapshot.pagination);
+      setStatistics(snapshot.statistics);
+      setSelectedBooking(snapshot.selectedBooking);
+      setIsApproveModalOpen(snapshot.isApproveModalOpen);
+      setIsRejecting(snapshot.isRejecting);
+      setRejectReason(snapshot.rejectReason);
       setError(err.message || "Failed to reject booking");
     }
   };
@@ -220,12 +309,6 @@ const PendingRequests = () => {
     setSelectedBooking(booking);
     setIsApproveModalOpen(true);
     setIsRejecting(false);
-  };
-
-  const getStatusColor = (hasConflict) => {
-    return hasConflict
-      ? "bg-amber-100 text-amber-700"
-      : "bg-green-100 text-green-700";
   };
 
   return (
@@ -269,11 +352,9 @@ const PendingRequests = () => {
             </h3>
             <div className="space-y-3">
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-500 mb-1">
-                  Conflicts Detected
-                </p>
+                <p className="text-xs text-slate-500 mb-1">Reject Today</p>
                 <p className="text-xl font-bold text-amber-600">
-                  {conflictCount}
+                  {conflictDetected}
                 </p>
               </div>
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
@@ -391,24 +472,6 @@ const PendingRequests = () => {
             >
               Priority
             </button>
-            <button
-              onClick={() => {
-                setFilterType("conflict");
-                setPage(1);
-              }}
-              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-                filterType === "conflict"
-                  ? "bg-white shadow-sm text-blue-600"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Conflicts
-              {conflictCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                  {conflictCount}
-                </span>
-              )}
-            </button>
           </div>
 
           {/* Data Table */}
@@ -427,9 +490,6 @@ const PendingRequests = () => {
                       Date & Time
                     </th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase text-center">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase text-right">
                       Actions
                     </th>
                   </tr>
@@ -438,7 +498,7 @@ const PendingRequests = () => {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan="4"
                         className="px-6 py-12 text-center text-slate-500"
                       >
                         Loading pending requests...
@@ -447,7 +507,7 @@ const PendingRequests = () => {
                   ) : filteredBookings.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan="4"
                         className="px-6 py-12 text-center text-slate-500"
                       >
                         No pending requests found
@@ -458,7 +518,7 @@ const PendingRequests = () => {
                       <tr
                         key={booking._id}
                         className={`hover:bg-slate-50 transition-colors group ${
-                          booking.has_conflict
+                          getHasConflict(booking)
                             ? "border-l-4 border-l-amber-400"
                             : ""
                         }`}
@@ -510,26 +570,8 @@ const PendingRequests = () => {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-5 text-center">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(
-                              booking.has_conflict,
-                            )}`}
-                          >
-                            {booking.has_conflict ? (
-                              <>
-                                <span className="text-lg">⚠️</span> Conflict
-                              </>
-                            ) : (
-                              <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>{" "}
-                                Clear
-                              </>
-                            )}
-                          </span>
-                        </td>
                         <td className="px-6 py-5">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex justify-end gap-2">
                             <button
                               onClick={() => openDetails(booking)}
                               className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700"

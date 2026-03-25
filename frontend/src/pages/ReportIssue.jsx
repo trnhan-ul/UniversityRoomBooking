@@ -4,6 +4,7 @@ import Header from "../components/layout/Header";
 import { createFacilityIssue } from "../services/facilityIssueService";
 import { getMyBookings } from "../services/bookingService";
 import { getEquipmentByRoom } from "../services/equipmentService";
+import { formatTime12Hour } from "../utils/timeFormat";
 
 const ReportIssue = () => {
   const navigate = useNavigate();
@@ -11,16 +12,6 @@ const ReportIssue = () => {
 
   // Get pre-selected booking from navigation state
   const preSelectedBooking = location.state?.booking;
-
-  // Helper function to convert 24h time to 12h AM/PM format
-  const formatTime12Hour = (time24) => {
-    if (!time24) return "";
-    const [hours, minutes] = time24.split(":");
-    const hour = parseInt(hours);
-    const period = hour >= 12 ? "PM" : "AM";
-    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    return `${hour12}:${minutes} ${period}`;
-  };
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

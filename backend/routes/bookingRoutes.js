@@ -53,7 +53,7 @@ router.get(
 router.get(
   "/statistics",
   authenticate,
-  authorizeRoles(["ADMINISTRATOR"]),
+  authorizeRoles(["ADMINISTRATOR", "FACILITY_MANAGER"]),
   bookingController.getBookingStatistics,
 );
 

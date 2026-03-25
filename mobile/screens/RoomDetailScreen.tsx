@@ -13,7 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getEquipmentByRoom, getRoomById, RoomSummary, EquipmentItem } from '../services/roomService';
 import { COLORS } from '../constants/theme';
 import { getDefaultRoomImages, getRoomLocalImages } from '../constants/roomImages';
-import { buildTimeSlots, normalizeEquipment, getTodayDate, TimeSlot } from '../utils/roomHelpers';
+import { buildTimeSlots, normalizeEquipment, getTodayDate } from '../utils/roomHelpers';
 import { SpecCard, Section, EquipmentChips, TimeSlotGrid, ImageGallery } from '../components';
 import { RootStackParamList } from '../types/navigation';
 

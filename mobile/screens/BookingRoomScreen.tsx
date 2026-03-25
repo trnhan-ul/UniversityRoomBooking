@@ -17,14 +17,14 @@ import { COLORS } from '../constants/theme';
 import { getRooms, RoomSummary } from '../services/roomService';
 import { createBooking } from '../services/bookingService';
 import { RootStackParamList } from '../types/navigation';
-import { getTodayDate } from '../utils/roomHelpers';
+import { formatTime12Hour, getTodayDate } from "../utils/roomHelpers";
 
-type NavProp = NativeStackNavigationProp<RootStackParamList, 'BookingRoom'>;
-type RouteProps = RouteProp<RootStackParamList, 'BookingRoom'>;
+type NavProp = NativeStackNavigationProp<RootStackParamList, "BookingRoom">;
+type RouteProps = RouteProp<RootStackParamList, "BookingRoom">;
 
 const TIME_OPTIONS = Array.from({ length: 15 }, (_, index) => {
   const hour = index + 7;
-  return `${String(hour).padStart(2, '0')}:00`;
+  return `${String(hour).padStart(2, "0")}:00`;
 });
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -34,28 +34,28 @@ const isValidDateInput = (value: string): boolean => {
     return false;
   }
 
-  const [yearStr, monthStr, dayStr] = value.split('-');
+  const [yearStr, monthStr, dayStr] = value.split("-");
   const year = Number(yearStr);
   const month = Number(monthStr);
   const day = Number(dayStr);
 
   if (
-    Number.isNaN(year)
-    || Number.isNaN(month)
-    || Number.isNaN(day)
-    || month < 1
-    || month > 12
-    || day < 1
-    || day > 31
+    Number.isNaN(year) ||
+    Number.isNaN(month) ||
+    Number.isNaN(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
   ) {
     return false;
   }
 
   const date = new Date(year, month - 1, day);
   return (
-    date.getFullYear() === year
-    && date.getMonth() === month - 1
-    && date.getDate() === day
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
   );
 };
 
@@ -76,36 +76,40 @@ export default function BookingRoomScreen() {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  const [roomId, setRoomId] = useState(route.params?.preselectedRoomId || '');
+  const [roomId, setRoomId] = useState(route.params?.preselectedRoomId || "");
   const [date, setDate] = useState(getTodayDate());
-  const [startTime, setStartTime] = useState('08:00');
-  const [endTime, setEndTime] = useState('10:00');
-  const [purpose, setPurpose] = useState('');
+  const [startTime, setStartTime] = useState("08:00");
+  const [endTime, setEndTime] = useState("10:00");
+  const [purpose, setPurpose] = useState("");
 
   useEffect(() => {
     const fetchRooms = async () => {
       try {
         setLoadingRooms(true);
-        setError('');
+        setError("");
         const response = await getRooms();
 
         if (!response.success) {
-          setError(response.message || 'Failed to load available rooms');
+          setError(response.message || "Failed to load available rooms");
           return;
         }
 
         const availableRooms = (response.data || []).filter(
-          (room) => room.status === 'AVAILABLE',
+          (room) => room.status === "AVAILABLE",
         );
         setRooms(availableRooms);
 
-        setRoomId((currentRoomId) => currentRoomId || availableRooms[0]?._id || '');
+        setRoomId(
+          (currentRoomId) => currentRoomId || availableRooms[0]?._id || "",
+        );
       } catch (fetchError: unknown) {
         const message =
-          fetchError instanceof Error ? fetchError.message : 'Failed to load available rooms';
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Failed to load available rooms";
         setError(message);
       } finally {
         setLoadingRooms(false);
@@ -133,31 +137,31 @@ export default function BookingRoomScreen() {
 
   const validateForm = (): string | null => {
     if (!roomId) {
-      return 'Please choose a room';
+      return "Please choose a room";
     }
 
     if (!isValidDateInput(date)) {
-      return 'Date must be in YYYY-MM-DD format';
+      return "Date must be in YYYY-MM-DD format";
     }
 
     if (isPastDate(date)) {
-      return 'Date cannot be in the past';
+      return "Date cannot be in the past";
     }
 
     if (!startTime || !endTime) {
-      return 'Please choose both start time and end time';
+      return "Please choose both start time and end time";
     }
 
     if (endTime <= startTime) {
-      return 'End time must be after start time';
+      return "End time must be after start time";
     }
 
     if (!purpose.trim()) {
-      return 'Please enter booking purpose';
+      return "Please enter booking purpose";
     }
 
     if (purpose.trim().length < 6) {
-      return 'Purpose should be at least 6 characters';
+      return "Purpose should be at least 6 characters";
     }
 
     return null;
@@ -167,14 +171,14 @@ export default function BookingRoomScreen() {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
-      setSuccessMessage('');
+      setSuccessMessage("");
       return;
     }
 
     try {
       setSubmitting(true);
-      setError('');
-      setSuccessMessage('');
+      setError("");
+      setSuccessMessage("");
 
       const response = await createBooking({
         room_id: roomId,
@@ -185,15 +189,20 @@ export default function BookingRoomScreen() {
       });
 
       if (!response.success) {
-        setError(response.message || 'Failed to create booking');
+        setError(response.message || "Failed to create booking");
         return;
       }
 
-      setSuccessMessage(response.message || 'Booking created successfully. Waiting for approval.');
-      setPurpose('');
+      setSuccessMessage(
+        response.message ||
+          "Booking created successfully. Waiting for approval.",
+      );
+      setPurpose("");
     } catch (submitError: unknown) {
       const message =
-        submitError instanceof Error ? submitError.message : 'Failed to create booking';
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to create booking";
       setError(message);
     } finally {
       setSubmitting(false);
@@ -203,16 +212,20 @@ export default function BookingRoomScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+      >
         <Card>
           <View style={styles.headerRow}>
             <Ionicons name="book-outline" size={18} color={COLORS.primary} />
             <Text style={styles.sectionTitle}>Create Booking</Text>
           </View>
           <Text style={styles.sectionDesc}>
-            Fill your booking details below. This follows the same flow as the web booking form.
+            Fill your booking details below. This follows the same flow as the
+            web booking form.
           </Text>
         </Card>
 
@@ -227,7 +240,7 @@ export default function BookingRoomScreen() {
             <Text style={styles.successText}>{successMessage}</Text>
             <TouchableOpacity
               style={styles.successButton}
-              onPress={() => navigation.navigate('MyBookings')}
+              onPress={() => navigation.navigate("MyBookings")}
               activeOpacity={0.9}
             >
               <Text style={styles.successButtonText}>Go to My Bookings</Text>
@@ -252,10 +265,17 @@ export default function BookingRoomScreen() {
                     onPress={() => setRoomId(room._id)}
                     activeOpacity={0.9}
                   >
-                    <Text style={[styles.roomTitle, isActive && styles.roomTitleActive]}>
+                    <Text
+                      style={[
+                        styles.roomTitle,
+                        isActive && styles.roomTitleActive,
+                      ]}
+                    >
                       {buildRoomLabel(room)}
                     </Text>
-                    <Text style={[styles.roomSub, isActive && styles.roomSubActive]}>
+                    <Text
+                      style={[styles.roomSub, isActive && styles.roomSubActive]}
+                    >
                       {room.location} • Capacity {room.capacity}
                     </Text>
                   </TouchableOpacity>
@@ -293,7 +313,14 @@ export default function BookingRoomScreen() {
                   onPress={() => setStartTime(time)}
                   activeOpacity={0.9}
                 >
-                  <Text style={[styles.timeChipText, isActive && styles.timeChipTextActive]}>{time}</Text>
+                  <Text
+                    style={[
+                      styles.timeChipText,
+                      isActive && styles.timeChipTextActive,
+                    ]}
+                  >
+                    {formatTime12Hour(time)}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -314,7 +341,14 @@ export default function BookingRoomScreen() {
                   onPress={() => setEndTime(time)}
                   activeOpacity={0.9}
                 >
-                  <Text style={[styles.timeChipText, isActive && styles.timeChipTextActive]}>{time}</Text>
+                  <Text
+                    style={[
+                      styles.timeChipText,
+                      isActive && styles.timeChipTextActive,
+                    ]}
+                  >
+                    {formatTime12Hour(time)}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -340,7 +374,9 @@ export default function BookingRoomScreen() {
           <Text style={styles.label}>Review</Text>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Room</Text>
-            <Text style={styles.reviewValue}>{selectedRoom ? buildRoomLabel(selectedRoom) : 'N/A'}</Text>
+            <Text style={styles.reviewValue}>
+              {selectedRoom ? buildRoomLabel(selectedRoom) : "N/A"}
+            </Text>
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Date</Text>
@@ -348,21 +384,28 @@ export default function BookingRoomScreen() {
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Time</Text>
-            <Text style={styles.reviewValue}>{startTime} - {endTime}</Text>
+            <Text style={styles.reviewValue}>
+              {formatTime12Hour(startTime)} - {formatTime12Hour(endTime)}
+            </Text>
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Purpose</Text>
-            <Text style={styles.reviewValue}>{purpose.trim() || 'N/A'}</Text>
+            <Text style={styles.reviewValue}>{purpose.trim() || "N/A"}</Text>
           </View>
         </Card>
 
         <TouchableOpacity
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            submitting && styles.submitButtonDisabled,
+          ]}
           onPress={handleCreateBooking}
           activeOpacity={0.9}
           disabled={submitting}
         >
-          <Text style={styles.submitText}>{submitting ? 'Creating Booking...' : 'Create Booking'}</Text>
+          <Text style={styles.submitText}>
+            {submitting ? "Creating Booking..." : "Create Booking"}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

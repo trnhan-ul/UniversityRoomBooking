@@ -15,6 +15,27 @@ const SLOT_START_HOUR = 7;
 const SLOT_END_HOUR = 21;
 
 /**
+ * Convert HH:mm to 12-hour AM/PM format for UI display
+ */
+export const formatTime12Hour = (time24: string): string => {
+  if (!time24 || !time24.includes(':')) {
+    return time24;
+  }
+
+  const [hourPart, minutePart] = time24.split(':');
+  const hour = Number(hourPart);
+  const minute = minutePart?.slice(0, 2) ?? '00';
+
+  if (Number.isNaN(hour)) {
+    return time24;
+  }
+
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}:${minute} ${period}`;
+};
+
+/**
  * Convert hour to HH:mm format
  */
 export const toHHmm = (hour: number): string => `${String(hour).padStart(2, '0')}:00`;
@@ -41,7 +62,7 @@ export const buildTimeSlots = (selectedDate: string, roomStatus?: string): TimeS
 
     slots.push({
       id: `${selectedDate}-${start}`,
-      label: `${start} - ${end}`,
+      label: `${formatTime12Hour(start)} - ${formatTime12Hour(end)}`,
       start,
       end,
     });

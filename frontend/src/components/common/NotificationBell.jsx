@@ -52,24 +52,22 @@ const NotificationBell = () => {
       // Mark as read
       if (!notification.is_read) {
         await markAsRead(notification._id);
+        setRecentNotifications((prev) =>
+          prev.map((item) =>
+            item._id === notification._id ? { ...item, is_read: true } : item,
+          ),
+        );
         fetchUnreadCount(); // Update count
       }
-
-      // Navigate to related page
-      if (notification.type === 'BOOKING' && notification.target_id) {
-        navigate(`/bookings/${notification.target_id}`);
-      }
-
-      setIsOpen(false);
     } catch (error) {
-      console.error('Error handling notification:', error);
+      console.error("Error handling notification:", error);
     }
   };
 
   // View all notifications
   const handleViewAll = () => {
     setIsOpen(false);
-    navigate('/notifications');
+    navigate("/notifications");
   };
 
   // Close dropdown when clicking outside
@@ -81,25 +79,29 @@ const NotificationBell = () => {
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
 
-  // Fetch unread count on mount and set polling
+  // Fetch unread count/recent notifications on mount and set polling
   useEffect(() => {
     fetchUnreadCount();
-    
-    // Poll every 30 seconds
+    fetchRecent();
+
+    // Poll every 10 seconds so updates from manager show up quickly.
     const interval = setInterval(() => {
       fetchUnreadCount();
-    }, 30000);
+      if (isOpen) {
+        fetchRecent();
+      }
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isOpen]);
 
   return (
     <div className="relative" ref={dropdownRef}>

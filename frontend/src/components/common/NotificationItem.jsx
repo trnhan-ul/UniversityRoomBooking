@@ -92,6 +92,8 @@ const NotificationItem = ({
     }
   };
 
+  const isClickable = typeof onClick === "function";
+
   const handleDelete = (e) => {
     e.stopPropagation();
     if (onDelete) {
@@ -103,12 +105,14 @@ const NotificationItem = ({
     <div
       onClick={handleClick}
       className={`
-        flex items-start gap-3 cursor-pointer hover:bg-gray-50 transition-colors
+        flex items-start gap-3 ${isClickable ? "cursor-pointer hover:bg-gray-50" : "cursor-default"} transition-colors
         ${getCardStyle(notification.is_read)}
       `}
     >
       {/* Icon */}
-      <div className={`flex-shrink-0 w-10 h-10 rounded-lg ${getIconColor(notification.type, notification.title)} flex items-center justify-center`}>
+      <div
+        className={`flex-shrink-0 w-10 h-10 rounded-lg ${getIconColor(notification.type, notification.title)} flex items-center justify-center`}
+      >
         <span className="material-symbols-outlined text-xl">
           {getNotificationIcon(notification.type, notification.title)}
         </span>
@@ -121,40 +125,44 @@ const NotificationItem = ({
             <h4 className="text-sm font-bold text-gray-900">
               {notification.title}
             </h4>
-            <p className="text-sm text-gray-600 mt-1">
-              {notification.message}
-            </p>
-            
+            <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+
             {/* Action buttons for booking approval */}
-            {notification.type === 'BOOKING' && notification.title.toLowerCase().includes('approval') && (
-              <div className="flex items-center gap-2 mt-3">
-                <button className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">
-                  Approve
-                </button>
-                <button className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded hover:bg-gray-50 transition-colors">
-                  View Details
-                </button>
-                <button className="px-3 py-1.5 text-red-600 text-xs font-medium hover:underline">
-                  Reject
-                </button>
-              </div>
-            )}
-            
+            {notification.type === "BOOKING" &&
+              notification.title.toLowerCase().includes("approval") && (
+                <div className="flex items-center gap-2 mt-3">
+                  <button className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">
+                    Approve
+                  </button>
+                  <button className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded hover:bg-gray-50 transition-colors">
+                    View Details
+                  </button>
+                  <button className="px-3 py-1.5 text-red-600 text-xs font-medium hover:underline">
+                    Reject
+                  </button>
+                </div>
+              )}
+
             {/* Action buttons for confirmed booking */}
-            {notification.type === 'BOOKING' && notification.title.toLowerCase().includes('confirm') && (
-              <div className="flex items-center gap-3 mt-3">
-                <button className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline">
-                  <span className="material-symbols-outlined text-sm">event</span>
-                  Add to Calendar
-                </button>
-                <button className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline">
-                  <span className="material-symbols-outlined text-sm">directions</span>
-                  Get Directions
-                </button>
-              </div>
-            )}
+            {notification.type === "BOOKING" &&
+              notification.title.toLowerCase().includes("confirm") && (
+                <div className="flex items-center gap-3 mt-3">
+                  <button className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline">
+                    <span className="material-symbols-outlined text-sm">
+                      event
+                    </span>
+                    Add to Calendar
+                  </button>
+                  <button className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline">
+                    <span className="material-symbols-outlined text-sm">
+                      directions
+                    </span>
+                    Get Directions
+                  </button>
+                </div>
+              )}
           </div>
-          
+
           {/* Unread indicator and time */}
           <div className="flex flex-col items-end gap-1">
             <span className="text-xs text-gray-500 whitespace-nowrap">
@@ -165,7 +173,7 @@ const NotificationItem = ({
             )}
           </div>
         </div>
-        
+
         {showDelete && (
           <div className="mt-2">
             <button

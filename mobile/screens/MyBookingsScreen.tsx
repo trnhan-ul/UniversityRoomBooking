@@ -15,23 +15,27 @@ import { Card } from '../components';
 import { COLORS } from '../constants/theme';
 import { getMyBookings, BookingItem } from '../services/bookingService';
 import { RootStackParamList } from '../types/navigation';
+import { formatTime12Hour } from "../utils/roomHelpers";
 
-type MyBookingsNavProp = NativeStackNavigationProp<RootStackParamList, 'MyBookings'>;
+type MyBookingsNavProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "MyBookings"
+>;
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  APPROVED: { bg: '#dcfce7', text: '#166534' },
-  PENDING: { bg: '#fef9c3', text: '#854d0e' },
-  REJECTED: { bg: '#fee2e2', text: '#991b1b' },
-  CANCELLED: { bg: '#e5e7eb', text: '#374151' },
-  'CHECKED-IN': { bg: '#dbeafe', text: '#1d4ed8' },
+  APPROVED: { bg: "#dcfce7", text: "#166534" },
+  PENDING: { bg: "#fef9c3", text: "#854d0e" },
+  REJECTED: { bg: "#fee2e2", text: "#991b1b" },
+  CANCELLED: { bg: "#e5e7eb", text: "#374151" },
+  "CHECKED-IN": { bg: "#dbeafe", text: "#1d4ed8" },
 };
 
 const formatDate = (value: string) => {
   const date = new Date(value);
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 };
 
@@ -40,7 +44,7 @@ export default function MyBookingsScreen() {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const fetchBookings = async (isRefreshing = false) => {
     try {
@@ -49,11 +53,11 @@ export default function MyBookingsScreen() {
       } else {
         setLoading(true);
       }
-      setError('');
+      setError("");
 
       const response = await getMyBookings();
       if (!response.success) {
-        setError(response.message || 'Failed to load bookings');
+        setError(response.message || "Failed to load bookings");
         setBookings([]);
         return;
       }
@@ -62,7 +66,9 @@ export default function MyBookingsScreen() {
       setBookings(items);
     } catch (fetchError: unknown) {
       const message =
-        fetchError instanceof Error ? fetchError.message : 'Failed to load bookings';
+        fetchError instanceof Error
+          ? fetchError.message
+          : "Failed to load bookings";
       setError(message);
       setBookings([]);
     } finally {
@@ -82,40 +88,54 @@ export default function MyBookingsScreen() {
 
   const renderBooking = ({ item }: { item: BookingItem }) => {
     const colorSet = STATUS_COLORS[item.status] || {
-      bg: '#e2e8f0',
-      text: '#334155',
+      bg: "#e2e8f0",
+      text: "#334155",
     };
 
     return (
       <TouchableOpacity
         activeOpacity={0.9}
-        onPress={() => navigation.navigate('BookingDetail', { booking: item })}
+        onPress={() => navigation.navigate("BookingDetail", { booking: item })}
       >
         <Card style={styles.bookingCard}>
           <View style={styles.rowBetween}>
             <View style={styles.roomBlock}>
-              <Text style={styles.roomName}>{item.room_id?.room_name || 'Unknown room'}</Text>
+              <Text style={styles.roomName}>
+                {item.room_id?.room_name || "Unknown room"}
+              </Text>
               <Text style={styles.roomMeta}>
-                {item.room_id?.room_code || 'N/A'} • {item.room_id?.location || 'N/A'}
+                {item.room_id?.room_code || "N/A"} •{" "}
+                {item.room_id?.location || "N/A"}
               </Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: colorSet.bg }]}>
-              <Text style={[styles.statusText, { color: colorSet.text }]}>{item.status}</Text>
+            <View
+              style={[styles.statusBadge, { backgroundColor: colorSet.bg }]}
+            >
+              <Text style={[styles.statusText, { color: colorSet.text }]}>
+                {item.status}
+              </Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={15} color={COLORS.lightText} />
+            <Ionicons
+              name="calendar-outline"
+              size={15}
+              color={COLORS.lightText}
+            />
             <Text style={styles.detailText}>{formatDate(item.date)}</Text>
           </View>
 
           <View style={styles.detailRow}>
             <Ionicons name="time-outline" size={15} color={COLORS.lightText} />
-            <Text style={styles.detailText}>{item.start_time} - {item.end_time}</Text>
+            <Text style={styles.detailText}>
+              {formatTime12Hour(item.start_time)} -{" "}
+              {formatTime12Hour(item.end_time)}
+            </Text>
           </View>
 
           <Text style={styles.purposeText} numberOfLines={2}>
-            {item.purpose || 'No purpose provided'}
+            {item.purpose || "No purpose provided"}
           </Text>
         </Card>
       </TouchableOpacity>
@@ -135,7 +155,10 @@ export default function MyBookingsScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => fetchBookings()}>
+        <TouchableOpacity
+          style={styles.retryBtn}
+          onPress={() => fetchBookings()}
+        >
           <Text style={styles.retryText}>Try again</Text>
         </TouchableOpacity>
       </View>
@@ -153,7 +176,9 @@ export default function MyBookingsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyTitle}>No bookings yet</Text>
-            <Text style={styles.emptyText}>Create your first booking to see it here.</Text>
+            <Text style={styles.emptyText}>
+              Create your first booking to see it here.
+            </Text>
           </View>
         }
         refreshControl={

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createBooking, createRecurringBooking } from '../services/bookingService';
 import { getRooms } from '../services/roomService';
-import { generateTimeOptions, formatTime12Hour } from '../utils/timeFormat';
+import { formatTime12Hour } from "../utils/timeFormat";
 import Header from "../components/layout/Header";
 import { useAuthContext } from "../context/AuthContext";
 
@@ -47,9 +47,6 @@ const CreateBooking = () => {
     end_time: urlEndTime || preSelectedTime?.end || "10:00",
     purpose: urlPurpose || "",
   });
-
-  // Generate time options for dropdowns
-  const timeOptions = generateTimeOptions();
 
   useEffect(() => {
     const fetchRooms = async () => {

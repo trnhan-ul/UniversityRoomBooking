@@ -673,8 +673,8 @@ const ScheduleManagement = () => {
                                       {event.room?.room_code}
                                     </div>
                                     <div className="text-[10px] opacity-90 truncate">
-                                      {moment(event.start).format("HH:mm")} -{" "}
-                                      {moment(event.end).format("HH:mm")}
+                                      {moment(event.start).format("h:mm A")} -{" "}
+                                      {moment(event.end).format("h:mm A")}
                                     </div>
                                     {event.type === "booking" && event.user && (
                                       <div className="text-[10px] opacity-75 truncate mt-0.5">
