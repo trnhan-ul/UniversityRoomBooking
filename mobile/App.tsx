@@ -8,6 +8,8 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
 import RoomDetailScreen from './screens/RoomDetailScreen';
+import MyBookingsScreen from './screens/MyBookingsScreen';
+import BookingDetailScreen from './screens/BookingDetailScreen';
 import { RootStackParamList } from './types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -30,6 +32,16 @@ function RootNavigator() {
         {isAuthenticated ? (
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen
+              name="MyBookings"
+              component={MyBookingsScreen}
+              options={{ headerShown: true, title: 'My Bookings' }}
+            />
+            <Stack.Screen
+              name="BookingDetail"
+              component={BookingDetailScreen}
+              options={{ headerShown: true, title: 'Booking Detail' }}
+            />
             <Stack.Screen
               name="RoomDetail"
               component={RoomDetailScreen}

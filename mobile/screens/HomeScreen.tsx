@@ -1,10 +1,14 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthContext } from '../context/AuthContext';
 import { COLORS } from '../constants/theme';
 import { Card } from '../components';
+import { RootStackParamList } from '../types/navigation';
 
 export default function HomeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, logout } = useAuthContext();
 
   const handleLogout = async () => {
@@ -78,13 +82,18 @@ export default function HomeScreen() {
           <Text style={styles.featureDescription}>Create a new booking request quickly.</Text>
         </Card>
 
-        <Card style={styles.featureCard}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('MyBookings')}
+        >
+          <Card style={styles.featureCard}>
           <View style={[styles.featureIconBox, { backgroundColor: '#ede9fe' }]}>
             <Ionicons name="calendar-outline" size={20} color="#7c3aed" />
           </View>
           <Text style={styles.featureTitle}>My Bookings</Text>
           <Text style={styles.featureDescription}>Track and manage your upcoming bookings.</Text>
-        </Card>
+          </Card>
+        </TouchableOpacity>
 
         <Card style={styles.featureCard}>
           <View style={[styles.featureIconBox, { backgroundColor: '#fee2e2' }]}>
