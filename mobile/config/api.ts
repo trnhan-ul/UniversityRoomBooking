@@ -17,8 +17,10 @@ export const API_CONFIG = {
       UPDATE_PROFILE: '/users/profile',
     },
     BOOKING: {
+      CREATE: '/bookings',
       MY_BOOKINGS: '/bookings/my-bookings',
       DETAIL: '/bookings',
+      CANCEL: '/bookings',
     },
   },
   TIMEOUT: 30000, // 30 seconds

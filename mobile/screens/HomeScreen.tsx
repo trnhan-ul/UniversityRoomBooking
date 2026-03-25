@@ -84,7 +84,11 @@ export default function HomeScreen() {
           </Card>
         </TouchableOpacity>
 
-        <View style={styles.featurePressable}>
+        <TouchableOpacity
+          style={styles.featurePressable}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('BookingRoom')}
+        >
           <Card style={styles.featureCard}>
             <View style={[styles.featureIconBox, { backgroundColor: '#dcfce7' }]}>
               <Ionicons name="book-outline" size={20} color="#16a34a" />
@@ -92,7 +96,7 @@ export default function HomeScreen() {
             <Text style={styles.featureTitle}>Book Room</Text>
             <Text style={styles.featureDescription}>Create a new booking request quickly.</Text>
           </Card>
-        </View>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.featurePressable}

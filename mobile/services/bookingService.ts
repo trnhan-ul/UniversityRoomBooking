@@ -24,6 +24,20 @@ export interface BookingItem {
   updated_at?: string;
 }
 
+export interface CreateBookingPayload {
+  room_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  purpose: string;
+}
+
+interface CreateBookingResponse {
+  success: boolean;
+  data?: BookingItem;
+  message?: string;
+}
+
 interface Pagination {
   total: number;
   page: number;
@@ -46,6 +60,32 @@ interface BookingDetailResponse {
   data?: BookingItem;
   message?: string;
 }
+
+interface CancelBookingResponse {
+  success: boolean;
+  data?: BookingItem;
+  message?: string;
+}
+
+export const createBooking = async (
+  payload: CreateBookingPayload,
+): Promise<CreateBookingResponse> => {
+  try {
+    const response = await api.post<CreateBookingResponse>(
+      API_CONFIG.ENDPOINTS.BOOKING.CREATE,
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<CreateBookingResponse>;
+    const errorData = axiosError.response?.data;
+    const errorMessage = errorData
+      ? getErrorMessage(errorData)
+      : getErrorMessage(error);
+
+    throw new CustomApiError(errorMessage, errorData);
+  }
+};
 
 export const getMyBookings = async (): Promise<MyBookingsResponse> => {
   try {
@@ -84,6 +124,25 @@ export const getBookingById = async (
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<BookingDetailResponse>;
+    const errorData = axiosError.response?.data;
+    const errorMessage = errorData
+      ? getErrorMessage(errorData)
+      : getErrorMessage(error);
+
+    throw new CustomApiError(errorMessage, errorData);
+  }
+};
+
+export const cancelBooking = async (
+  bookingId: string,
+): Promise<CancelBookingResponse> => {
+  try {
+    const response = await api.patch<CancelBookingResponse>(
+      `${API_CONFIG.ENDPOINTS.BOOKING.CANCEL}/${bookingId}/cancel`,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<CancelBookingResponse>;
     const errorData = axiosError.response?.data;
     const errorMessage = errorData
       ? getErrorMessage(errorData)
