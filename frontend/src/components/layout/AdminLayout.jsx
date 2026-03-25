@@ -32,7 +32,6 @@ const AdminLayout = ({ children }) => {
       icon: "⚠️",
       label: "Facility Issues",
     },
-    { path: "/qr-scanner", icon: "📷", label: "QR Check-in" },
   ];
 
   const filteredMenuItems =

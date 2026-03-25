@@ -1671,6 +1671,13 @@ const checkInBooking = async (req, res) => {
       });
     }
 
+    if (booking.user_id._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to check-in this booking"
+      });
+    }
+
     // Validate QR token
     if (booking.qr_code_token !== qr_token) {
       return res.status(400).json({

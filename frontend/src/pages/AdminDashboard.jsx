@@ -1,9 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { getDashboardStats } from "../services/dashboardService";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [analytics, setAnalytics] = useState({
@@ -270,30 +268,6 @@ const AdminDashboard = () => {
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
                 {analytics.pendingBookings.toLocaleString()}
               </h3>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-xl shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-white text-lg font-bold mb-2">
-                  Check-in Bookings via QR Code
-                </h3>
-                <p className="text-blue-100 text-sm">
-                  Scan QR codes to verify and check-in approved bookings at the
-                  facility
-                </p>
-              </div>
-              <button
-                onClick={() => navigate("/qr-scanner")}
-                className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined">
-                  qr_code_scanner
-                </span>
-                Open Scanner
-              </button>
             </div>
           </div>
 
