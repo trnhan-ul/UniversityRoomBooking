@@ -22,6 +22,13 @@ export const API_CONFIG = {
       DETAIL: '/bookings',
       CANCEL: '/bookings',
     },
+    NOTIFICATION: {
+      LIST: '/notifications',
+      UNREAD_COUNT: '/notifications/unread-count',
+      MARK_AS_READ: '/notifications',
+      MARK_ALL_AS_READ: '/notifications/read-all',
+      DELETE: '/notifications',
+    },
   },
   TIMEOUT: 30000, // 30 seconds
 };

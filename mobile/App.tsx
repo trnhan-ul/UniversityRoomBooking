@@ -12,6 +12,7 @@ import BookingRoomScreen from './screens/BookingRoomScreen';
 import RoomDetailScreen from './screens/RoomDetailScreen';
 import MyBookingsScreen from './screens/MyBookingsScreen';
 import BookingDetailScreen from './screens/BookingDetailScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
 import ProfileScreen from "./screens/ProfileScreen";
 import { RootStackParamList } from "./types/navigation";
 
@@ -49,6 +50,11 @@ function RootNavigator() {
               name="MyBookings"
               component={MyBookingsScreen}
               options={{ headerShown: true, title: 'My Bookings' }}
+            />
+            <Stack.Screen
+              name="Notifications"
+              component={NotificationsScreen}
+              options={{ headerShown: true, title: 'Notifications' }}
             />
             <Stack.Screen
               name="BookingDetail"
