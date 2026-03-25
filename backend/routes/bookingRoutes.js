@@ -8,7 +8,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
 router.post(
   "/recurring",
   authenticate,
-  authorizeRoles(["STUDENT", "LECTURER"]),
+  authorizeRoles(["LECTURER"]),
   bookingController.createRecurringBooking,
 );
 

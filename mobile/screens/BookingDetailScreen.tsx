@@ -123,7 +123,7 @@ export default function BookingDetailScreen() {
       [
         { text: 'No', style: 'cancel' },
         {
-          text: 'Yes, cancel',
+          text: 'Cancel Booking',
           style: 'destructive',
           onPress: async () => {
             try {

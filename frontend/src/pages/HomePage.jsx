@@ -1,45 +1,15 @@
 import React from 'react';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Header from "../components/layout/Header";
 
 const StudentDashboard = () => {
-  const { user, logout } = useAuthContext();
+  const { user } = useAuthContext();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-2 rounded-lg text-white">
-                <span className="material-symbols-outlined text-2xl">
-                  school
-                </span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  Student Dashboard
-                </h1>
-                <p className="text-sm text-gray-500">Room Booking System</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <span className="material-symbols-outlined">logout</span>
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header user={user} />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -79,7 +49,7 @@ const StudentDashboard = () => {
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FeatureCard
-            icon="search"
+            icon="house"
             title="Rooms"
             description="View all available classrooms"
             color="blue"

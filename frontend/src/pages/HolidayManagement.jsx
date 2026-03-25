@@ -7,19 +7,25 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 const HolidayManagement = () => {
   const [holidays, setHolidays] = useState([]);
+  const [recurringHolidays, setRecurringHolidays] = useState([]);
   const [filteredHolidays, setFilteredHolidays] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [startMonth, setStartMonth] = useState(
+    Math.floor(new Date().getMonth() / 3) * 3,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentHoliday, setCurrentHoliday] = useState(null);
+  const [togglingHolidayId, setTogglingHolidayId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // Form state
   const [formData, setFormData] = useState({
     name: "",
-    date: "",
+    startDate: "",
+    endDate: "",
     description: "",
     isRecurring: false,
   });
@@ -27,13 +33,18 @@ const HolidayManagement = () => {
   const fetchHolidays = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${API_URL}/holidays?year=${selectedYear}`,
-        {
+      const [yearResponse, allResponse] = await Promise.all([
+        axios.get(`${API_URL}/holidays?year=${selectedYear}`, {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }),
+        axios.get(`${API_URL}/holidays`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      setHolidays(yearResponse.data.holidays || []);
+      setRecurringHolidays(
+        (allResponse.data.holidays || []).filter((h) => h.isRecurring),
       );
-      setHolidays(response.data.holidays || []);
     } catch (error) {
       console.error("Error fetching holidays:", error);
     }
@@ -59,6 +70,12 @@ const HolidayManagement = () => {
 
   const handleAddHoliday = async (e) => {
     e.preventDefault();
+
+    if (formData.endDate < formData.startDate) {
+      alert("End date must be greater than or equal to start date");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       await runMutationWithRefresh({
@@ -69,7 +86,13 @@ const HolidayManagement = () => {
         refresh: fetchHolidays,
       });
       setShowAddModal(false);
-      setFormData({ name: "", date: "", description: "", isRecurring: false });
+      setFormData({
+        name: "",
+        startDate: "",
+        endDate: "",
+        description: "",
+        isRecurring: false,
+      });
     } catch (error) {
       console.error("Error adding holiday:", error);
       alert(error.response?.data?.message || "Failed to add holiday");
@@ -78,6 +101,12 @@ const HolidayManagement = () => {
 
   const handleUpdateHoliday = async (e) => {
     e.preventDefault();
+
+    if (formData.endDate < formData.startDate) {
+      alert("End date must be greater than or equal to start date");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       await runMutationWithRefresh({
@@ -89,7 +118,13 @@ const HolidayManagement = () => {
       });
       setShowEditModal(false);
       setCurrentHoliday(null);
-      setFormData({ name: "", date: "", description: "", isRecurring: false });
+      setFormData({
+        name: "",
+        startDate: "",
+        endDate: "",
+        description: "",
+        isRecurring: false,
+      });
     } catch (error) {
       console.error("Error updating holiday:", error);
       alert(error.response?.data?.message || "Failed to update holiday");
@@ -115,21 +150,93 @@ const HolidayManagement = () => {
     }
   };
 
+  const handleToggleRecurring = async (holiday) => {
+    try {
+      setTogglingHolidayId(holiday._id);
+      const token = localStorage.getItem("token");
+
+      await runMutationWithRefresh({
+        mutate: () =>
+          axios.put(
+            `${API_URL}/holidays/${holiday._id}`,
+            { isRecurring: !holiday.isRecurring },
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        refresh: fetchHolidays,
+      });
+    } catch (error) {
+      console.error("Error toggling recurring holiday:", error);
+      alert(error.response?.data?.message || "Failed to update recurring mode");
+    } finally {
+      setTogglingHolidayId(null);
+    }
+  };
+
   const openEditModal = (holiday) => {
+    const startDate = new Date(holiday.startDate || holiday.date)
+      .toISOString()
+      .split("T")[0];
+    const endDate = new Date(
+      holiday.endDate || holiday.startDate || holiday.date,
+    )
+      .toISOString()
+      .split("T")[0];
+
     setCurrentHoliday(holiday);
     setFormData({
       name: holiday.name,
-      date: new Date(holiday.date).toISOString().split("T")[0],
+      startDate,
+      endDate,
       description: holiday.description || "",
       isRecurring: holiday.isRecurring,
     });
     setShowEditModal(true);
   };
 
+  const getHolidayStart = (holiday) =>
+    new Date(holiday.startDate || holiday.date);
+
+  const getHolidayEnd = (holiday) =>
+    new Date(holiday.endDate || holiday.startDate || holiday.date);
+
+  const normalizeDate = (value) => {
+    const d = new Date(value);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const safeDateInYear = (year, month, day) => {
+    const maxDay = new Date(year, month + 1, 0).getDate();
+    return new Date(year, month, Math.min(day, maxDay));
+  };
+
+  const getHolidayRangeForYear = (holiday, year) => {
+    const start = normalizeDate(getHolidayStart(holiday));
+    const end = normalizeDate(getHolidayEnd(holiday));
+
+    if (!holiday.isRecurring) {
+      return { start, end };
+    }
+
+    if (year < start.getFullYear()) {
+      return null;
+    }
+
+    const durationDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
+    const rangeStart = safeDateInYear(year, start.getMonth(), start.getDate());
+    rangeStart.setHours(0, 0, 0, 0);
+
+    const rangeEnd = new Date(rangeStart);
+    rangeEnd.setDate(rangeEnd.getDate() + durationDays);
+    rangeEnd.setHours(0, 0, 0, 0);
+
+    return { start: rangeStart, end: rangeEnd };
+  };
+
   // Calendar generation
-  const generateCalendar = (year) => {
+  const generateCalendar = (year, startMonthIndex) => {
     const months = [];
-    for (let month = 0; month < 12; month++) {
+    for (let month = startMonthIndex; month < startMonthIndex + 3; month++) {
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const daysInMonth = lastDay.getDate();
@@ -146,6 +253,7 @@ const HolidayManagement = () => {
       }
 
       months.push({
+        monthIndex: month,
         name: firstDay.toLocaleDateString("en-US", {
           month: "long",
           year: "numeric",
@@ -156,15 +264,77 @@ const HolidayManagement = () => {
     return months;
   };
 
-  const isHoliday = (year, monthIndex, day) => {
-    if (!day) return false;
-    const dateStr = new Date(year, monthIndex, day).toISOString().split("T")[0];
-    return holidays.some(
-      (h) => new Date(h.date).toISOString().split("T")[0] === dateStr,
-    );
+  const getHolidayInfo = (year, monthIndex, day) => {
+    if (!day) return { isHoliday: false, type: null, tooltip: "" };
+
+    const currentDate = normalizeDate(new Date(year, monthIndex, day));
+
+    const exactMatches = holidays.filter((h) => {
+      if (h.isRecurring) return false;
+      const range = getHolidayRangeForYear(h, year);
+      if (!range) return false;
+      return currentDate >= range.start && currentDate <= range.end;
+    });
+
+    if (exactMatches.length > 0) {
+      const names = exactMatches.map((h) => h.name).join(", ");
+      return {
+        isHoliday: true,
+        type: "exact",
+        tooltip: `${names} (configured for this year)`,
+      };
+    }
+
+    const recurringMatches = recurringHolidays.filter((h) => {
+      const range = getHolidayRangeForYear(h, year);
+      if (!range) return false;
+      return currentDate >= range.start && currentDate <= range.end;
+    });
+
+    if (recurringMatches.length > 0) {
+      const names = recurringMatches.map((h) => h.name).join(", ");
+      return {
+        isHoliday: true,
+        type: "recurring",
+        tooltip: `${names} (recurring annually)`,
+      };
+    }
+
+    return { isHoliday: false, type: null, tooltip: "" };
   };
 
-  const calendar = generateCalendar(selectedYear);
+  const getHolidayTooltipText = (year, monthIndex, day, holidayInfo) => {
+    if (!holidayInfo?.isHoliday) return "";
+    const dateLabel = new Date(year, monthIndex, day).toLocaleDateString(
+      "en-GB",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      },
+    );
+    return `${dateLabel} - ${holidayInfo.tooltip}`;
+  };
+
+  const calendar = generateCalendar(selectedYear, startMonth);
+
+  const handlePrevQuarter = () => {
+    if (startMonth === 0) {
+      setSelectedYear((prev) => prev - 1);
+      setStartMonth(9);
+      return;
+    }
+    setStartMonth((prev) => prev - 3);
+  };
+
+  const handleNextQuarter = () => {
+    if (startMonth === 9) {
+      setSelectedYear((prev) => prev + 1);
+      setStartMonth(0);
+      return;
+    }
+    setStartMonth((prev) => prev + 3);
+  };
 
   // Pagination
   const totalPages = Math.ceil(filteredHolidays.length / itemsPerPage);
@@ -206,16 +376,16 @@ const HolidayManagement = () => {
             </h2>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setSelectedYear(selectedYear - 1)}
+                onClick={handlePrevQuarter}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
                 <ChevronLeft size={20} />
               </button>
               <span className="text-lg font-medium">
-                Academic Year {selectedYear}-{selectedYear + 1}
+                {calendar[0]?.name} - {calendar[2]?.name}
               </span>
               <button
-                onClick={() => setSelectedYear(selectedYear + 1)}
+                onClick={handleNextQuarter}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
                 <ChevronRight size={20} />
@@ -223,9 +393,20 @@ const HolidayManagement = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            {calendar.slice(0, 3).map((month, monthIndex) => (
-              <div key={monthIndex} className="border rounded-lg p-4">
+          <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center gap-2 text-gray-700">
+              <span className="inline-block w-4 h-4 rounded bg-red-100 border border-red-200" />
+              Holiday in selected year
+            </div>
+            <div className="flex items-center gap-2 text-gray-700">
+              <span className="inline-block w-4 h-4 rounded bg-rose-50 border border-rose-200" />
+              Recurring holiday (auto-applied)
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {calendar.map((month) => (
+              <div key={month.monthIndex} className="border rounded-lg p-4">
                 <h3 className="font-semibold text-center mb-3">{month.name}</h3>
                 <div className="grid grid-cols-7 gap-1 text-center text-sm">
                   {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
@@ -233,20 +414,50 @@ const HolidayManagement = () => {
                       {day}
                     </div>
                   ))}
-                  {month.days.map((day, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-1 ${day ? "hover:bg-gray-100" : ""} ${
-                        day && isHoliday(selectedYear, monthIndex, day)
-                          ? "bg-red-100 text-red-600 font-semibold rounded"
-                          : day
-                            ? "text-gray-700"
-                            : ""
-                      }`}
-                    >
-                      {day || ""}
-                    </div>
-                  ))}
+                  {month.days.map((day, idx) =>
+                    (() => {
+                      const holidayInfo = day
+                        ? getHolidayInfo(selectedYear, month.monthIndex, day)
+                        : { isHoliday: false, type: null, tooltip: "" };
+
+                      return (
+                        <div
+                          key={idx}
+                          title={getHolidayTooltipText(
+                            selectedYear,
+                            month.monthIndex,
+                            day,
+                            holidayInfo,
+                          )}
+                          className={`relative ${holidayInfo.isHoliday ? "group cursor-help" : ""}`}
+                        >
+                          <div
+                            className={`p-1 ${day ? "hover:bg-gray-100" : ""} ${
+                              holidayInfo.type === "exact"
+                                ? "bg-red-100 text-red-700 font-semibold rounded"
+                                : holidayInfo.type === "recurring"
+                                  ? "bg-rose-50 text-rose-600 font-semibold rounded border border-rose-100"
+                                  : day
+                                    ? "text-gray-700"
+                                    : ""
+                            }`}
+                          >
+                            {day || ""}
+                          </div>
+                          {holidayInfo.isHoliday && (
+                            <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-1 w-48 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                              {getHolidayTooltipText(
+                                selectedYear,
+                                month.monthIndex,
+                                day,
+                                holidayInfo,
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })(),
+                  )}
                 </div>
               </div>
             ))}
@@ -311,14 +522,18 @@ const HolidayManagement = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {new Date(holiday.date).toLocaleDateString("en-US", {
+                      {new Date(
+                        holiday.startDate || holiday.date,
+                      ).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
                       })}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {new Date(holiday.date).toLocaleDateString("en-US", {
+                      {new Date(
+                        holiday.endDate || holiday.startDate || holiday.date,
+                      ).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
@@ -329,10 +544,11 @@ const HolidayManagement = () => {
                         <input
                           type="checkbox"
                           checked={holiday.isRecurring}
-                          readOnly
+                          disabled={togglingHolidayId === holiday._id}
+                          onChange={() => handleToggleRecurring(holiday)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer disabled:opacity-50 disabled:cursor-not-allowed peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </td>
                     <td className="px-4 py-3">
@@ -422,13 +638,30 @@ const HolidayManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Start Date
+                  </label>
                   <input
                     type="date"
                     required
-                    value={formData.date}
+                    value={formData.startDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, date: e.target.value })
+                      setFormData({ ...formData, startDate: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.endDate}
+                    min={formData.startDate || undefined}
+                    onChange={(e) =>
+                      setFormData({ ...formData, endDate: e.target.value })
                     }
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -475,7 +708,8 @@ const HolidayManagement = () => {
                     setShowAddModal(false);
                     setFormData({
                       name: "",
-                      date: "",
+                      startDate: "",
+                      endDate: "",
                       description: "",
                       isRecurring: false,
                     });
@@ -518,13 +752,30 @@ const HolidayManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Start Date
+                  </label>
                   <input
                     type="date"
                     required
-                    value={formData.date}
+                    value={formData.startDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, date: e.target.value })
+                      setFormData({ ...formData, startDate: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.endDate}
+                    min={formData.startDate || undefined}
+                    onChange={(e) =>
+                      setFormData({ ...formData, endDate: e.target.value })
                     }
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -571,7 +822,8 @@ const HolidayManagement = () => {
                     setCurrentHoliday(null);
                     setFormData({
                       name: "",
-                      date: "",
+                      startDate: "",
+                      endDate: "",
                       description: "",
                       isRecurring: false,
                     });

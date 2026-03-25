@@ -1,43 +1,132 @@
-const { Holiday, User, Notification } = require("../models");
+const { Holiday, Notification } = require("../models");
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const normalizeDate = (value) => {
+  const d = new Date(value);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const safeDateInYear = (year, month, day) => {
+  const maxDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, maxDay));
+};
+
+const getStoredRange = (holiday) => {
+  const start = normalizeDate(holiday.startDate || holiday.date);
+  const end = normalizeDate(
+    holiday.endDate || holiday.startDate || holiday.date,
+  );
+  return { start, end };
+};
+
+const getHolidayRangeForYear = (holiday, year) => {
+  const { start: storedStart, end: storedEnd } = getStoredRange(holiday);
+
+  if (!holiday.isRecurring) {
+    return {
+      start: storedStart,
+      end: storedEnd,
+    };
+  }
+
+  if (year < storedStart.getFullYear()) {
+    return null;
+  }
+
+  const durationDays = Math.round((storedEnd - storedStart) / DAY_MS);
+  const start = safeDateInYear(
+    year,
+    storedStart.getMonth(),
+    storedStart.getDate(),
+  );
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + durationDays);
+  end.setHours(0, 0, 0, 0);
+
+  return { start, end };
+};
+
+const isDateInHoliday = (holiday, date) => {
+  const checkDate = normalizeDate(date);
+  const year = checkDate.getFullYear();
+  const range = getHolidayRangeForYear(holiday, year);
+  if (!range) return false;
+  return checkDate >= range.start && checkDate <= range.end;
+};
+
+const rangesOverlap = (aStart, aEnd, bStart, bEnd) => {
+  return aStart <= bEnd && bStart <= aEnd;
+};
+
+const formatDateRange = (start, end) => {
+  const startLabel = new Date(start).toLocaleDateString();
+  const endLabel = new Date(end).toLocaleDateString();
+  return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
+};
+
+const serializeHoliday = (holiday, yearOverride) => {
+  const source =
+    typeof holiday.toObject === "function" ? holiday.toObject() : holiday;
+  const range =
+    typeof yearOverride === "number"
+      ? getHolidayRangeForYear(source, yearOverride)
+      : getStoredRange(source);
+
+  return {
+    ...source,
+    startDate: range?.start || source.startDate || source.date,
+    endDate: range?.end || source.endDate || source.startDate || source.date,
+    date: source.date || source.startDate || range?.start,
+  };
+};
 
 // Create a new holiday
 exports.createHoliday = async (req, res) => {
   try {
-    const { name, date, description, isRecurring } = req.body;
+    const { name, startDate, endDate, date, description, isRecurring } =
+      req.body;
+    const parsedStartDate = startDate || date;
+    const parsedEndDate = endDate || startDate || date;
 
     // Validate required fields
-    if (!name || !date) {
+    if (!name || !parsedStartDate || !parsedEndDate) {
       return res.status(400).json({
-        message: "Holiday name and date are required",
+        message: "Holiday name, startDate and endDate are required",
       });
     }
 
-    // Parse date to ensure consistent format
-    const holidayDate = new Date(date);
-    holidayDate.setHours(0, 0, 0, 0);
+    const holidayStartDate = normalizeDate(parsedStartDate);
+    const holidayEndDate = normalizeDate(parsedEndDate);
 
-    // Check if holiday already exists on this date
-    const startOfDay = new Date(holidayDate);
-    const endOfDay = new Date(holidayDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    const existingHoliday = await Holiday.findOne({
-      date: {
-        $gte: startOfDay,
-        $lt: endOfDay,
-      },
+    if (holidayEndDate < holidayStartDate) {
+      return res.status(400).json({
+        message: "endDate must be greater than or equal to startDate",
+      });
+    }
+
+    // Check overlap with existing holiday ranges.
+    const existingHolidays = await Holiday.find({}).lean();
+    const overlappingHoliday = existingHolidays.find((item) => {
+      const { start, end } = getStoredRange(item);
+      return rangesOverlap(holidayStartDate, holidayEndDate, start, end);
     });
 
-    if (existingHoliday) {
+    if (overlappingHoliday) {
       return res.status(400).json({
-        message: "A holiday already exists on this date",
+        message: "Holiday date range overlaps with an existing holiday",
       });
     }
 
     // Create holiday
     const holiday = await Holiday.create({
       name,
-      date: holidayDate,
+      date: holidayStartDate,
+      startDate: holidayStartDate,
+      endDate: holidayEndDate,
       description,
       isRecurring: isRecurring || false,
       createdBy: req.user._id,
@@ -47,7 +136,7 @@ exports.createHoliday = async (req, res) => {
     await Notification.create({
       recipient_type: "ALL_USERS",
       title: "New Holiday Added",
-      message: `${name} has been scheduled on ${new Date(date).toLocaleDateString()}. Room bookings will not be available on this date.`,
+      message: `${name} has been scheduled for ${formatDateRange(holidayStartDate, holidayEndDate)}. Room bookings will not be available during this period.`,
       type: "SYSTEM",
       target_type: "RoomSchedule",
       read_by: [],
@@ -55,7 +144,7 @@ exports.createHoliday = async (req, res) => {
 
     res.status(201).json({
       message: "Holiday created successfully",
-      holiday,
+      holiday: serializeHoliday(holiday),
     });
   } catch (error) {
     console.error("Create holiday error:", error);
@@ -70,36 +159,53 @@ exports.createHoliday = async (req, res) => {
 exports.getAllHolidays = async (req, res) => {
   try {
     const { year, upcoming } = req.query;
+    const parsedYear = year ? Number(year) : null;
 
-    let filter = {};
-
-    // Filter by year if provided
-    if (year) {
-      const startDate = new Date(`${year}-01-01`);
-      const endDate = new Date(`${year}-12-31`);
-      endDate.setHours(23, 59, 59, 999);
-      filter.date = {
-        $gte: startDate,
-        $lte: endDate,
-      };
-    }
-
-    // Filter upcoming holidays if requested
-    if (upcoming === "true") {
-      filter.date = {
-        $gte: new Date(),
-      };
-    }
-
-    const holidays = await Holiday.find(filter)
+    const holidays = await Holiday.find({})
       .populate("createdBy", "full_name email")
       .sort({ date: 1 })
       .lean();
 
+    let filtered = holidays;
+
+    if (parsedYear) {
+      filtered = filtered.filter((holiday) => {
+        const range = getHolidayRangeForYear(holiday, parsedYear);
+        return !!range;
+      });
+    }
+
+    if (upcoming === "true") {
+      const today = normalizeDate(new Date());
+      filtered = filtered.filter((holiday) => {
+        if (holiday.isRecurring) {
+          const currentYearRange = getHolidayRangeForYear(
+            holiday,
+            today.getFullYear(),
+          );
+          if (currentYearRange && currentYearRange.end >= today) {
+            return true;
+          }
+          const nextYearRange = getHolidayRangeForYear(
+            holiday,
+            today.getFullYear() + 1,
+          );
+          return !!nextYearRange;
+        }
+
+        const range = getStoredRange(holiday);
+        return range.end >= today;
+      });
+    }
+
+    const normalized = filtered.map((holiday) =>
+      serializeHoliday(holiday, parsedYear || undefined),
+    );
+
     res.json({
       message: "Holidays retrieved successfully",
-      count: holidays.length,
-      holidays,
+      count: normalized.length,
+      holidays: normalized,
     });
   } catch (error) {
     console.error("Get holidays error:", error);
@@ -115,8 +221,10 @@ exports.getHolidayById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const holiday = await Holiday.findById(id)
-      .populate("createdBy", "full_name email");
+    const holiday = await Holiday.findById(id).populate(
+      "createdBy",
+      "full_name email",
+    );
 
     if (!holiday) {
       return res.status(404).json({
@@ -126,7 +234,7 @@ exports.getHolidayById = async (req, res) => {
 
     res.json({
       message: "Holiday retrieved successfully",
-      holiday,
+      holiday: serializeHoliday(holiday),
     });
   } catch (error) {
     console.error("Get holiday error:", error);
@@ -141,7 +249,8 @@ exports.getHolidayById = async (req, res) => {
 exports.updateHoliday = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, date, description, isRecurring } = req.body;
+    const { name, startDate, endDate, date, description, isRecurring } =
+      req.body;
 
     const holiday = await Holiday.findById(id);
 
@@ -152,35 +261,44 @@ exports.updateHoliday = async (req, res) => {
     }
 
     const oldName = holiday.name;
-    const oldDate = holiday.date;
+    const oldRange = getStoredRange(holiday);
 
-    // If date is being changed, check if new date already has a holiday
-    if (date && date !== holiday.date.toISOString().split('T')[0]) {
-      const newDate = new Date(date);
-      newDate.setHours(0, 0, 0, 0);
-      
-      const startOfDay = new Date(newDate);
-      const endOfDay = new Date(newDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      const existingHoliday = await Holiday.findOne({
-        date: {
-          $gte: startOfDay,
-          $lt: endOfDay,
-        },
-        _id: { $ne: id },
+    const mergedStartDate =
+      startDate || date || holiday.startDate || holiday.date;
+    const mergedEndDate =
+      endDate ||
+      startDate ||
+      date ||
+      holiday.endDate ||
+      holiday.startDate ||
+      holiday.date;
+
+    const normalizedStartDate = normalizeDate(mergedStartDate);
+    const normalizedEndDate = normalizeDate(mergedEndDate);
+
+    if (normalizedEndDate < normalizedStartDate) {
+      return res.status(400).json({
+        message: "endDate must be greater than or equal to startDate",
       });
+    }
 
-      if (existingHoliday) {
-        return res.status(400).json({
-          message: "A holiday already exists on this date",
-        });
-      }
+    const existingHolidays = await Holiday.find({ _id: { $ne: id } }).lean();
+    const overlappingHoliday = existingHolidays.find((item) => {
+      const { start, end } = getStoredRange(item);
+      return rangesOverlap(normalizedStartDate, normalizedEndDate, start, end);
+    });
+
+    if (overlappingHoliday) {
+      return res.status(400).json({
+        message: "Holiday date range overlaps with an existing holiday",
+      });
     }
 
     // Update holiday
     if (name) holiday.name = name;
-    if (date) holiday.date = new Date(date);
+    holiday.startDate = normalizedStartDate;
+    holiday.endDate = normalizedEndDate;
+    holiday.date = normalizedStartDate;
     if (description !== undefined) holiday.description = description;
     if (isRecurring !== undefined) holiday.isRecurring = isRecurring;
 
@@ -190,7 +308,7 @@ exports.updateHoliday = async (req, res) => {
     await Notification.create({
       recipient_type: "ALL_USERS",
       title: "Holiday Updated",
-      message: `${oldName} has been updated. New details: ${holiday.name} on ${holiday.date.toLocaleDateString()}.`,
+      message: `${oldName} (${formatDateRange(oldRange.start, oldRange.end)}) has been updated. New details: ${holiday.name} (${formatDateRange(holiday.startDate, holiday.endDate)}).`,
       type: "SYSTEM",
       target_type: "RoomSchedule",
       read_by: [],
@@ -198,7 +316,7 @@ exports.updateHoliday = async (req, res) => {
 
     res.json({
       message: "Holiday updated successfully",
-      holiday,
+      holiday: serializeHoliday(holiday),
     });
   } catch (error) {
     console.error("Update holiday error:", error);
@@ -223,7 +341,7 @@ exports.deleteHoliday = async (req, res) => {
     }
 
     const holidayName = holiday.name;
-    const holidayDate = holiday.date;
+    const holidayRange = getStoredRange(holiday);
 
     await Holiday.findByIdAndDelete(id);
 
@@ -231,7 +349,7 @@ exports.deleteHoliday = async (req, res) => {
     await Notification.create({
       recipient_type: "ALL_USERS",
       title: "Holiday Removed",
-      message: `${holidayName} (${holidayDate.toLocaleDateString()}) has been removed from the holiday calendar. Booking is now available on this date.`,
+      message: `${holidayName} (${formatDateRange(holidayRange.start, holidayRange.end)}) has been removed from the holiday calendar. Booking is now available during this period.`,
       type: "SYSTEM",
       target_type: "RoomSchedule",
       read_by: [],
@@ -264,19 +382,18 @@ exports.checkHoliday = async (req, res) => {
     checkDate.setHours(0, 0, 0, 0);
 
     const startOfDay = new Date(checkDate);
-    const endOfDay = new Date(checkDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const allHolidays = await Holiday.find({}).lean();
 
-    const holiday = await Holiday.findOne({
-      date: {
-        $gte: startOfDay,
-        $lt: endOfDay,
-      },
-    });
+    const holiday = allHolidays.find((item) =>
+      isDateInHoliday(item, startOfDay),
+    );
+    const responseHoliday = holiday
+      ? serializeHoliday(holiday, startOfDay.getFullYear())
+      : null;
 
     res.json({
-      isHoliday: !!holiday,
-      holiday: holiday || null,
+      isHoliday: !!responseHoliday,
+      holiday: responseHoliday,
     });
   } catch (error) {
     console.error("Check holiday error:", error);

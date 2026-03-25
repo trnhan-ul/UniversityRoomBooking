@@ -9,7 +9,12 @@ const holidaySchema = new mongoose.Schema(
     },
     date: {
       type: Date,
-      required: [true, "Holiday date is required"],
+    },
+    startDate: {
+      type: Date,
+    },
+    endDate: {
+      type: Date,
     },
     description: {
       type: String,
@@ -28,11 +33,12 @@ const holidaySchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Indexes
 holidaySchema.index({ date: 1 });
+holidaySchema.index({ startDate: 1, endDate: 1 });
 holidaySchema.index({ createdBy: 1 });
 
 const Holiday = mongoose.model("Holiday", holidaySchema);

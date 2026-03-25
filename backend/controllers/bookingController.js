@@ -6,6 +6,7 @@ const { sendApprovalEmail } = require("../services/emailService");
 const { logBookingAction } = require("../utils/auditLogger");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const isToday = (d) => {
   const now = new Date();
@@ -14,6 +15,58 @@ const isToday = (d) => {
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate()
   );
+};
+
+const normalizeDate = (value) => {
+  const d = new Date(value);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const safeDateInYear = (year, month, day) => {
+  const maxDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, maxDay));
+};
+
+const getHolidayStoredRange = (holiday) => {
+  const start = normalizeDate(holiday.startDate || holiday.date);
+  const end = normalizeDate(
+    holiday.endDate || holiday.startDate || holiday.date,
+  );
+  return { start, end };
+};
+
+const getHolidayRangeForYear = (holiday, year) => {
+  const { start: storedStart, end: storedEnd } = getHolidayStoredRange(holiday);
+
+  if (!holiday.isRecurring) {
+    return { start: storedStart, end: storedEnd };
+  }
+
+  if (year < storedStart.getFullYear()) {
+    return null;
+  }
+
+  const durationDays = Math.round((storedEnd - storedStart) / DAY_MS);
+  const start = safeDateInYear(
+    year,
+    storedStart.getMonth(),
+    storedStart.getDate(),
+  );
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + durationDays);
+  end.setHours(0, 0, 0, 0);
+
+  return { start, end };
+};
+
+const isDateInHoliday = (holiday, date) => {
+  const checkDate = normalizeDate(date);
+  const range = getHolidayRangeForYear(holiday, checkDate.getFullYear());
+  if (!range) return false;
+  return checkDate >= range.start && checkDate <= range.end;
 };
 
 // UC14 - Create Booking
@@ -58,17 +111,11 @@ const createBooking = async (req, res) => {
     }
 
     // Check if date is a holiday
-    const checkDate = new Date(bookingDate);
-    checkDate.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(bookingDate);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const holiday = await Holiday.findOne({
-      date: {
-        $gte: checkDate,
-        $lt: endOfDay,
-      },
-    });
+    const checkDate = normalizeDate(bookingDate);
+    const allHolidays = await Holiday.find({}).lean();
+    const holiday = allHolidays.find((item) =>
+      isDateInHoliday(item, checkDate),
+    );
 
     if (holiday) {
       return res.status(400).json({
@@ -76,7 +123,8 @@ const createBooking = async (req, res) => {
         message: `Cannot book room on ${holiday.name}`,
         holiday: {
           name: holiday.name,
-          date: holiday.date,
+          date: holiday.startDate || holiday.date,
+          endDate: holiday.endDate || holiday.startDate || holiday.date,
           description: holiday.description,
         },
       });
@@ -527,12 +575,10 @@ const cancelBooking = async (req, res) => {
     }
 
     if (booking.status !== "PENDING") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Only pending bookings can be cancelled",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Only pending bookings can be cancelled",
+      });
     }
 
     booking.status = "CANCELLED";
@@ -910,6 +956,13 @@ const getBookingReport = async (req, res) => {
 // Recurring Booking — thêm vào trước module.exports
 const createRecurringBooking = async (req, res) => {
   try {
+    if (req.user?.role !== "LECTURER") {
+      return res.status(403).json({
+        success: false,
+        message: "Only lecturers can create recurring bookings",
+      });
+    }
+
     const {
       room_id,
       start_date,
@@ -1028,12 +1081,14 @@ const createRecurringBooking = async (req, res) => {
     }
 
     // 8. Load all holidays in range (1 query)
-    const holidays = await Holiday.find({ date: { $gte: startD, $lte: endD } });
+    const holidays = await Holiday.find({}).lean();
     const holidayMap = {};
-    holidays.forEach((h) => {
-      const d = new Date(h.date);
-      d.setHours(0, 0, 0, 0);
-      holidayMap[d.toISOString().split("T")[0]] = h.name;
+    dates.forEach((d) => {
+      const dateKey = new Date(d).toISOString().split("T")[0];
+      const matched = holidays.find((h) => isDateInHoliday(h, d));
+      if (matched) {
+        holidayMap[dateKey] = matched.name;
+      }
     });
 
     // 9. Load all conflicts in range (1 query, filter in-memory)

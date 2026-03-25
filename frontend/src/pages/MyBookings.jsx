@@ -170,7 +170,7 @@ const MyBookings = () => {
           <Button
             variant="primary"
             icon="+"
-            onClick={() => (window.location.href = "/book")}
+            onClick={() => navigate("/create-booking")}
           >
             Book a Room
           </Button>
@@ -207,7 +207,10 @@ const MyBookings = () => {
           </div>
           <div className="px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium flex items-center gap-2">
             <span>⚡</span>
-            <label htmlFor="booking-status-filter" className="whitespace-nowrap">
+            <label
+              htmlFor="booking-status-filter"
+              className="whitespace-nowrap"
+            >
               Status
             </label>
             <select
@@ -281,7 +284,8 @@ const MyBookings = () => {
                         {formatDate(booking.date)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-800 font-medium">
-                        {formatTime12Hour(booking.start_time)} - {formatTime12Hour(booking.end_time)}
+                        {formatTime12Hour(booking.start_time)} -{" "}
+                        {formatTime12Hour(booking.end_time)}
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={getStatusBadge(booking.status)}>
@@ -290,8 +294,12 @@ const MyBookings = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
-                          <button 
-                            onClick={() => navigate(`/booking-detail/${booking._id}`, { state: { booking } })}
+                          <button
+                            onClick={() =>
+                              navigate(`/booking-detail/${booking._id}`, {
+                                state: { booking },
+                              })
+                            }
                             className="text-blue-600 text-sm font-semibold hover:underline"
                           >
                             View Details
@@ -369,7 +377,7 @@ const MyBookings = () => {
                   value={JSON.stringify({
                     b: qrData.b,
                     t: qrData.t,
-                    type: qrData.type
+                    type: qrData.type,
                   })}
                   size={280}
                   level="M"
@@ -384,7 +392,9 @@ const MyBookings = () => {
               </p>
 
               {checkInLoading && (
-                <p className="text-sm text-blue-600 font-semibold mb-3">Checking in...</p>
+                <p className="text-sm text-blue-600 font-semibold mb-3">
+                  Checking in...
+                </p>
               )}
 
               {!!checkInMessage && (
@@ -417,7 +427,8 @@ const MyBookings = () => {
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Time:</span>
                     <span className="text-sm font-semibold text-gray-900">
-                      {formatTime12Hour(qrData.start_time)} - {formatTime12Hour(qrData.end_time)}
+                      {formatTime12Hour(qrData.start_time)} -{" "}
+                      {formatTime12Hour(qrData.end_time)}
                     </span>
                   </div>
                 </div>
@@ -437,26 +448,28 @@ const MyBookings = () => {
                 </button>
                 <button
                   onClick={() => {
-                    const svg = document.querySelector('#qr-code-svg');
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
+                    const svg = document.querySelector("#qr-code-svg");
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
                     const data = new XMLSerializer().serializeToString(svg);
                     const img = new Image();
-                    const svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+                    const svgBlob = new Blob([data], {
+                      type: "image/svg+xml;charset=utf-8",
+                    });
                     const url = URL.createObjectURL(svgBlob);
-                    
+
                     img.onload = () => {
                       canvas.width = img.width;
                       canvas.height = img.height;
-                      ctx.fillStyle = '#FFFFFF';
+                      ctx.fillStyle = "#FFFFFF";
                       ctx.fillRect(0, 0, canvas.width, canvas.height);
                       ctx.drawImage(img, 0, 0);
-                      
+
                       canvas.toBlob((blob) => {
                         const pngUrl = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
+                        const link = document.createElement("a");
                         link.href = pngUrl;
-                        link.download = `qr-code-${qrData.room_name || 'booking'}.png`;
+                        link.download = `qr-code-${qrData.room_name || "booking"}.png`;
                         link.click();
                         URL.revokeObjectURL(pngUrl);
                         URL.revokeObjectURL(url);
@@ -466,7 +479,7 @@ const MyBookings = () => {
                   }}
                   className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                 >
-                   Download
+                  Download
                 </button>
               </div>
             </div>
