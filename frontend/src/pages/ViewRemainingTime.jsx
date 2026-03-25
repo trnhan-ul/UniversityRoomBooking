@@ -229,8 +229,13 @@ const ViewRemainingTime = () => {
       const response = await getMyBookings(1, 100, "APPROVED", "upcoming");
       if (response.success && response.data) {
         const all = response.data.bookings || [];
+        // Safety guard: never show unapproved bookings on this screen.
+        const approvedOnly = all.filter((b) =>
+          ["APPROVED", "CHECKED-IN"].includes((b.status || "").toUpperCase())
+        );
+
         // Keep only today's ongoing + upcoming, and filter out ended ones
-        const relevant = all.filter((b) => {
+        const relevant = approvedOnly.filter((b) => {
           const status = getBookingTimeStatus(b);
           return status.phase === "ongoing" || status.phase === "upcoming";
         });
