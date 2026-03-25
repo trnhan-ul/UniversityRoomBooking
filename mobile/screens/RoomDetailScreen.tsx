@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  ImageSourcePropType,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getEquipmentByRoom, getRoomById, RoomSummary, EquipmentItem } from '../services/roomService';
 import { COLORS } from '../constants/theme';
+import { getRoomLocalImages } from '../constants/roomImages';
 import { buildTimeSlots, normalizeEquipment, getTodayDate, TimeSlot } from '../utils/roomHelpers';
 import { SpecCard, Section, EquipmentChips, TimeSlotGrid, ImageGallery } from '../components';
 import { RootStackParamList } from '../types/navigation';
@@ -56,7 +58,19 @@ export default function RoomDetailScreen() {
     fetchDetail();
   }, [id]);
 
-  const imageList = room?.images && room.images.length > 0 ? room.images : [];
+  const imageList = useMemo<ImageSourcePropType[]>(() => {
+    const localImages = getRoomLocalImages(room?.room_code);
+    if (localImages.length > 0) {
+      return localImages;
+    }
+
+    if (!room?.images || room.images.length === 0) {
+      return [];
+    }
+
+    return room.images.map((uri) => ({ uri }));
+  }, [room?.images, room?.room_code]);
+
   const displayEquipment = normalizeEquipment(room, equipment);
 
   const availableSlots = useMemo(() => buildTimeSlots(selectedDate, room?.status), [selectedDate, room?.status]);

@@ -7,6 +7,7 @@ import { COLORS } from './constants/theme';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
+import RoomsScreen from './screens/RoomsScreen';
 import RoomDetailScreen from './screens/RoomDetailScreen';
 import MyBookingsScreen from './screens/MyBookingsScreen';
 import BookingDetailScreen from './screens/BookingDetailScreen';
@@ -32,6 +33,11 @@ function RootNavigator() {
         {isAuthenticated ? (
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen
+              name="Rooms"
+              component={RoomsScreen}
+              options={{ headerShown: true, title: 'Rooms' }}
+            />
             <Stack.Screen
               name="MyBookings"
               component={MyBookingsScreen}
