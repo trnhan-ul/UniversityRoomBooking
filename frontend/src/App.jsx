@@ -32,7 +32,6 @@ import EquipmentManagement from "./pages/EquipmentManagement";
 import HolidayManagement from "./pages/HolidayManagement";
 import AuditLogs from "./pages/AuditLogs";
 import ViewRemainingTime from "./pages/ViewRemainingTime";
-import QRScanner from "./pages/QRScanner";
 import ReportIssue from "./pages/ReportIssue";
 import MyReportedIssues from "./pages/MyReportedIssues";
 import FacilityIssuesManagement from "./pages/FacilityIssuesManagement";
@@ -220,10 +219,6 @@ function App() {
               </AdminLayout>
             }
           />
-        )}
-
-        {user && isManagerRole(user.role) && (
-          <Route path="/qr-scanner" element={<QRScanner />} />
         )}
 
         {user && isManagerRole(user.role) && (

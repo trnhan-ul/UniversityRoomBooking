@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyBookings, cancelBooking, getBookingQRData } from "../services/bookingService";
+import { getMyBookings, cancelBooking, getBookingQRData, checkInBooking } from "../services/bookingService";
 import {
   formatDate,
   getStatusVariant,
@@ -27,6 +27,9 @@ const MyBookings = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrData, setQRData] = useState(null);
   const [qrLoading, setQRLoading] = useState(false);
+  const [checkInLoading, setCheckInLoading] = useState(false);
+  const [checkInMessage, setCheckInMessage] = useState("");
+  const [checkInError, setCheckInError] = useState("");
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -93,12 +96,39 @@ const MyBookings = () => {
       const response = await getBookingQRData(bookingId);
       if (response.success) {
         setQRData(response.data);
+        setCheckInMessage("");
+        setCheckInError("");
         setShowQRModal(true);
       }
     } catch (err) {
       alert(err.message || "Failed to load QR code");
     } finally {
       setQRLoading(false);
+    }
+  };
+
+  const handleSelfCheckIn = async () => {
+    if (!qrData || checkInLoading) {
+      return;
+    }
+
+    try {
+      setCheckInLoading(true);
+      setCheckInMessage("");
+      setCheckInError("");
+
+      const response = await checkInBooking(qrData.b, qrData.t);
+
+      if (response.success) {
+        setCheckInMessage(response.message || "Checked-in successfully");
+        fetchBookings();
+      } else {
+        setCheckInError(response.message || "Check-in failed");
+      }
+    } catch (err) {
+      setCheckInError(err.message || "Check-in failed");
+    } finally {
+      setCheckInLoading(false);
     }
   };
 
@@ -325,7 +355,13 @@ const MyBookings = () => {
               </h3>
 
               {/* QR Code */}
-              <div className="bg-white p-6 rounded-lg border-2 border-gray-200 mb-4 inline-block">
+              <button
+                type="button"
+                onClick={handleSelfCheckIn}
+                disabled={checkInLoading}
+                className="bg-white p-6 rounded-lg border-2 border-gray-200 mb-4 inline-block hover:border-blue-400 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+                title="Click to check-in now"
+              >
                 <QRCodeSVG
                   id="qr-code-svg"
                   value={JSON.stringify({
@@ -339,7 +375,27 @@ const MyBookings = () => {
                   bgColor="#FFFFFF"
                   fgColor="#000000"
                 />
-              </div>
+              </button>
+
+              <p className="text-sm text-gray-600 mb-4">
+                Click the QR code to check-in directly without opening camera.
+              </p>
+
+              {checkInLoading && (
+                <p className="text-sm text-blue-600 font-semibold mb-3">Checking in...</p>
+              )}
+
+              {!!checkInMessage && (
+                <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                  {checkInMessage}
+                </div>
+              )}
+
+              {!!checkInError && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {checkInError}
+                </div>
+              )}
 
               {/* Booking Info */}
               <div className="bg-gray-50 rounded-lg p-4 text-left mb-4">
@@ -368,7 +424,11 @@ const MyBookings = () => {
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowQRModal(false)}
+                  onClick={() => {
+                    setShowQRModal(false);
+                    setCheckInMessage("");
+                    setCheckInError("");
+                  }}
                   className="flex-1 px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                 >
                   Close
