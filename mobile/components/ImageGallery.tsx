@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { StyleSheet, Image, ScrollView, TouchableOpacity, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Image, ScrollView, TouchableOpacity, Text, ImageSourcePropType } from 'react-native';
 import { COLORS } from '../constants/theme';
 
 interface ImageGalleryProps {
-  images: string[];
+  images: ImageSourcePropType[];
 }
 
 /**
@@ -12,13 +12,17 @@ interface ImageGalleryProps {
 export const ImageGallery: React.FC<ImageGalleryProps> = ({ images }) => {
   const [selectedImage, setSelectedImage] = useState(0);
 
+  useEffect(() => {
+    setSelectedImage(0);
+  }, [images]);
+
   if (images.length === 0) {
     return <Text style={styles.placeholder}>No room images available.</Text>;
   }
 
   return (
     <>
-      <Image source={{ uri: images[selectedImage] }} style={styles.mainImage} />
+      <Image source={images[selectedImage]} style={styles.mainImage} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -26,12 +30,12 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ images }) => {
       >
         {images.map((img, index) => (
           <TouchableOpacity
-            key={`${img}-${index}`}
+            key={`thumb-${index}`}
             onPress={() => setSelectedImage(index)}
             activeOpacity={0.7}
           >
             <Image
-              source={{ uri: img }}
+              source={img}
               style={[
                 styles.thumbImage,
                 index === selectedImage ? styles.thumbActive : undefined,

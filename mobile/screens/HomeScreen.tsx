@@ -59,49 +59,64 @@ export default function HomeScreen() {
         </View>
       </Card>
 
-      <TouchableOpacity style={styles.primaryActionButton} activeOpacity={0.9}>
+      <TouchableOpacity
+        style={styles.primaryActionButton}
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('Rooms')}
+      >
         <Ionicons name="flash-outline" size={18} color="#ffffff" />
         <Text style={styles.primaryActionText}>Quick Booking</Text>
       </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>Main Features</Text>
       <View style={styles.featureGrid}>
-        <Card style={styles.featureCard}>
-          <View style={[styles.featureIconBox, { backgroundColor: '#e0edff' }]}>
-            <Ionicons name="search-outline" size={20} color={COLORS.primary} />
-          </View>
-          <Text style={styles.featureTitle}>Search Rooms</Text>
-          <Text style={styles.featureDescription}>Find classrooms by location and capacity.</Text>
-        </Card>
+        <TouchableOpacity
+          style={styles.featurePressable}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('Rooms')}
+        >
+          <Card style={styles.featureCard}>
+            <View style={[styles.featureIconBox, { backgroundColor: '#e0edff' }]}>
+              <Ionicons name="business-outline" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={styles.featureTitle}>Room</Text>
+            <Text style={styles.featureDescription}>Find classrooms by location and capacity.</Text>
+          </Card>
+        </TouchableOpacity>
 
-        <Card style={styles.featureCard}>
-          <View style={[styles.featureIconBox, { backgroundColor: '#dcfce7' }]}>
-            <Ionicons name="book-outline" size={20} color="#16a34a" />
-          </View>
-          <Text style={styles.featureTitle}>Book Room</Text>
-          <Text style={styles.featureDescription}>Create a new booking request quickly.</Text>
-        </Card>
+        <View style={styles.featurePressable}>
+          <Card style={styles.featureCard}>
+            <View style={[styles.featureIconBox, { backgroundColor: '#dcfce7' }]}>
+              <Ionicons name="book-outline" size={20} color="#16a34a" />
+            </View>
+            <Text style={styles.featureTitle}>Book Room</Text>
+            <Text style={styles.featureDescription}>Create a new booking request quickly.</Text>
+          </Card>
+        </View>
 
         <TouchableOpacity
+          style={styles.featurePressable}
           activeOpacity={0.9}
           onPress={() => navigation.navigate('MyBookings')}
         >
           <Card style={styles.featureCard}>
-          <View style={[styles.featureIconBox, { backgroundColor: '#ede9fe' }]}>
-            <Ionicons name="calendar-outline" size={20} color="#7c3aed" />
-          </View>
-          <Text style={styles.featureTitle}>My Bookings</Text>
-          <Text style={styles.featureDescription}>Track and manage your upcoming bookings.</Text>
+            <View style={[styles.featureIconBox, { backgroundColor: '#ede9fe' }]}>
+              <Ionicons name="calendar-outline" size={20} color="#7c3aed" />
+            </View>
+            <Text style={styles.featureTitle}>My Bookings</Text>
+            <Text style={styles.featureDescription}>Track and manage your upcoming bookings.</Text>
           </Card>
         </TouchableOpacity>
 
-        <Card style={styles.featureCard}>
-          <View style={[styles.featureIconBox, { backgroundColor: '#fee2e2' }]}>
-            <Ionicons name="notifications-outline" size={20} color="#dc2626" />
-          </View>
-          <Text style={styles.featureTitle}>Notifications</Text>
-          <Text style={styles.featureDescription}>Stay updated with booking status changes.</Text>
-        </Card>
+        <View style={styles.featurePressable}>
+          <Card style={styles.featureCard}>
+            <View style={[styles.featureIconBox, { backgroundColor: '#fee2e2' }]}>
+              <Ionicons name="notifications-outline" size={20} color="#dc2626" />
+            </View>
+            <Text style={styles.featureTitle}>Notifications</Text>
+            <Text style={styles.featureDescription}>Stay updated with booking status changes.</Text>
+          </Card>
+        </View>
       </View>
 
     </ScrollView>
@@ -227,10 +242,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 14,
   },
-  featureCard: {
-    width: 165,
-    minHeight: 148,
+  featurePressable: {
+    width: '48%',
     marginBottom: 10,
+  },
+  featureCard: {
+    width: '100%',
+    minHeight: 148,
     padding: 14,
   },
   featureIconBox: {
