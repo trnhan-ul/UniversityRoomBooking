@@ -3,40 +3,22 @@ const router = express.Router();
 const Booking = require("../models/Booking");
 const bookingController = require("../controllers/bookingController");
 const { authenticate, authorizeRoles } = require("../middleware/auth");
-const { v4: uuidv4 } = require("uuid");
 
 // POST /api/bookings/recurring -> create recurring bookings
-router.post("/recurring", authenticate, authorizeRoles(["STUDENT", "LECTURER"]), bookingController.createRecurringBooking);
+router.post(
+  "/recurring",
+  authenticate,
+  authorizeRoles(["STUDENT", "LECTURER"]),
+  bookingController.createRecurringBooking,
+);
 
 // POST /api/bookings -> create new booking
-router.post("/", authenticate, authorizeRoles(["STUDENT", "LECTURER"]), async (req, res) => {
-  try {
-    const { room_id, date, start_time, end_time, purpose } = req.body;
-
-    const booking = await Booking.create({
-      user_id: req.user._id,
-      room_id,
-      date: new Date(date),
-      start_time,
-      end_time,
-      purpose: purpose.trim(),
-      status: "PENDING",
-      qr_code_token: uuidv4(),
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Booking created successfully",
-      data: booking,
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+router.post(
+  "/",
+  authenticate,
+  authorizeRoles(["STUDENT", "LECTURER"]),
+  bookingController.createBooking,
+);
 
 // GET /api/bookings/my-bookings
 router.get("/my-bookings", authenticate, async (req, res) => {
@@ -122,11 +104,7 @@ router.patch("/:id/extend", authenticate, bookingController.extendBooking);
 router.get("/:id/qr-data", authenticate, bookingController.getBookingQRData);
 
 // POST /api/bookings/check-in - check-in booking via QR code (booking owner)
-router.post(
-  "/check-in",
-  authenticate,
-  bookingController.checkInBooking,
-);
+router.post("/check-in", authenticate, bookingController.checkInBooking);
 
 // GET /api/bookings/:id - booking detail (owner or privileged roles)
 router.get("/:id", authenticate, bookingController.getBookingById);

@@ -7,6 +7,15 @@ const { logBookingAction } = require("../utils/auditLogger");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 
+const isToday = (d) => {
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+};
+
 // UC14 - Create Booking
 const createBooking = async (req, res) => {
   try {
@@ -92,6 +101,18 @@ const createBooking = async (req, res) => {
         success: false,
         message: "End time must be after start time",
       });
+    }
+
+    // Real-time validation for same-day bookings.
+    if (isToday(bookingDate)) {
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      if (startMinutes <= nowMinutes) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot book a past time slot for today",
+        });
+      }
     }
 
     // Validate working hours
@@ -247,9 +268,10 @@ const getBookingById = async (req, res) => {
     const privilegedRoles = ["FACILITY_MANAGER", "ADMINISTRATOR"];
     const userRole = (req.user.role || "").toUpperCase();
     const isPrivileged = privilegedRoles.includes(userRole);
-    const isOwner = booking.user_id && booking.user_id._id
-      ? booking.user_id._id.toString() === req.user._id.toString()
-      : booking.user_id.toString() === req.user._id.toString();
+    const isOwner =
+      booking.user_id && booking.user_id._id
+        ? booking.user_id._id.toString() === req.user._id.toString()
+        : booking.user_id.toString() === req.user._id.toString();
 
     if (!isPrivileged && !isOwner) {
       return res
@@ -504,10 +526,13 @@ const cancelBooking = async (req, res) => {
         .json({ success: false, message: "Forbidden: not your booking" });
     }
 
-    if (!["PENDING", "APPROVED"].includes(booking.status)) {
+    if (booking.status !== "PENDING") {
       return res
         .status(400)
-        .json({ success: false, message: "Cannot cancel this booking" });
+        .json({
+          success: false,
+          message: "Only pending bookings can be cancelled",
+        });
     }
 
     booking.status = "CANCELLED";
@@ -912,12 +937,10 @@ const createRecurringBooking = async (req, res) => {
 
     // 2. Validate recurrence_type
     if (!["WEEKLY", "MONTHLY"].includes(recurrence_type)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "recurrence_type must be WEEKLY or MONTHLY",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "recurrence_type must be WEEKLY or MONTHLY",
+      });
     }
 
     // 3. Validate dates
@@ -1144,13 +1167,11 @@ const getExtendOptions = async (req, res) => {
         .status(403)
         .json({ success: false, message: "Forbidden: not your booking" });
     }
-    if (!['APPROVED', 'CHECKED-IN'].includes(booking.status)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Only approved or checked-in bookings can be extended",
-        });
+    if (!["APPROVED", "CHECKED-IN"].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Only approved or checked-in bookings can be extended",
+      });
     }
 
     // Check booking date = today
@@ -1158,12 +1179,10 @@ const getExtendOptions = async (req, res) => {
     const todayStr = now.toISOString().split("T")[0];
     const bookingDateStr = new Date(booking.date).toISOString().split("T")[0];
     if (bookingDateStr !== todayStr) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Can only extend bookings scheduled for today",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Can only extend bookings scheduled for today",
+      });
     }
 
     // Check booking is currently ongoing
@@ -1171,12 +1190,10 @@ const getExtendOptions = async (req, res) => {
     const startMins = toMins(booking.start_time);
     const endMins = toMins(booking.end_time);
     if (nowMins < startMins || nowMins >= endMins) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Booking is not currently in progress",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Booking is not currently in progress",
+      });
     }
 
     // Get working hours end
@@ -1280,13 +1297,11 @@ const extendBooking = async (req, res) => {
         .status(403)
         .json({ success: false, message: "Forbidden: not your booking" });
     }
-    if (!['APPROVED', 'CHECKED-IN'].includes(booking.status)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Only approved or checked-in bookings can be extended",
-        });
+    if (!["APPROVED", "CHECKED-IN"].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Only approved or checked-in bookings can be extended",
+      });
     }
 
     // Check today
@@ -1294,12 +1309,10 @@ const extendBooking = async (req, res) => {
     const todayStr = now.toISOString().split("T")[0];
     const bookingDateStr = new Date(booking.date).toISOString().split("T")[0];
     if (bookingDateStr !== todayStr) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Can only extend bookings scheduled for today",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Can only extend bookings scheduled for today",
+      });
     }
 
     // Check ongoing
@@ -1307,23 +1320,19 @@ const extendBooking = async (req, res) => {
     const startMins = toMins(booking.start_time);
     const endMins = toMins(booking.end_time);
     if (nowMins < startMins || nowMins >= endMins) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Booking is not currently in progress",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Booking is not currently in progress",
+      });
     }
 
     // new_end_time must be after current end_time
     const newEndMins = toMins(new_end_time);
     if (newEndMins <= endMins) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "New end time must be after current end time",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "New end time must be after current end time",
+      });
     }
 
     // Check working hours
@@ -1394,12 +1403,10 @@ const approveRecurringGroup = async (req, res) => {
       .populate("room_id", "name location");
 
     if (pendingBookings.length === 0) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "No pending bookings found for this recurring group",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "No pending bookings found for this recurring group",
+      });
     }
 
     const approved = [];
@@ -1504,12 +1511,10 @@ const rejectRecurringGroup = async (req, res) => {
         .json({ success: false, message: "recurrence_id is required" });
     }
     if (!reject_reason || reject_reason.trim().length < 10) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Rejection reason required (min 10 characters)",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Rejection reason required (min 10 characters)",
+      });
     }
 
     const pendingBookings = await Booking.find({
@@ -1520,12 +1525,10 @@ const rejectRecurringGroup = async (req, res) => {
       .populate("room_id", "name location");
 
     if (pendingBookings.length === 0) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "No pending bookings found for this recurring group",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "No pending bookings found for this recurring group",
+      });
     }
 
     const now = new Date();
@@ -1593,7 +1596,7 @@ const getBookingQRData = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid booking ID"
+        message: "Invalid booking ID",
       });
     }
 
@@ -1604,7 +1607,7 @@ const getBookingQRData = async (req, res) => {
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: "Booking not found"
+        message: "Booking not found",
       });
     }
 
@@ -1612,7 +1615,7 @@ const getBookingQRData = async (req, res) => {
     if (booking.user_id._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to view this booking's QR code"
+        message: "Not authorized to view this booking's QR code",
       });
     }
 
@@ -1620,14 +1623,14 @@ const getBookingQRData = async (req, res) => {
     if (booking.status !== "APPROVED") {
       return res.status(400).json({
         success: false,
-        message: "Only approved bookings have QR codes"
+        message: "Only approved bookings have QR codes",
       });
     }
 
     if (!booking.qr_code_token) {
       return res.status(400).json({
         success: false,
-        message: "QR code not generated for this booking"
+        message: "QR code not generated for this booking",
       });
     }
 
@@ -1640,12 +1643,12 @@ const getBookingQRData = async (req, res) => {
       room_name: booking.room_id.room_name,
       date: booking.date,
       start_time: booking.start_time,
-      end_time: booking.end_time
+      end_time: booking.end_time,
     };
 
     res.status(200).json({
       success: true,
-      data: qrData
+      data: qrData,
     });
   } catch (error) {
     console.error("getBookingQRData error:", error);
@@ -1661,14 +1664,14 @@ const checkInBooking = async (req, res) => {
     if (!booking_id || !qr_token) {
       return res.status(400).json({
         success: false,
-        message: "Booking ID and QR token are required"
+        message: "Booking ID and QR token are required",
       });
     }
 
     if (!mongoose.Types.ObjectId.isValid(booking_id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid booking ID"
+        message: "Invalid booking ID",
       });
     }
 
@@ -1680,14 +1683,14 @@ const checkInBooking = async (req, res) => {
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: "Booking not found"
+        message: "Booking not found",
       });
     }
 
     if (booking.user_id._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to check-in this booking"
+        message: "Not authorized to check-in this booking",
       });
     }
 
@@ -1695,7 +1698,7 @@ const checkInBooking = async (req, res) => {
     if (booking.qr_code_token !== qr_token) {
       return res.status(400).json({
         success: false,
-        message: "Invalid QR code"
+        message: "Invalid QR code",
       });
     }
 
@@ -1703,7 +1706,7 @@ const checkInBooking = async (req, res) => {
     if (booking.status !== "APPROVED") {
       return res.status(400).json({
         success: false,
-        message: `Cannot check-in. Booking status is ${booking.status}`
+        message: `Cannot check-in. Booking status is ${booking.status}`,
       });
     }
 
@@ -1712,7 +1715,7 @@ const checkInBooking = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Booking already checked-in",
-        checked_in_at: booking.checked_in_at
+        checked_in_at: booking.checked_in_at,
       });
     }
 
@@ -1726,7 +1729,7 @@ const checkInBooking = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Can only check-in on booking date",
-        booking_date: booking.date
+        booking_date: booking.date,
       });
     }
 
@@ -1743,12 +1746,14 @@ const checkInBooking = async (req, res) => {
 
     // Check if too early
     if (now < bookingStartTime) {
-      const minutesUntilStart = Math.floor((bookingStartTime - now) / (1000 * 60));
+      const minutesUntilStart = Math.floor(
+        (bookingStartTime - now) / (1000 * 60),
+      );
       return res.status(400).json({
         success: false,
         message: `Too early. Check-in opens at start time (in ${minutesUntilStart} minutes)`,
         start_time: booking.start_time,
-        available_from: bookingStartTime
+        available_from: bookingStartTime,
       });
     }
 
@@ -1758,7 +1763,7 @@ const checkInBooking = async (req, res) => {
         success: false,
         message: "Booking expired. Check-in must be before end time",
         end_time: booking.end_time,
-        expired_at: bookingEndTime
+        expired_at: bookingEndTime,
       });
     }
 
@@ -1784,13 +1789,14 @@ const checkInBooking = async (req, res) => {
     await Notification.create({
       user_id: booking.user_id._id,
       title: "Check-in Successful",
-      message: checkInType === "LATE"
-        ? `Late check-in for ${booking.room_id.room_name} (${lateMinutes} minutes late)`
-        : `On-time check-in for ${booking.room_id.room_name}`,
+      message:
+        checkInType === "LATE"
+          ? `Late check-in for ${booking.room_id.room_name} (${lateMinutes} minutes late)`
+          : `On-time check-in for ${booking.room_id.room_name}`,
       type: "BOOKING",
       target_type: "Booking",
       target_id: booking._id,
-      is_read: false
+      is_read: false,
     });
 
     // Log audit
@@ -1801,20 +1807,21 @@ const checkInBooking = async (req, res) => {
       checkInType === "LATE"
         ? `Late check-in (${lateMinutes} minutes late) for ${booking.room_id.room_name} by ${booking.user_id.full_name}`
         : `On-time check-in for ${booking.room_id.room_name} by ${booking.user_id.full_name}`,
-      req
+      req,
     );
 
     res.status(200).json({
       success: true,
-      message: checkInType === "LATE"
-        ? `Checked-in successfully (late by ${lateMinutes} minutes)`
-        : "Checked-in successfully",
+      message:
+        checkInType === "LATE"
+          ? `Checked-in successfully (late by ${lateMinutes} minutes)`
+          : "Checked-in successfully",
       data: {
         booking,
         check_in_type: checkInType,
         late_minutes: lateMinutes,
-        checked_in_at: now
-      }
+        checked_in_at: now,
+      },
     });
   } catch (error) {
     console.error("checkInBooking error:", error);

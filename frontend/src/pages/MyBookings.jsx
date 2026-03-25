@@ -22,8 +22,9 @@ const MyBookings = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [activeTab, setActiveTab] = useState("upcoming");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrData, setQRData] = useState(null);
   const [qrLoading, setQRLoading] = useState(false);
@@ -36,18 +37,7 @@ const MyBookings = () => {
       setLoading(true);
       setError(null);
 
-      let timeFilter = null;
-      let statusFilter = null;
-
-      if (activeTab === "upcoming") {
-        timeFilter = "upcoming";
-      } else if (activeTab === "past") {
-        timeFilter = "past";
-      } else if (activeTab === "cancelled") {
-        statusFilter = "CANCELLED";
-      }
-
-      const response = await getMyBookings(page, 20, statusFilter, timeFilter);
+      const response = await getMyBookings(page, 20, null, null);
 
       if (response.success && response.data) {
         setBookings(response.data.bookings || []);
@@ -68,13 +58,44 @@ const MyBookings = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, page]);
+  }, [page]);
 
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
 
   const getStatusBadge = getStatusVariant;
+
+  const toDateKey = (dateValue) => {
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) {
+      return "";
+    }
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredBookings = bookings.filter((booking) => {
+    const roomName = booking.room_id?.room_name?.toLowerCase() || "";
+    const roomCode = booking.room_id?.room_code?.toLowerCase() || "";
+    const roomLocation = booking.room_id?.location?.toLowerCase() || "";
+
+    const matchesSearch =
+      !normalizedSearch ||
+      roomName.includes(normalizedSearch) ||
+      roomCode.includes(normalizedSearch) ||
+      roomLocation.includes(normalizedSearch);
+
+    const matchesDate = !selectedDate || toDateKey(booking.date) === selectedDate;
+    const matchesStatus =
+      selectedStatus === "ALL" || booking.status === selectedStatus;
+
+    return matchesSearch && matchesDate && matchesStatus;
+  });
 
   const handleCancelBooking = async (bookingId) => {
     if (!window.confirm("Are you sure you want to cancel this booking?")) {
@@ -155,51 +176,6 @@ const MyBookings = () => {
           </Button>
         </div>
 
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="flex border-b border-gray-300 gap-8">
-            <button
-              onClick={() => {
-                setActiveTab("upcoming");
-                setPage(1);
-              }}
-              className={`pb-3 pt-4 font-bold text-sm border-b-2 transition-colors ${
-                activeTab === "upcoming"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              Upcoming
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("past");
-                setPage(1);
-              }}
-              className={`pb-3 pt-4 font-bold text-sm border-b-2 transition-colors ${
-                activeTab === "past"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              Past
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("cancelled");
-                setPage(1);
-              }}
-              className={`pb-3 pt-4 font-bold text-sm border-b-2 transition-colors ${
-                activeTab === "cancelled"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              Cancelled
-            </button>
-          </div>
-        </div>
-
         {/* Search and Filters */}
         <div className="flex flex-col md:flex-row gap-3 mb-6">
           <div className="flex-1">
@@ -216,12 +192,38 @@ const MyBookings = () => {
               />
             </div>
           </div>
-          <button className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
-            📅 Filter by Date
-          </button>
-          <button className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
-            ⚡ Status
-          </button>
+          <div className="px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium flex items-center gap-2">
+            <span>📅</span>
+            <label htmlFor="booking-date-filter" className="whitespace-nowrap">
+              Filter by Date
+            </label>
+            <input
+              id="booking-date-filter"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="border border-gray-200 rounded px-2 py-1 text-sm"
+            />
+          </div>
+          <div className="px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium flex items-center gap-2">
+            <span>⚡</span>
+            <label htmlFor="booking-status-filter" className="whitespace-nowrap">
+              Status
+            </label>
+            <select
+              id="booking-status-filter"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="border border-gray-200 rounded px-2 py-1 text-sm bg-white"
+            >
+              <option value="ALL">All</option>
+              <option value="PENDING">Pending</option>
+              <option value="APPROVED">Approved</option>
+              <option value="CHECKED-IN">Checked-in</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
         </div>
 
         {/* Loading/Error States */}
@@ -248,17 +250,17 @@ const MyBookings = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {bookings.length === 0 ? (
+                {filteredBookings.length === 0 ? (
                   <tr>
                     <td
                       colSpan="5"
                       className="px-6 py-8 text-center text-gray-500"
                     >
-                      No bookings found.
+                      No bookings match your filters.
                     </td>
                   </tr>
                 ) : (
-                  bookings.map((booking) => (
+                  filteredBookings.map((booking) => (
                     <tr
                       key={booking._id}
                       className="hover:bg-gray-50 transition-colors"
@@ -303,7 +305,7 @@ const MyBookings = () => {
                               📱 View QR
                             </button>
                           )}
-                          {["PENDING", "APPROVED"].includes(booking.status) && (
+                          {booking.status === "PENDING" && (
                             <button
                               onClick={() => handleCancelBooking(booking._id)}
                               className="text-red-600 text-sm font-semibold hover:underline"
@@ -322,7 +324,7 @@ const MyBookings = () => {
             {/* Pagination */}
             <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 bg-white">
               <p className="text-sm text-gray-600">
-                Showing {bookings.length} of {total} {activeTab} bookings
+                Showing {filteredBookings.length} of {total} bookings
               </p>
               <div className="flex gap-2">
                 <button

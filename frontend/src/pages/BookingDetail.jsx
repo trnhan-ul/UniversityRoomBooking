@@ -257,7 +257,7 @@ const BookingDetail = () => {
                       <option value="">Select a room</option>
                       {rooms.map((room) => (
                         <option key={room._id} value={room._id}>
-                          {room.room_name} - {room.room_code} ({room.location}) - Capacity: {room.capacity}
+                            {room.room_name} - {room.room_code} ({room.location})
                         </option>
                       ))}
                     </select>
@@ -282,12 +282,6 @@ const BookingDetail = () => {
                   <p className="text-sm text-gray-600 mb-1">Location</p>
                   <p className="text-base font-semibold text-gray-900">
                     {booking.room_id?.location || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Capacity</p>
-                  <p className="text-base font-semibold text-gray-900">
-                    {booking.room_id?.capacity || "N/A"} seats
                   </p>
                 </div>
               </div>
@@ -460,7 +454,7 @@ const BookingDetail = () => {
                     ⏱ Extend Booking
                   </button>
                 )}
-                {["PENDING", "APPROVED"].includes(booking.status) && (
+                {booking.status === "PENDING" && (
                   <button
                     onClick={handleCancelBooking}
                     className="px-6 py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700"
