@@ -6,6 +6,48 @@ const { Notification } = require('../models');
 const User = require('../models/User');
 const { logAuditAction } = require('../utils/auditLogger');
 
+const parseTimeToMinutes = (timeStr) => {
+  if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) {
+    return null;
+  }
+
+  const [hourStr, minuteStr] = timeStr.split(':');
+  const hours = Number(hourStr);
+  const minutes = Number(minuteStr);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+};
+
+const isNowWithinBookingWindow = (booking) => {
+  if (!booking?.date || !booking?.start_time || !booking?.end_time) {
+    return false;
+  }
+
+  const now = new Date();
+  const bookingDate = new Date(booking.date);
+
+  const nowDayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  const bookingDayKey = `${bookingDate.getFullYear()}-${bookingDate.getMonth()}-${bookingDate.getDate()}`;
+
+  if (nowDayKey !== bookingDayKey) {
+    return false;
+  }
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const startMinutes = parseTimeToMinutes(booking.start_time);
+  const endMinutes = parseTimeToMinutes(booking.end_time);
+
+  if (startMinutes === null || endMinutes === null) {
+    return false;
+  }
+
+  return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
+};
+
 // Create a new facility issue report
 const createFacilityIssue = async (req, res) => {
   try {
@@ -42,6 +84,20 @@ const createFacilityIssue = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'You can only report issues for your own bookings'
+      });
+    }
+
+    if (!['APPROVED', 'CHECKED-IN'].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You can only report issues for approved or checked-in bookings'
+      });
+    }
+
+    if (!isNowWithinBookingWindow(booking)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You can only report facility issues during your booking time slot'
       });
     }
 
@@ -258,8 +314,11 @@ const getFacilityIssueById = async (req, res) => {
       });
     }
 
-    // Check permissions: User can view their own issues, Admin can view all
-    if (req.user.role !== 'ADMINISTRATOR' && issue.reported_by._id.toString() !== req.user._id.toString()) {
+    // Permission rules:
+    // - FACILITY_MANAGER and ADMINISTRATOR can view all issues
+    // - Students/Lecturers can only view issues they reported
+    const canViewAll = req.user.role === 'ADMINISTRATOR' || req.user.role === 'FACILITY_MANAGER';
+    if (!canViewAll && issue.reported_by._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to view this issue'

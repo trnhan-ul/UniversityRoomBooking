@@ -12,7 +12,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getEquipmentByRoom, getRoomById, RoomSummary, EquipmentItem } from '../services/roomService';
 import { COLORS } from '../constants/theme';
-import { getRoomLocalImages } from '../constants/roomImages';
+import { getDefaultRoomImages, getRoomLocalImages } from '../constants/roomImages';
 import { buildTimeSlots, normalizeEquipment, getTodayDate, TimeSlot } from '../utils/roomHelpers';
 import { SpecCard, Section, EquipmentChips, TimeSlotGrid, ImageGallery } from '../components';
 import { RootStackParamList } from '../types/navigation';
@@ -59,16 +59,16 @@ export default function RoomDetailScreen() {
   }, [id]);
 
   const imageList = useMemo<ImageSourcePropType[]>(() => {
-    const localImages = getRoomLocalImages(room?.room_code);
-    if (localImages.length > 0) {
-      return localImages;
+    if (room?.images && room.images.length > 0) {
+      return room.images.map((uri) => ({ uri }));
     }
 
-    if (!room?.images || room.images.length === 0) {
-      return [];
+    const mappedLocalImages = getRoomLocalImages(room?.room_code);
+    if (mappedLocalImages.length > 0) {
+      return mappedLocalImages;
     }
 
-    return room.images.map((uri) => ({ uri }));
+    return getDefaultRoomImages();
   }, [room?.images, room?.room_code]);
 
   const displayEquipment = normalizeEquipment(room, equipment);
