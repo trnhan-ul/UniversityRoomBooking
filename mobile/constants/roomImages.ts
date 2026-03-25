@@ -29,8 +29,10 @@ const ROOM_IMAGES_BY_CODE: Record<string, ImageSourcePropType[]> = {
 
 export const getRoomLocalImages = (roomCode?: string): ImageSourcePropType[] => {
   if (!roomCode) {
-    return DEFAULT_ROOM_IMAGES;
+    return [];
   }
 
-  return ROOM_IMAGES_BY_CODE[roomCode] || DEFAULT_ROOM_IMAGES;
+  return ROOM_IMAGES_BY_CODE[roomCode] || [];
 };
+
+export const getDefaultRoomImages = (): ImageSourcePropType[] => DEFAULT_ROOM_IMAGES;

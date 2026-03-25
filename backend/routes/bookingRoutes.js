@@ -128,6 +128,9 @@ router.post(
   bookingController.checkInBooking,
 );
 
+// GET /api/bookings/:id - booking detail (owner or privileged roles)
+router.get("/:id", authenticate, bookingController.getBookingById);
+
 // PATCH /api/bookings/:id - update booking (User) - MUST be last
 router.patch("/:id", authenticate, bookingController.updateBooking);
 

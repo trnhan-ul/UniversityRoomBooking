@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,12 +8,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../components';
 import { COLORS } from '../constants/theme';
-import { cancelBooking } from '../services/bookingService';
+import { BookingItem, cancelBooking, getBookingById } from '../services/bookingService';
 import { RootStackParamList } from '../types/navigation';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -25,7 +25,20 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 const formatDateTime = (value: string) => {
-  const date = new Date(value);
+  if (!value) {
+    return 'N/A';
+  }
+
+  // Parse date-only values as local dates to avoid timezone day shifts.
+  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = dateOnlyMatch
+    ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
   return date.toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -36,8 +49,67 @@ const formatDateTime = (value: string) => {
 export default function BookingDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'BookingDetail'>>();
-  const [booking, setBooking] = useState(route.params.booking);
+  const bookingId = route.params?.booking?._id;
+  const [booking, setBooking] = useState<BookingItem | null>(route.params?.booking ?? null);
+  const [loadingDetail, setLoadingDetail] = useState(!route.params?.booking);
+  const [loadError, setLoadError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const fetchBookingDetail = useCallback(async () => {
+    if (!bookingId) {
+      setLoadError('Booking ID is missing.');
+      return;
+    }
+
+    try {
+      setLoadingDetail(true);
+      setLoadError('');
+      const response = await getBookingById(bookingId);
+
+      if (!response.success || !response.data) {
+        setLoadError(response.message || 'Failed to load booking details.');
+        return;
+      }
+
+      setBooking(response.data);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load booking details.';
+      setLoadError(message);
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, [bookingId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchBookingDetail();
+    }, [fetchBookingDetail]),
+  );
+
+  if (loadingDetail && !booking) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.centeredText}>Loading booking details...</Text>
+      </View>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{loadError || 'Booking details are not available.'}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={fetchBookingDetail}>
+          <Text style={styles.retryText}>Try again</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.retryText}>Go back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const canCancel = booking.status === 'PENDING' || booking.status === 'APPROVED';
 
   const colorSet = STATUS_COLORS[booking.status] || {
     bg: '#e2e8f0',
@@ -67,12 +139,7 @@ export default function BookingDetailScreen() {
                 setBooking(updatedBooking);
               }
 
-              Alert.alert('Success', response.message || 'Booking has been cancelled', [
-                {
-                  text: 'OK',
-                  onPress: () => navigation.goBack(),
-                },
-              ]);
+              Alert.alert('Success', response.message || 'Booking has been cancelled');
             } catch (error: unknown) {
               const message = error instanceof Error ? error.message : 'Failed to cancel booking';
               Alert.alert('Cancel failed', message);
@@ -88,6 +155,8 @@ export default function BookingDetailScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.pageTitle}>Booking Detail</Text>
+
+      {loadError ? <Text style={styles.warningText}>{loadError}</Text> : null}
 
       <Card style={styles.card}>
         <View style={styles.headerRow}>
@@ -136,12 +205,15 @@ export default function BookingDetailScreen() {
           </Text>
         </View>
 
-        {booking.status === 'PENDING' ? (
+        {canCancel ? (
           <TouchableOpacity
             style={[styles.cancelButton, submitting && styles.cancelButtonDisabled]}
             onPress={handleCancelBooking}
             disabled={submitting}
             activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel booking"
+            accessibilityHint="Cancels this booking request"
           >
             {submitting ? (
               <ActivityIndicator size="small" color="#ffffff" />
@@ -168,6 +240,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: COLORS.dark,
+  },
+  warningText: {
+    color: COLORS.errorText,
+    fontSize: 13,
+    lineHeight: 18,
   },
   card: {
     padding: 14,
@@ -240,6 +317,34 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: '#ffffff',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background2,
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  centeredText: {
+    color: COLORS.lightText,
+    marginTop: 8,
+  },
+  errorText: {
+    color: COLORS.errorText,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  retryBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  retryText: {
+    color: '#ffffff',
     fontWeight: '700',
   },
 });

@@ -225,7 +225,7 @@ const getPendingBookings = async (req, res) => {
   }
 };
 
-// Manager view booking detail by id
+// Booking detail by id (owner or privileged roles)
 const getBookingById = async (req, res) => {
   try {
     const bookingId = req.params.id;
@@ -235,13 +235,26 @@ const getBookingById = async (req, res) => {
         .json({ success: false, message: "Invalid booking id" });
     }
     const booking = await Booking.findById(bookingId)
-      .populate("user_id", "full_name email phone_number")
-      .populate("room_id", "name location capacity");
+      .populate("user_id", "full_name email phone_number role")
+      .populate("room_id", "room_name room_code location capacity");
 
     if (!booking) {
       return res
         .status(404)
         .json({ success: false, message: "Booking not found" });
+    }
+
+    const privilegedRoles = ["FACILITY_MANAGER", "ADMINISTRATOR"];
+    const userRole = (req.user.role || "").toUpperCase();
+    const isPrivileged = privilegedRoles.includes(userRole);
+    const isOwner = booking.user_id && booking.user_id._id
+      ? booking.user_id._id.toString() === req.user._id.toString()
+      : booking.user_id.toString() === req.user._id.toString();
+
+    if (!isPrivileged && !isOwner) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden: not your booking" });
     }
 
     res.status(200).json({ success: true, data: booking });

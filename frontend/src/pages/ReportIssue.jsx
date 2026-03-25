@@ -30,6 +30,38 @@ const ReportIssue = () => {
   const [equipment, setEquipment] = useState([]);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
 
+  const isBookingActiveNow = (booking) => {
+    if (!booking?.date || !booking?.start_time || !booking?.end_time) {
+      return false;
+    }
+
+    const now = new Date();
+    const bookingDate = new Date(booking.date);
+
+    const nowDayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    const bookingDayKey = `${bookingDate.getFullYear()}-${bookingDate.getMonth()}-${bookingDate.getDate()}`;
+
+    if (nowDayKey !== bookingDayKey) {
+      return false;
+    }
+
+    const toMinutes = (time) => {
+      const [h, m] = (time || '').split(':').map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h * 60 + m;
+    };
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const startMinutes = toMinutes(booking.start_time);
+    const endMinutes = toMinutes(booking.end_time);
+
+    if (startMinutes === null || endMinutes === null) {
+      return false;
+    }
+
+    return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
+  };
+
   const [formData, setFormData] = useState({
     booking_id: preSelectedBooking?._id || "",
     room_id: preSelectedBooking?.room_id?._id || "",
@@ -49,10 +81,12 @@ const ReportIssue = () => {
         setLoadingBookings(true);
         const response = await getMyBookings(1, 100);
         if (response.success && response.data) {
-          // Filter bookings that are approved or checked-in
+          // Only allow report during the current booking time slot.
           const allBookings = response.data.bookings || [];
-          const validBookings = allBookings.filter((booking) =>
-            ["APPROVED", "CHECKED-IN"].includes(booking.status),
+          const validBookings = allBookings.filter(
+            (booking) =>
+              ["APPROVED", "CHECKED-IN"].includes(booking.status) &&
+              isBookingActiveNow(booking),
           );
           setBookings(validBookings);
         }
@@ -181,6 +215,12 @@ const ReportIssue = () => {
         const errorMsg = `Please fill in all required fields: ${missingFields.join(", ")}`;
         console.error("Validation failed:", errorMsg);
         setError(errorMsg);
+        setLoading(false);
+        return;
+      }
+
+      if (!selectedBooking || !isBookingActiveNow(selectedBooking)) {
+        setError("You can only report facility issues during your current booking time slot");
         setLoading(false);
         return;
       }
@@ -324,8 +364,8 @@ const ReportIssue = () => {
                 <div className="text-gray-500">Loading bookings...</div>
               ) : bookings.length === 0 ? (
                 <div className="text-gray-500 bg-gray-50 p-4 rounded-lg">
-                  No active bookings found. You can only report issues for
-                  approved or checked-in bookings.
+                  No current booking slot found. You can only report issues
+                  during your active booking time.
                 </div>
               ) : (
                 <select
