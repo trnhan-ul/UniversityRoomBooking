@@ -1,5 +1,6 @@
 const Booking = require("../models/Booking");
 const Room = require("../models/Room");
+const RoomSchedule = require("../models/RoomSchedule");
 const Setting = require("../models/Setting");
 const { Notification, Holiday } = require("../models");
 const { sendApprovalEmail } = require("../services/emailService");
@@ -7,6 +8,9 @@ const { logBookingAction } = require("../utils/auditLogger");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 const DAY_MS = 24 * 60 * 60 * 1000;
+const ACTIVE_BOOKING_STATUSES = ["PENDING", "APPROVED", "CHECKED-IN"];
+const APPROVED_BOOKING_STATUSES = ["APPROVED", "CHECKED-IN"];
+const BLOCKING_SCHEDULE_STATUSES = ["BLOCKED", "MAINTENANCE", "EVENT"];
 
 const isToday = (d) => {
   const now = new Date();
@@ -21,6 +25,29 @@ const normalizeDate = (value) => {
   const d = new Date(value);
   d.setHours(0, 0, 0, 0);
   return d;
+};
+
+const getDayRange = (value) => {
+  const start = normalizeDate(value);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+};
+
+const findBlockingScheduleConflict = async ({
+  roomId,
+  date,
+  startTime,
+  endTime,
+}) => {
+  const { start: dayStart, end: dayEnd } = getDayRange(date);
+  return RoomSchedule.findOne({
+    room_id: roomId,
+    date: { $gte: dayStart, $lt: dayEnd },
+    status: { $in: BLOCKING_SCHEDULE_STATUSES },
+    start_time: { $lt: endTime },
+    end_time: { $gt: startTime },
+  });
 };
 
 const safeDateInYear = (year, month, day) => {
@@ -99,7 +126,7 @@ const createBooking = async (req, res) => {
     }
 
     // Validate date is not in the past
-    const bookingDate = new Date(date);
+    const bookingDate = normalizeDate(new Date(date));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -181,11 +208,27 @@ const createBooking = async (req, res) => {
       }
     }
 
+    // Check conflict with blocked room schedules
+    const blockingSchedule = await findBlockingScheduleConflict({
+      roomId: room_id,
+      date: bookingDate,
+      startTime: start_time,
+      endTime: end_time,
+    });
+
+    if (blockingSchedule) {
+      return res.status(409).json({
+        success: false,
+        message: `Time slot is blocked (${blockingSchedule.status})`,
+      });
+    }
+
     // Check for booking conflicts
+    const { start: dayStart, end: dayEnd } = getDayRange(bookingDate);
     const conflicts = await Booking.find({
       room_id,
-      date: bookingDate,
-      status: { $in: ["PENDING", "APPROVED"] },
+      date: { $gte: dayStart, $lt: dayEnd },
+      status: { $in: ACTIVE_BOOKING_STATUSES },
       $or: [
         {
           start_time: { $lt: end_time },
@@ -406,11 +449,26 @@ const approveBooking = async (req, res) => {
         .json({ success: false, message: "Booking is not pending" });
     }
 
+    const blockingSchedule = await findBlockingScheduleConflict({
+      roomId: booking.room_id,
+      date: booking.date,
+      startTime: booking.start_time,
+      endTime: booking.end_time,
+    });
+
+    if (blockingSchedule) {
+      return res.status(409).json({
+        success: false,
+        message: `Time slot is blocked (${blockingSchedule.status})`,
+      });
+    }
+
+    const { start: dayStart, end: dayEnd } = getDayRange(booking.date);
     const conflicts = await Booking.findOne({
       _id: { $ne: bookingId },
       room_id: booking.room_id,
-      date: booking.date,
-      status: "APPROVED",
+      date: { $gte: dayStart, $lt: dayEnd },
+      status: { $in: APPROVED_BOOKING_STATUSES },
       $or: [
         {
           start_time: { $lt: booking.end_time },
@@ -736,15 +794,31 @@ const updateBooking = async (req, res) => {
 
     // Check for booking conflicts
     const checkRoomId = room_id || booking.room_id;
-    const checkDate = date ? new Date(date) : booking.date;
+    const checkDate = normalizeDate(date ? new Date(date) : booking.date);
     const checkStartTime = start_time || booking.start_time;
     const checkEndTime = end_time || booking.end_time;
+
+    const blockingSchedule = await findBlockingScheduleConflict({
+      roomId: checkRoomId,
+      date: checkDate,
+      startTime: checkStartTime,
+      endTime: checkEndTime,
+    });
+
+    if (blockingSchedule) {
+      return res.status(409).json({
+        success: false,
+        message: `Time slot is blocked (${blockingSchedule.status})`,
+      });
+    }
+
+    const { start: dayStart, end: dayEnd } = getDayRange(checkDate);
 
     const conflicts = await Booking.find({
       _id: { $ne: bookingId }, // Exclude current booking
       room_id: checkRoomId,
-      date: checkDate,
-      status: { $in: ["PENDING", "APPROVED"] },
+      date: { $gte: dayStart, $lt: dayEnd },
+      status: { $in: ACTIVE_BOOKING_STATUSES },
       $or: [
         {
           start_time: { $lt: checkEndTime },
@@ -762,7 +836,7 @@ const updateBooking = async (req, res) => {
 
     // Update booking fields
     if (room_id) booking.room_id = room_id;
-    if (date) booking.date = new Date(date);
+    if (date) booking.date = normalizeDate(new Date(date));
     if (start_time) booking.start_time = start_time;
     if (end_time) booking.end_time = end_time;
     if (purpose) booking.purpose = purpose;
@@ -1149,7 +1223,7 @@ const createRecurringBooking = async (req, res) => {
     const existingBookings = await Booking.find({
       room_id,
       date: { $gte: startD, $lte: endD },
-      status: { $in: ["PENDING", "APPROVED"] },
+      status: { $in: ACTIVE_BOOKING_STATUSES },
       $or: [{ start_time: { $lt: end_time }, end_time: { $gt: start_time } }],
     });
     const conflictSet = new Set();
@@ -1157,6 +1231,20 @@ const createRecurringBooking = async (req, res) => {
       const d = new Date(b.date);
       d.setHours(0, 0, 0, 0);
       conflictSet.add(d.toISOString().split("T")[0]);
+    });
+
+    const blockedSchedules = await RoomSchedule.find({
+      room_id,
+      date: { $gte: startD, $lte: endD },
+      status: { $in: BLOCKING_SCHEDULE_STATUSES },
+      start_time: { $lt: end_time },
+      end_time: { $gt: start_time },
+    }).lean();
+    const blockedDateSet = new Set();
+    blockedSchedules.forEach((s) => {
+      const d = new Date(s.date);
+      d.setHours(0, 0, 0, 0);
+      blockedDateSet.add(d.toISOString().split("T")[0]);
     });
 
     // 10. Generate recurrence_id
@@ -1178,6 +1266,10 @@ const createRecurringBooking = async (req, res) => {
           date: dateStr,
           reason: `Holiday: ${holidayMap[dateStr]}`,
         });
+        continue;
+      }
+      if (blockedDateSet.has(dateStr)) {
+        failed.push({ date: dateStr, reason: "Time slot is blocked" });
         continue;
       }
       if (conflictSet.has(dateStr)) {
@@ -1333,11 +1425,19 @@ const getExtendOptions = async (req, res) => {
 
     // Check conflicts for range [current end_time, max candidate end_time]
     const maxCandidateTime = toTime(candidates[candidates.length - 1]);
+    const { start: dayStart, end: dayEnd } = getDayRange(booking.date);
     const conflicts = await Booking.find({
       _id: { $ne: booking._id },
       room_id: booking.room_id._id,
-      date: booking.date,
-      status: { $in: ["PENDING", "APPROVED"] },
+      date: { $gte: dayStart, $lt: dayEnd },
+      status: { $in: ACTIVE_BOOKING_STATUSES },
+      start_time: { $lt: maxCandidateTime },
+      end_time: { $gt: booking.end_time },
+    });
+    const scheduleConflicts = await RoomSchedule.find({
+      room_id: booking.room_id._id,
+      date: { $gte: dayStart, $lt: dayEnd },
+      status: { $in: BLOCKING_SCHEDULE_STATUSES },
       start_time: { $lt: maxCandidateTime },
       end_time: { $gt: booking.end_time },
     });
@@ -1347,6 +1447,10 @@ const getExtendOptions = async (req, res) => {
     conflicts.forEach((c) => {
       const cStartMins = toMins(c.start_time);
       if (cStartMins < blockedFromMins) blockedFromMins = cStartMins;
+    });
+    scheduleConflicts.forEach((s) => {
+      const sStartMins = toMins(s.start_time);
+      if (sStartMins < blockedFromMins) blockedFromMins = sStartMins;
     });
 
     // Only include candidates that don't exceed the blocked slot
@@ -1454,11 +1558,12 @@ const extendBooking = async (req, res) => {
     }
 
     // Check conflict: any booking on same room/date that overlaps [current_end, new_end]
+    const { start: dayStart, end: dayEnd } = getDayRange(booking.date);
     const conflict = await Booking.findOne({
       _id: { $ne: booking._id },
       room_id: booking.room_id._id,
-      date: booking.date,
-      status: { $in: ["PENDING", "APPROVED"] },
+      date: { $gte: dayStart, $lt: dayEnd },
+      status: { $in: ACTIVE_BOOKING_STATUSES },
       start_time: { $lt: new_end_time },
       end_time: { $gt: booking.end_time },
     });
@@ -1467,6 +1572,21 @@ const extendBooking = async (req, res) => {
       return res.status(409).json({
         success: false,
         message: `Cannot extend: another booking starts at ${conflict.start_time}`,
+      });
+    }
+
+    const blockingSchedule = await RoomSchedule.findOne({
+      room_id: booking.room_id._id,
+      date: { $gte: dayStart, $lt: dayEnd },
+      status: { $in: BLOCKING_SCHEDULE_STATUSES },
+      start_time: { $lt: new_end_time },
+      end_time: { $gt: booking.end_time },
+    });
+
+    if (blockingSchedule) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot extend: time is blocked (${blockingSchedule.status})`,
       });
     }
 
@@ -1522,12 +1642,29 @@ const approveRecurringGroup = async (req, res) => {
     const skipped = []; // conflict
 
     for (const booking of pendingBookings) {
+      const blockingSchedule = await findBlockingScheduleConflict({
+        roomId: booking.room_id._id,
+        date: booking.date,
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+      });
+
+      if (blockingSchedule) {
+        skipped.push({
+          booking_id: booking._id,
+          date: booking.date.toISOString().split("T")[0],
+          reason: `Blocked (${blockingSchedule.status})`,
+        });
+        continue;
+      }
+
       // Check time-slot conflict for each date individually
+      const { start: dayStart, end: dayEnd } = getDayRange(booking.date);
       const conflict = await Booking.findOne({
         _id: { $ne: booking._id },
         room_id: booking.room_id._id,
-        date: booking.date,
-        status: "APPROVED",
+        date: { $gte: dayStart, $lt: dayEnd },
+        status: { $in: APPROVED_BOOKING_STATUSES },
         $or: [
           {
             start_time: { $lt: booking.end_time },

@@ -741,13 +741,13 @@ const CreateBooking = () => {
                   ← Back
                 </button>
                 <div className="flex gap-3">
-                  <button
+                  {/* <button
                     type="button"
                     onClick={handleSaveDraft}
                     className="px-6 py-2 text-blue-600 bg-white border border-blue-600 rounded-lg hover:bg-blue-50"
                   >
                     Save as Draft
-                  </button>
+                  </button> */}
                   <button
                     type="submit"
                     disabled={loading}

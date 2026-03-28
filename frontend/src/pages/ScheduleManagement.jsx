@@ -2,8 +2,7 @@
 import moment from 'moment';
 import { getCalendarData } from '../services/scheduleService';
 import { getRooms, blockTimeSlot, unblockTimeSlot } from '../services/roomService';
-import { useAuth } from '../hooks/useAuth';
-import { generateTimeOptions } from '../utils/timeFormat';
+import { useAuth } from "../hooks/useAuth";
 import { runMutationWithRefresh } from "../utils/mutationRefresh";
 
 const ScheduleManagement = () => {
@@ -32,9 +31,6 @@ const ScheduleManagement = () => {
   const [blockLoading, setBlockLoading] = useState(false);
   const [conflicts, setConflicts] = useState(null);
   const [errorCode, setErrorCode] = useState(null);
-
-  // Generate time options for dropdowns
-  const timeOptions = generateTimeOptions();
 
   // Generate time slots (7:00 AM - 9:00 PM)
   const timeSlots = [];
@@ -281,6 +277,8 @@ const ScheduleManagement = () => {
   const getEventColor = (event) => {
     if (event.type === "booking") {
       switch (event.status) {
+        case "CHECKED-IN":
+          return "bg-cyan-500 border-cyan-600";
         case "APPROVED":
           return "bg-green-500 border-green-600";
         case "PENDING":
@@ -420,6 +418,7 @@ const ScheduleManagement = () => {
             className="px-4 py-2 bg-background-light border border-[#cfdbe7] rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm transition-all"
           >
             <option value="ALL">All Bookings</option>
+            <option value="CHECKED-IN">Checked In</option>
             <option value="APPROVED">Approved</option>
             <option value="PENDING">Pending</option>
             <option value="REJECTED">Rejected</option>
@@ -503,6 +502,10 @@ const ScheduleManagement = () => {
               Booking Status
             </h4>
             <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded bg-cyan-500"></span>
+                <span className="text-xs text-[#0d141b]">Checked In</span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded bg-green-500"></span>
                 <span className="text-xs text-[#0d141b]">Approved</span>
@@ -802,13 +805,15 @@ const ScheduleManagement = () => {
                     </label>
                     <span
                       className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold ${
-                        selectedEvent.status === "APPROVED"
-                          ? "bg-green-100 text-green-700"
-                          : selectedEvent.status === "PENDING"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : selectedEvent.status === "REJECTED"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-gray-100 text-gray-700"
+                        selectedEvent.status === "CHECKED-IN"
+                          ? "bg-cyan-100 text-cyan-700"
+                          : selectedEvent.status === "APPROVED"
+                            ? "bg-green-100 text-green-700"
+                            : selectedEvent.status === "PENDING"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : selectedEvent.status === "REJECTED"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-700"
                       }`}
                     >
                       {selectedEvent.status}
