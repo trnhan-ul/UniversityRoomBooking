@@ -1,237 +1,124 @@
 # University Room Booking System
 
-## Overview
-The University Room Booking System is an internal web-based application that allows students to view available rooms and request room usage, while administrators manage rooms, users, and system booking configurations.
+University Room Booking System is a full-stack platform that helps universities manage room resources and booking workflows across web and mobile clients.
 
-This project is developed following an iterative approach. Iteration 1 focuses on core authentication, data setup, and system configuration as a proof of concept (POC).
+The project focuses on solving real operational problems such as overlapping reservations, schedule blocking, recurring bookings, role-based approvals, and room usage visibility.
 
-**WDP301 - Nhóm G4**
+## 1. Project Overview
 
-## User Roles
+- Multi-client system:
+   - Web application for administration and booking operations
+   - Mobile application for user booking interactions
+- Centralized backend API with role-based permission control
+- Booking lifecycle management from request to approval, check-in, extension, and completion
+- Conflict-aware scheduling with support for blocked slots and holidays
+- Operational support features including notifications, reporting, and issue tracking
 
-### Student
-- Login to the system
-- View room list and room details
-- Manage personal profile
+## 2. Business Roles
 
-### Admin
-- Manage users
-- Manage rooms
-- Configure system settings (booking time range)
-- Access admin dashboard
+- Student:
+   - Browse and request room bookings
+   - Manage personal bookings and check-in
+- Lecturer:
+   - Create single or recurring bookings for teaching activities
+- Facility Manager:
+   - Approve/reject booking requests
+   - Manage room schedules and block/unblock time slots
+- Administrator:
+   - System-level governance, configurations, and monitoring
 
-## Iteration 1 Scope (POC)
-- User authentication (login, reset password)
-- User profile management
-- Room management (CRUD)
-- System settings management
-- Admin user management
+## 3. Core Functional Areas
 
-## Out of Scope (Iteration 1)
-- Room booking and cancellation
-- Availability conflict handling
-- Search and filtering
-- Booking history and reports
+- Authentication and account management
+- Room and equipment management
+- Booking engine with conflict detection
+- Recurring booking workflows
+- Calendar and schedule management
+- Holiday and unavailable-time handling
+- Notifications and auditability
+- Dashboard metrics and reporting
+- Facility issue reporting and resolution tracking
 
-## Technology Stack
-- **Frontend:** React
-- **Backend:** Node.js + Express
-- **Database:** MongoDB Compass
+## 4. System Architecture
 
-## Cấu trúc dự án
+The architecture follows a client-server model:
 
-```
+- Client layer:
+   - React web application
+   - Expo React Native mobile application
+- Service layer:
+   - Node.js + Express REST API
+   - Role-based access and booking business rules
+- Data layer:
+   - MongoDB with Mongoose models for domain entities
+
+This design allows both clients to reuse one backend while keeping business logic centralized and consistent.
+
+## 5. Technology Stack
+
+### Backend
+- Node.js
+- Express
+- MongoDB + Mongoose
+- JWT authentication
+- Nodemailer (email workflows)
+
+### Frontend (Web)
+- React 18
+- React Router
+- Axios
+- Tailwind CSS
+- Recharts + React Big Calendar
+
+### Mobile
+- Expo
+- React Native
+- React Navigation
+- Axios
+- TypeScript
+
+## 6. Repository Structure
+
+```text
 wdp301_g4_university-room-booking-system/
-├── backend/          # Node.js Backend (MVC)
-│   ├── config/       # Cấu hình database, môi trường
-│   ├── controllers/  # Controllers xử lý logic
-│   ├── models/       # Models MongoDB
-│   ├── routes/       # API routes
-│   ├── middleware/   # Middleware (auth, validation, etc.)
-│   ├── utils/        # Utility functions
-│   ├── server.js     # Entry point
-│   └── .env.example  # Environment variables template
-│
-└── frontend/         # React Frontend
-    ├── public/       # Static files
-    ├── src/
-    │   ├── assets/   # Images, fonts, etc.
-    │   ├── components/ # React components
-    │   ├── pages/    # Page components
-    │   ├── services/ # API services
-    │   ├── utils/    # Utility functions
-    │   ├── App.jsx   # Main App component
-    │   └── index.jsx # Entry point
-    └── .env.example  # Environment variables template
+├── backend/
+│   ├── config/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── services/
+│   ├── templates/
+│   ├── utils/
+│   ├── server.js
+│   └── seedDatabase.js
+├── frontend/
+│   ├── public/
+│   └── src/
+│       ├── components/
+│       ├── context/
+│       ├── hooks/
+│       ├── pages/
+│       ├── services/
+│       └── utils/
+└── mobile/
+    ├── App.tsx
+    ├── components/
+    ├── config/
+    ├── context/
+    ├── hooks/
+    ├── screens/
+    ├── services/
+    ├── types/
+    └── utils/
 ```
 
-## Project Management
-- GitLab is used for source control and project tracking
-- Issues are used to manage tasks
-- Milestone `Iteration_1_POC` represents Iteration 1 scope
-- Each team member is assigned specific issues
+## 7. Portfolio Value
 
-## Team Members & Responsibilities
-- **SV1:** Authentication (Login)
-- **SV2:** Reset Password & User Profile
-- **SV3:** Room Management
-- **SV4:** System Settings
-- **SV5:** Admin User Management
+This project demonstrates practical software engineering skills in:
 
-## Tech Stack
-
-- **Backend:** Node.js + Express
-- **Frontend:** React
-- **Database:** MongoDB Compass
-
-## Getting started
-
-### Prerequisites
-- Node.js (v16 or higher)
-- MongoDB Compass
-- Git
-
-### Clone repository
-
-```bash
-git clone https://gitlab.com/wdp3011/wdp301_g4_university-room-booking-system.git
-cd wdp301_g4_university-room-booking-system
-```
-
-### Backend Setup
-
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Edit .env file and configure your MongoDB connection string
-# MONGODB_URI=mongodb://localhost:27017/university-room-booking
-npm start
-```
-
-The backend server will run on `http://localhost:5000`
-
-### Frontend Setup
-
-```bash
-cd frontend
-npm install
-cp .env.example .env
-# Edit .env file if needed
-# REACT_APP_API_URL=http://localhost:5000
-npm start
-```
-
-The frontend application will run on `http://localhost:3000`
-
-## Development Workflow
-
-1. Create a new branch for your feature
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-2. Make your changes and commit
-   ```bash
-   git add .
-   git commit -m "Description of changes"
-   ```
-
-3. Push to GitLab
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-4. Create a Merge Request on GitLab
-
-## GitLab Repository
-
-https://gitlab.com/wdp3011/wdp301_g4_university-room-booking-system
-
----
-
-## Additional GitLab Resources
-
-### Add your files
-
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/wdp3011/wdp301_g4_university-room-booking-system.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-* [Set up project integrations](https://gitlab.com/wdp3011/wdp301_g4_university-room-booking-system/-/settings/integrations)
-
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- Designing domain-driven booking workflows
+- Implementing real-world scheduling constraints and edge-case handling
+- Building consistent APIs consumed by multiple clients
+- Delivering role-oriented UX for operational systems
+- Structuring a maintainable full-stack codebase for team collaboration
